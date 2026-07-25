@@ -36,6 +36,7 @@
 
 - 下载Windows版本：[点击下载](https://github.com/Lrht-llw/KfuPet/releases/latest)
 - 下载安卓版本：[点击下载](https://github.com/KfuPet/KfuPet-for-Android/releases/latest)
+- 下载开发者工具：[点击下载](https://github.com/KfuPet/KfuPet-Tool/releases/latest)
 
 <br />
 
