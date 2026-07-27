@@ -49,10 +49,17 @@
 
 ### 快速开始
 
-1. 使用 Visual Studio 打开项目
-2. 还原 NuGet 依赖
-3. 启动调试：`F5`
-4. 构建：右键项目 → 生成
+1. 最直接：双击解决方案文件 .sln
+在文件夹里找到后缀为 .sln 的文件，直接双击，系统会自动用 Visual Studio 打开整个项目（包括所有子项目）。
+如果没反应，右键选择 “打开方式” → “Microsoft Visual Studio”。
+
+2. 从 Visual Studio 内部打开
+启动 Visual Studio 后，有多种入口：
+
+开始窗口：点击右侧 “打开项目或解决方案”，然后浏览找到 .sln 或 .csproj 文件。
+
+菜单栏：
+文件 → 打开 → 项目/解决方案（快捷键 Ctrl+Shift+O），同样选择 .sln 或项目文件。
 
 <br />
 
