@@ -41,19 +41,26 @@ namespace KfuPet.Core.Rendering
             var worldTransform = bone.WorldTransform;
             if (worldTransform == null) return;
 
-            var startPosition = worldTransform.Transform(new Point(0, 0));
-            var endPosition = worldTransform.Transform(bone.LocalPosition);
+            var boneBase = worldTransform.Transform(new Point(0, 0));
 
-            if (bone.Parent != null)
+            if (bone.Children.Count > 0)
             {
-                DrawBoneLine(startPosition, endPosition);
+                foreach (var child in bone.Children)
+                {
+                    if (child.WorldTransform != null)
+                    {
+                        var childPosition = child.WorldTransform.Transform(new Point(0, 0));
+                        DrawBoneLine(boneBase, childPosition);
+                        DrawJoint(childPosition);
+                    }
+                    RenderBoneRecursive(child);
+                }
             }
-
-            DrawJoint(endPosition);
-
-            foreach (var child in bone.Children)
+            else
             {
-                RenderBoneRecursive(child);
+                var boneTip = worldTransform.Transform(new Point(bone.Length, 0));
+                DrawBoneLine(boneBase, boneTip);
+                DrawJoint(boneTip);
             }
         }
 

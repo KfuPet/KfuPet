@@ -101,10 +101,11 @@ namespace KfuPet
             // 此代码只做演示作用，后期会进行修改删除
             _skeleton.AddBone(new Bone
             {
-                Id = "root",             // 骨骼唯一标识符
-                Name = "Root",           // 骨骼显示名称
-                ParentId = null,         // 无父骨骼，作为根节点
-                LocalPosition = new Point(256 / dpiScale, 384 / dpiScale)  // 画布中心位置 (512x768)，转换为逻辑像素
+                Id = "root",
+                Name = "Root",
+                ParentId = null,
+                LocalPosition = new Point(256 / dpiScale, 384 / dpiScale),
+                Length = 100 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -112,7 +113,8 @@ namespace KfuPet
                 Id = "body",
                 Name = "Body",
                 ParentId = "root",
-                LocalPosition = new Point(0, -100 / dpiScale)
+                LocalPosition = new Point(0, -100 / dpiScale),
+                Length = 80 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -120,7 +122,8 @@ namespace KfuPet
                 Id = "neck",
                 Name = "Neck",
                 ParentId = "body",
-                LocalPosition = new Point(0, -80 / dpiScale)
+                LocalPosition = new Point(0, -80 / dpiScale),
+                Length = 50 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -128,7 +131,8 @@ namespace KfuPet
                 Id = "head",
                 Name = "Head",
                 ParentId = "neck",
-                LocalPosition = new Point(0, -50 / dpiScale)
+                LocalPosition = new Point(0, -50 / dpiScale),
+                Length = 50 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -136,7 +140,8 @@ namespace KfuPet
                 Id = "arm_left_upper",
                 Name = "LeftArmUpper",
                 ParentId = "body",
-                LocalPosition = new Point(-80 / dpiScale, 0)
+                LocalPosition = new Point(-80 / dpiScale, 0),
+                Length = 100 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -144,7 +149,8 @@ namespace KfuPet
                 Id = "arm_left_lower",
                 Name = "LeftArmLower",
                 ParentId = "arm_left_upper",
-                LocalPosition = new Point(-100 / dpiScale, 0)
+                LocalPosition = new Point(-100 / dpiScale, 0),
+                Length = 50 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -152,7 +158,8 @@ namespace KfuPet
                 Id = "arm_right_upper",
                 Name = "RightArmUpper",
                 ParentId = "body",
-                LocalPosition = new Point(80 / dpiScale, 0)
+                LocalPosition = new Point(80 / dpiScale, 0),
+                Length = 100 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -160,7 +167,8 @@ namespace KfuPet
                 Id = "arm_right_lower",
                 Name = "RightArmLower",
                 ParentId = "arm_right_upper",
-                LocalPosition = new Point(100 / dpiScale, 0)
+                LocalPosition = new Point(100 / dpiScale, 0),
+                Length = 50 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -168,7 +176,8 @@ namespace KfuPet
                 Id = "hip",
                 Name = "Hip",
                 ParentId = "body",
-                LocalPosition = new Point(0, 100 / dpiScale)
+                LocalPosition = new Point(0, 100 / dpiScale),
+                Length = 80 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -176,7 +185,8 @@ namespace KfuPet
                 Id = "leg_left_upper",
                 Name = "LeftLegUpper",
                 ParentId = "hip",
-                LocalPosition = new Point(-40 / dpiScale, 80 / dpiScale)
+                LocalPosition = new Point(-40 / dpiScale, 80 / dpiScale),
+                Length = 100 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -184,7 +194,8 @@ namespace KfuPet
                 Id = "leg_left_lower",
                 Name = "LeftLegLower",
                 ParentId = "leg_left_upper",
-                LocalPosition = new Point(0, 100 / dpiScale)
+                LocalPosition = new Point(0, 100 / dpiScale),
+                Length = 60 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -192,7 +203,8 @@ namespace KfuPet
                 Id = "leg_right_upper",
                 Name = "RightLegUpper",
                 ParentId = "hip",
-                LocalPosition = new Point(40 / dpiScale, 80 / dpiScale)
+                LocalPosition = new Point(40 / dpiScale, 80 / dpiScale),
+                Length = 100 / dpiScale
             });
 
             _skeleton.AddBone(new Bone
@@ -200,7 +212,8 @@ namespace KfuPet
                 Id = "leg_right_lower",
                 Name = "RightLegLower",
                 ParentId = "leg_right_upper",
-                LocalPosition = new Point(0, 100 / dpiScale)
+                LocalPosition = new Point(0, 100 / dpiScale),
+                Length = 60 / dpiScale
             });
 
             // ==================== 更新变换 ====================

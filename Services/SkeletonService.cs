@@ -214,6 +214,27 @@ namespace KfuPet.Services
         }
 
         /// <summary>
+        /// 设置骨骼长度。
+        /// </summary>
+        public bool SetLength(string boneId, double length)
+        {
+            var bone = _skeleton?.FindBone(boneId);
+            if (bone == null) return false;
+
+            bone.Length = length;
+            UpdateAndNotify();
+            return true;
+        }
+
+        /// <summary>
+        /// 获取骨骼长度。
+        /// </summary>
+        public double? GetLength(string boneId)
+        {
+            return _skeleton?.FindBone(boneId)?.Length;
+        }
+
+        /// <summary>
         /// 重置骨骼为初始状态（位置归零，旋转归零，缩放为 1）。
         /// </summary>
         /// <param name="boneId">骨骼 ID</param>
@@ -335,6 +356,13 @@ namespace KfuPet.Services
 
                 case "isactive":
                     return CommandResponse.Ok(IsActive(Str(parameters, "boneId")));
+
+                case "setlength":
+                    return CommandResponse.Ok(SetLength(
+                        Str(parameters, "boneId"), Dbl(parameters, "length")));
+
+                case "getlength":
+                    return CommandResponse.Ok(GetLength(Str(parameters, "boneId")));
 
                 case "resetbone":
                     return CommandResponse.Ok(ResetBone(Str(parameters, "boneId")));

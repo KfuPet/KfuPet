@@ -21,6 +21,8 @@ namespace KfuPet.Models
 
         public Point LocalScale { get; set; } = new Point(1, 1);
 
+        public double Length { get; set; } = 50;
+
         public Matrix3x3? WorldTransform { get; set; }
 
         public List<Attachment> Attachments { get; } = new List<Attachment>();
