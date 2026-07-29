@@ -55,9 +55,9 @@ namespace KfuPet.Models
 
         private void UpdateBoneTransform(Bone bone, Matrix3x3 parentTransform)
         {
-            var localTransform = Matrix3x3.Scale(bone.LocalScale.X, bone.LocalScale.Y) *
-                                 Matrix3x3.Rotation(bone.LocalRotation) *
-                                 Matrix3x3.Translation(bone.LocalPosition.X, bone.LocalPosition.Y);
+            var localTransform = Matrix3x3.Rotation(bone.LocalRotation) *
+                                 Matrix3x3.Translation(bone.LocalPosition.X, bone.LocalPosition.Y) *
+                                 Matrix3x3.Scale(bone.LocalScale.X, bone.LocalScale.Y);
 
             bone.WorldTransform = parentTransform * localTransform;
 
