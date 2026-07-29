@@ -370,6 +370,9 @@ namespace KfuPet.Services
                     }
                     return CommandResponse.Fail("Invalid batch operations");
 
+                case "ping":
+                    return CommandResponse.Ok();
+
                 default:
                     return CommandResponse.Fail($"Unknown action: {action}");
             }

@@ -200,6 +200,32 @@ namespace KfuPet.Ipc.Client
             CallSkeletonBoolAsync("ResetAll").GetAwaiter().GetResult();
         }
 
+        /// <summary>
+        /// 心跳检测，检查 KfuPet 服务是否存活。
+        /// 不会抛出异常，返回 true 表示连接正常。
+        /// </summary>
+        public bool Ping()
+        {
+            return PingAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// 心跳检测（异步），检查 KfuPet 服务是否存活。
+        /// 不会抛出异常，返回 true 表示连接正常。
+        /// </summary>
+        public async Task<bool> PingAsync(CancellationToken ct = default)
+        {
+            try
+            {
+                var response = await SendRequestAsync("skeleton", "Ping", null, ct);
+                return response.Success;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public (double X, double Y)? GetWorldPosition(string boneId)
         {
             var je = CallSkeletonJsonAsync("GetWorldPosition", new { boneId }).GetAwaiter().GetResult();

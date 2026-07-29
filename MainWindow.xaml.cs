@@ -58,6 +58,11 @@ namespace KfuPet
 
         private NamedPipeServer? _pipeServer;
 
+        /// <summary>
+        /// 工具端是否已连接。开发者开关等依赖工具端的功能可检查此属性。
+        /// </summary>
+        public bool IsToolConnected => _pipeServer?.IsClientConnected ?? false;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -81,6 +86,7 @@ namespace KfuPet
             CommandDispatcher.RegisterService(VisionService);
 
             _pipeServer = new NamedPipeServer(CommandDispatcher, Application.Current);
+            _pipeServer.ClientStateChanged += OnToolConnectionChanged;
             _pipeServer.Start();
         }
 
@@ -88,6 +94,12 @@ namespace KfuPet
         {
             _pipeServer?.Stop();
             _pipeServer?.Dispose();
+        }
+
+        private void OnToolConnectionChanged(object? sender, EventArgs e)
+        {
+            // 后期在这里处理开发者开关状态等逻辑
+            Debug.WriteLine($"[KfuPet] 工具端{(IsToolConnected ? "已连接" : "已断开")}");
         }
 
         // 此代码只做演示作用，后期会进行修改删除
