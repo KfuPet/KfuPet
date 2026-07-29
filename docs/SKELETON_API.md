@@ -35,6 +35,7 @@ Service    Service    Service     Service
 - [缩放操作](#缩放操作)
 - [激活控制](#激活控制)
 - [重置操作](#重置操作)
+- [心跳检测](#心跳检测)
 - [批量操作](#批量操作)
 - [世界坐标](#世界坐标)
 - [Action 列表](#action-列表)
@@ -474,6 +475,47 @@ client.ResetAll();
 
 ---
 
+## 心跳检测
+
+### Ping
+
+检查 KfuPet 服务是否存活。不修改任何数据，仅返回连接状态。
+
+```csharp
+// 同步
+bool alive = client.Ping();
+
+// 异步
+bool alive = await client.PingAsync();
+```
+
+**对应 action**：`Ping`
+
+**返回值**：`bool` — `true` 服务存活，`false` 连接失败（服务未启动或已关闭）
+
+**双向感知**：服务端也会通过心跳来跟踪工具端的连接状态（5 秒超时窗口）。工具端一旦停止发送 `Ping`，服务端将自动标记为已断开，后续可配合开发者开关等依赖工具端的功能使用。
+
+**使用场景**：工具端可定时（如每 2-3 秒）调用 `Ping` 检查连接状态，根据返回值更新 UI 连接指示器。
+
+**示例：定时心跳**
+
+```csharp
+// 在工具端使用 Timer 定期检查
+var timer = new System.Timers.Timer(3000); // 3 秒一次
+timer.Elapsed += async (s, e) =>
+{
+    bool alive = await client.PingAsync();
+    Dispatcher.Invoke(() =>
+    {
+        statusLabel.Text = alive ? "已连接" : "已断开";
+        statusLabel.Color = alive ? Green : Red;
+    });
+};
+timer.Start();
+```
+
+---
+
 ## 批量操作
 
 ### Batch
@@ -565,6 +607,7 @@ if (worldPos.HasValue)
 | `IsActive` | `boneId` | `bool` | 获取激活状态 |
 | `ResetBone` | `boneId` | `bool` | 恢复单个骨骼到默认值 |
 | `ResetAll` | 无 | - | 恢复所有骨骼到默认值 |
+| `Ping` | 无 | `bool` | 心跳检测，检查服务是否存活 |
 | `Batch` | `operations` (数组) | `bool` | 批量操作 |
 | `GetWorldPosition` | `boneId` | `{x, y}` | 获取世界坐标 |
 
