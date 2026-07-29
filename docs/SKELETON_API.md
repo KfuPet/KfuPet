@@ -441,7 +441,7 @@ bool? active = client.IsActive("arm_left_lower");
 
 ### ResetBone
 
-重置单个骨骼为初始状态（位置归零、旋转归零、缩放为 1）。
+恢复单个骨骼到默认状态（骨骼首次创建时的位置、旋转、缩放和激活状态）。
 
 ```csharp
 bool success = client.ResetBone("arm_left_upper");
@@ -453,13 +453,16 @@ bool success = client.ResetBone("arm_left_upper");
 |------|------|------|
 | boneId | string | 骨骼 ID |
 
-**返回值**：`bool` — `true` 重置成功，`false` 骨骼不存在
+**返回值**：`bool` — `true` 恢复成功，`false` 骨骼不存在
+
+> **注意**：默认值在骨骼被添加到骨架（`AddBone`）时自动记录，恢复时回到该状态，而非简单归零。
+> 每个骨骼的默认值不同（如 root 骨骼默认位置在画布中心），因此恢复全部骨骼可还原角色初始姿态。
 
 ---
 
 ### ResetAll
 
-重置所有骨骼为初始状态。
+恢复所有骨骼到默认状态。
 
 ```csharp
 client.ResetAll();
@@ -467,7 +470,7 @@ client.ResetAll();
 
 **对应 action**：`ResetAll`
 
-所有骨骼的位置归零、旋转归零、缩放为 1、激活状态设为 `true`。
+所有骨骼恢复到各自首次创建时的位置、旋转、缩放和激活状态。
 
 ---
 
@@ -560,8 +563,8 @@ if (worldPos.HasValue)
 | `GetScale` | `boneId` | `{x, y}` | 获取缩放 |
 | `SetActive` | `boneId`, `isActive` | `bool` | 设置激活状态 |
 | `IsActive` | `boneId` | `bool` | 获取激活状态 |
-| `ResetBone` | `boneId` | `bool` | 重置单个骨骼 |
-| `ResetAll` | 无 | - | 重置所有骨骼 |
+| `ResetBone` | `boneId` | `bool` | 恢复单个骨骼到默认值 |
+| `ResetAll` | 无 | - | 恢复所有骨骼到默认值 |
 | `Batch` | `operations` (数组) | `bool` | 批量操作 |
 | `GetWorldPosition` | `boneId` | `{x, y}` | 获取世界坐标 |
 

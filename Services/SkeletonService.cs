@@ -214,24 +214,26 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 重置骨骼为初始状态（位置归零，旋转归零，缩放为 1）。
+        /// 恢复骨骼到默认状态（使用 Bone 自带的 Default* 值，
+        /// 这些值在骨骼首次 AddBone 时自动固化）。
         /// </summary>
         /// <param name="boneId">骨骼 ID</param>
-        /// <returns>是否重置成功</returns>
+        /// <returns>是否恢复成功</returns>
         public bool ResetBone(string boneId)
         {
             var bone = _skeleton?.FindBone(boneId);
             if (bone == null) return false;
 
-            bone.LocalPosition = new Point(0, 0);
-            bone.LocalRotation = 0;
-            bone.LocalScale = new Point(1, 1);
+            bone.LocalPosition = bone.DefaultPosition;
+            bone.LocalRotation = bone.DefaultRotation;
+            bone.LocalScale = bone.DefaultScale;
+            bone.IsActive = bone.DefaultIsActive;
             UpdateAndNotify();
             return true;
         }
 
         /// <summary>
-        /// 重置所有骨骼为初始状态。
+        /// 恢复所有骨骼到默认状态。
         /// </summary>
         public void ResetAll()
         {
@@ -239,10 +241,10 @@ namespace KfuPet.Services
 
             foreach (var bone in _skeleton.Bones)
             {
-                bone.LocalPosition = new Point(0, 0);
-                bone.LocalRotation = 0;
-                bone.LocalScale = new Point(1, 1);
-                bone.IsActive = true;
+                bone.LocalPosition = bone.DefaultPosition;
+                bone.LocalRotation = bone.DefaultRotation;
+                bone.LocalScale = bone.DefaultScale;
+                bone.IsActive = bone.DefaultIsActive;
             }
             UpdateAndNotify();
         }

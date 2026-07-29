@@ -27,6 +27,29 @@ namespace KfuPet.Models
 
         public bool IsActive { get; set; } = true;
 
+        /// <summary>
+        /// 骨骼的默认值，用于"恢复默认"功能。
+        /// 在骨骼首次添加到 Skeleton 时自动拍摄。
+        /// </summary>
+        public Point DefaultPosition { get; private set; }
+
+        public double DefaultRotation { get; private set; }
+
+        public Point DefaultScale { get; private set; } = new Point(1, 1);
+
+        public bool DefaultIsActive { get; private set; } = true;
+
+        /// <summary>
+        /// 将当前 Local* 值保存为默认值。由 Skeleton.AddBone 内部调用。
+        /// </summary>
+        internal void CaptureDefaults()
+        {
+            DefaultPosition = LocalPosition;
+            DefaultRotation = LocalRotation;
+            DefaultScale = LocalScale;
+            DefaultIsActive = IsActive;
+        }
+
         public void AddChild(Bone child)
         {
             child.Parent = this;

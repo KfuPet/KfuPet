@@ -13,6 +13,7 @@ namespace KfuPet.Models
 
         public void AddBone(Bone bone)
         {
+            bone.CaptureDefaults();
             Bones.Add(bone);
             BoneMap[bone.Id] = bone;
 
