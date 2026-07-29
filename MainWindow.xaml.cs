@@ -165,17 +165,9 @@ namespace KfuPet
 
             _skeleton.AddBone(new Bone
             {
-                Id = "hip",
-                Name = "Hip",
-                ParentId = "body",
-                LocalPosition = new Point(0, 100 / dpiScale)
-            });
-
-            _skeleton.AddBone(new Bone
-            {
                 Id = "leg_left_upper",
                 Name = "LeftLegUpper",
-                ParentId = "hip",
+                ParentId = "root",
                 LocalPosition = new Point(-40 / dpiScale, 80 / dpiScale)
             });
 
@@ -191,7 +183,7 @@ namespace KfuPet
             {
                 Id = "leg_right_upper",
                 Name = "RightLegUpper",
-                ParentId = "hip",
+                ParentId = "root",
                 LocalPosition = new Point(40 / dpiScale, 80 / dpiScale)
             });
 
