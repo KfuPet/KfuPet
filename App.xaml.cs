@@ -9,9 +9,20 @@ namespace KfuPet
     {
         private MainWindow? _mainWindow;
         private System.Windows.Forms.NotifyIcon? _notifyIcon;
+        private Mutex? _mutex;
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // 检测多开：只允许运行一个实例
+            _mutex = new Mutex(true, "KfuPet_SingleInstance", out bool createdNew);
+            if (!createdNew)
+            {
+                MessageBox.Show("KfuPet 已在运行中。", "KfuPet", MessageBoxButton.OK, MessageBoxImage.Information);
+                _mutex = null;
+                Shutdown();
+                return;
+            }
+
             base.OnStartup(e);
 
             // 初始化系统托盘图标
@@ -70,6 +81,7 @@ namespace KfuPet
         protected override void OnExit(ExitEventArgs e)
         {
             _notifyIcon?.Dispose();
+            _mutex?.Dispose();
             base.OnExit(e);
         }
     }
