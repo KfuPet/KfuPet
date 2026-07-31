@@ -6,11 +6,8 @@ using KfuPet.Core.Rendering;
 
 namespace KfuPet.Controls
 {
-    // 此代码只做演示作用，后期会进行修改删除
-    // 使用黑色粗线条模拟骨骼结构，实际项目中将使用图片资源渲染角色
     public partial class CharacterCanvas : UserControl
     {
-        // 此代码只做演示作用，后期会进行修改删除
         private SkeletonRenderer? _skeletonRenderer;
         private RenderContext? _renderContext;
 
@@ -22,6 +19,22 @@ namespace KfuPet.Controls
         {
             get => (Skeleton?)GetValue(SkeletonProperty);
             set => SetValue(SkeletonProperty, value);
+        }
+
+        /// <summary>
+        /// 是否显示骨骼调试线框。
+        /// </summary>
+        public bool ShowDebugBones
+        {
+            get => _skeletonRenderer?.ShowDebugBones ?? false;
+            set
+            {
+                if (_skeletonRenderer != null)
+                {
+                    _skeletonRenderer.ShowDebugBones = value;
+                    Render();
+                }
+            }
         }
 
         public CharacterCanvas()

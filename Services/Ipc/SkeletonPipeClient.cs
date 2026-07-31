@@ -233,6 +233,109 @@ namespace KfuPet.Ipc.Client
             return ExtractPoint(je);
         }
 
+        public bool AddAttachment(string boneId, string attachmentId, string name,
+            string resourcePath, double offsetX = 0, double offsetY = 0,
+            double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0)
+        {
+            return CallSkeletonBoolAsync("AddAttachment", new
+            {
+                boneId, attachmentId, name, resourcePath,
+                offsetX, offsetY, pivotX, pivotY, zOrder
+            }).GetAwaiter().GetResult();
+        }
+
+        public async Task<bool> AddAttachmentAsync(string boneId, string attachmentId, string name,
+            string resourcePath, double offsetX = 0, double offsetY = 0,
+            double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0, CancellationToken ct = default)
+        {
+            return await CallSkeletonBoolAsync("AddAttachment", new
+            {
+                boneId, attachmentId, name, resourcePath,
+                offsetX, offsetY, pivotX, pivotY, zOrder
+            }, ct);
+        }
+
+        public bool RemoveAttachment(string attachmentId)
+        {
+            return CallSkeletonBoolAsync("RemoveAttachment", new { attachmentId }).GetAwaiter().GetResult();
+        }
+
+        public bool SetAttachmentResource(string attachmentId, string resourceId, string resourcePath)
+        {
+            return CallSkeletonBoolAsync("SetAttachmentResource",
+                new { attachmentId, resourceId, resourcePath }).GetAwaiter().GetResult();
+        }
+
+        public bool SetAttachmentOffset(string attachmentId, double x, double y)
+        {
+            return CallSkeletonBoolAsync("SetAttachmentOffset",
+                new { attachmentId, x, y }).GetAwaiter().GetResult();
+        }
+
+        public bool SetAttachmentVisible(string attachmentId, bool visible)
+        {
+            return CallSkeletonBoolAsync("SetAttachmentVisible", new { attachmentId, visible }).GetAwaiter().GetResult();
+        }
+
+        public bool SetAttachmentScale(string attachmentId, double scaleX, double scaleY)
+        {
+            return CallSkeletonBoolAsync("SetAttachmentScale", new { attachmentId, scaleX, scaleY }).GetAwaiter().GetResult();
+        }
+
+        public (double ScaleX, double ScaleY)? GetAttachmentScale(string attachmentId)
+        {
+            var je = CallSkeletonJsonAsync("GetAttachmentScale", new { attachmentId }).GetAwaiter().GetResult();
+            if (je.ValueKind == JsonValueKind.Null || je.ValueKind == JsonValueKind.Undefined) return null;
+            return (je.TryGetProperty("scaleX", out var sx) ? sx.GetDouble() : 1.0,
+                    je.TryGetProperty("scaleY", out var sy) ? sy.GetDouble() : 1.0);
+        }
+
+        public IReadOnlyList<string> GetBoneAttachments(string boneId)
+        {
+            return CallSkeletonAsync<IReadOnlyList<string>>("GetBoneAttachments", new { boneId }).GetAwaiter().GetResult()
+                ?? Array.Empty<string>();
+        }
+
+        /// <summary>
+        /// 上传 base64 图片到 KfuPet 资源缓存，返回本地文件路径（可直接用于 AddAttachment 的 resourcePath）。
+        /// </summary>
+        /// <param name="boneId">可选骨骼 ID，传入后文件存入 Resources/Cache/{boneId}/ 子目录</param>
+        public string? UploadResource(string base64Data, string? boneId = null)
+        {
+            var je = CallSkeletonJsonAsync("UploadResource", new { base64Data, boneId }).GetAwaiter().GetResult();
+            if (je.ValueKind == JsonValueKind.Null || je.ValueKind == JsonValueKind.Undefined) return null;
+            return je.TryGetProperty("path", out var prop) ? prop.GetString() : null;
+        }
+
+        public async Task<string?> UploadResourceAsync(string base64Data, string? boneId = null, CancellationToken ct = default)
+        {
+            var je = await CallSkeletonJsonAsync("UploadResource", new { base64Data, boneId }, ct);
+            if (je.ValueKind == JsonValueKind.Null || je.ValueKind == JsonValueKind.Undefined) return null;
+            return je.TryGetProperty("path", out var prop) ? prop.GetString() : null;
+        }
+
+        public bool DeleteResource(string resourcePath)
+        {
+            return CallSkeletonBoolAsync("DeleteResource", new { resourcePath }).GetAwaiter().GetResult();
+        }
+
+        public void SetDebugSkeleton(bool show)
+        {
+            CallSkeletonBoolAsync("SetDebugSkeleton", new { show }).GetAwaiter().GetResult();
+        }
+
+        public bool GetDebugSkeleton()
+        {
+            return CallSkeletonBoolAsync("GetDebugSkeleton", null).GetAwaiter().GetResult();
+        }
+
+        public JsonElement? GetAttachment(string attachmentId)
+        {
+            var je = CallSkeletonJsonAsync("GetAttachment", new { attachmentId }).GetAwaiter().GetResult();
+            if (je.ValueKind == JsonValueKind.Null || je.ValueKind == JsonValueKind.Undefined) return null;
+            return je;
+        }
+
         public bool Batch(Action<BatchBuilder> build)
         {
             var builder = new BatchBuilder();
@@ -297,6 +400,24 @@ namespace KfuPet.Ipc.Client
         public BatchBuilder ResetBone(string boneId)
         {
             Operations.Add(new { action = "ResetBone", @params = new { boneId } });
+            return this;
+        }
+
+        public BatchBuilder AddAttachment(string boneId, string attachmentId, string name,
+            string resourcePath, double offsetX = 0, double offsetY = 0,
+            double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0)
+        {
+            Operations.Add(new
+            {
+                action = "AddAttachment",
+                @params = new { boneId, attachmentId, name, resourcePath, offsetX, offsetY, pivotX, pivotY, zOrder }
+            });
+            return this;
+        }
+
+        public BatchBuilder SetAttachmentScale(string attachmentId, double scaleX, double scaleY)
+        {
+            Operations.Add(new { action = "SetAttachmentScale", @params = new { attachmentId, scaleX, scaleY } });
             return this;
         }
     }

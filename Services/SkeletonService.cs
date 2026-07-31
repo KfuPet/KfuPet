@@ -21,6 +21,16 @@ namespace KfuPet.Services
         public event EventHandler? SkeletonChanged;
 
         /// <summary>
+        /// 是否显示骨骼调试线框（默认关闭）。
+        /// </summary>
+        public bool ShowDebugSkeleton { get; private set; }
+
+        /// <summary>
+        /// 调试线框状态变化时触发。
+        /// </summary>
+        public event EventHandler? DebugSkeletonChanged;
+
+        /// <summary>
         /// 当前绑定的骨骼实例。
         /// </summary>
         public Skeleton? Skeleton => _skeleton;
@@ -270,6 +280,277 @@ namespace KfuPet.Services
             return bone.WorldTransform.Transform(new Point(0, 0));
         }
 
+        /// <summary>
+        /// 为指定骨骼添加图片附件。
+        /// </summary>
+        public Attachment? AddAttachment(string boneId, string attachmentId, string name,
+            string resourcePath, double offsetX = 0, double offsetY = 0,
+            double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0)
+        {
+            var bone = _skeleton?.FindBone(boneId);
+            if (bone == null) return null;
+
+            var attachment = new Attachment
+            {
+                Id = attachmentId,
+                BoneId = boneId,
+                Name = name,
+                Offset = new Point(offsetX, offsetY),
+                Pivot = new Point(pivotX, pivotY),
+                ZOrder = zOrder
+            };
+            attachment.Set.DefaultResource = "default";
+            attachment.Set.Resources["default"] = resourcePath;
+            attachment.Set.CurrentResourceId = "default";
+
+            bone.AddAttachment(attachment);
+            UpdateAndNotify();
+            return attachment;
+        }
+
+        /// <summary>
+        /// 移除骨骼附件。
+        /// </summary>
+        public bool RemoveAttachment(string attachmentId)
+        {
+            if (_skeleton == null) return false;
+
+            var attachment = _skeleton.FindAttachment(attachmentId);
+            if (attachment == null) return false;
+
+            var resourcePath = attachment.GetCurrentResourcePath();
+
+            if (_skeleton.RemoveAttachment(attachmentId))
+            {
+                TryCleanupResource(resourcePath);
+                UpdateAndNotify();
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 如果缓存文件没有被其他附件引用，则删除之。
+        /// </summary>
+        private void TryCleanupResource(string? resourcePath)
+        {
+            if (string.IsNullOrEmpty(resourcePath) || _skeleton == null) return;
+
+            // 仅清理缓存目录下的文件，不碰用户手动指定的路径
+            if (!IsPathInCache(resourcePath))
+                return;
+
+            // 检查是否有其他附件还在引用该文件
+            foreach (var bone in _skeleton.Bones)
+            {
+                foreach (var att in bone.Attachments)
+                {
+                    var p = att.GetCurrentResourcePath();
+                    if (!string.IsNullOrEmpty(p) &&
+                        string.Equals(System.IO.Path.GetFullPath(p), System.IO.Path.GetFullPath(resourcePath), StringComparison.OrdinalIgnoreCase))
+                    {
+                        return; // 仍有引用，不删
+                    }
+                }
+            }
+
+            try { System.IO.File.Delete(resourcePath); } catch { }
+        }
+
+        /// <summary>
+        /// 显式删除缓存目录下的资源文件。
+        /// </summary>
+        public bool DeleteResource(string resourcePath)
+        {
+            if (string.IsNullOrEmpty(resourcePath)) return false;
+            if (!IsPathInCache(resourcePath)) return false;
+            if (!System.IO.File.Exists(resourcePath)) return false;
+
+            try
+            {
+                System.IO.File.Delete(resourcePath);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool IsPathInCache(string path)
+        {
+            var normalizedCache = System.IO.Path.GetFullPath(ResourceCacheDir);
+            var normalizedPath = System.IO.Path.GetFullPath(path);
+            return normalizedPath.StartsWith(normalizedCache, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// 切换附件的当前资源。
+        /// </summary>
+        public bool SetAttachmentResource(string attachmentId, string resourceId, string resourcePath)
+        {
+            var attachment = _skeleton?.FindAttachment(attachmentId);
+            if (attachment == null) return false;
+
+            attachment.Set.Resources[resourceId] = resourcePath;
+            attachment.Set.SetResource(resourceId);
+            UpdateAndNotify();
+            return true;
+        }
+
+        /// <summary>
+        /// 设置附件偏移。
+        /// </summary>
+        public bool SetAttachmentOffset(string attachmentId, double x, double y)
+        {
+            var attachment = _skeleton?.FindAttachment(attachmentId);
+            if (attachment == null) return false;
+
+            attachment.Offset = new Point(x, y);
+            UpdateAndNotify();
+            return true;
+        }
+
+        /// <summary>
+        /// 设置附件显隐。
+        /// </summary>
+        public bool SetAttachmentVisible(string attachmentId, bool visible)
+        {
+            var attachment = _skeleton?.FindAttachment(attachmentId);
+            if (attachment == null) return false;
+
+            attachment.Visible = visible;
+            UpdateAndNotify();
+            return true;
+        }
+
+        /// <summary>
+        /// 设置图片 X/Y 轴缩放。
+        /// </summary>
+        public bool SetAttachmentScale(string attachmentId, double scaleX, double scaleY)
+        {
+            var attachment = _skeleton?.FindAttachment(attachmentId);
+            if (attachment == null) return false;
+
+            attachment.ScaleX = scaleX;
+            attachment.ScaleY = scaleY;
+            UpdateAndNotify();
+            return true;
+        }
+
+        /// <summary>
+        /// 获取图片缩放值。
+        /// </summary>
+        public (double ScaleX, double ScaleY)? GetAttachmentScale(string attachmentId)
+        {
+            var attachment = _skeleton?.FindAttachment(attachmentId);
+            if (attachment == null) return null;
+            return (attachment.ScaleX, attachment.ScaleY);
+        }
+
+        /// <summary>
+        /// 获取附件信息。
+        /// </summary>
+        public Attachment? GetAttachment(string attachmentId)
+        {
+            return _skeleton?.FindAttachment(attachmentId);
+        }
+
+        /// <summary>
+        /// 获取指定骨骼的所有附件 ID 列表。
+        /// </summary>
+        public IReadOnlyList<string> GetBoneAttachments(string boneId)
+        {
+            var bone = _skeleton?.FindBone(boneId);
+            if (bone == null) return Array.Empty<string>();
+            return bone.Attachments.Select(a => a.Id).ToList();
+        }
+
+        /// <summary>
+        /// 开关骨骼调试线框显示。
+        /// </summary>
+        public void SetDebugSkeleton(bool show)
+        {
+            if (ShowDebugSkeleton == show) return;
+            ShowDebugSkeleton = show;
+            DebugSkeletonChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 获取骨骼调试线框显示状态。
+        /// </summary>
+        public bool GetDebugSkeleton() => ShowDebugSkeleton;
+
+        private static readonly string ResourceCacheDir = System.IO.Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, "Resources", "Cache");
+
+        /// <summary>
+        /// 退出时清理整个缓存目录。
+        /// </summary>
+        public static void CleanupCache()
+        {
+            try
+            {
+                if (System.IO.Directory.Exists(ResourceCacheDir))
+                    System.IO.Directory.Delete(ResourceCacheDir, true);
+            }
+            catch
+            {
+                // 忽略清理失败（文件被占用等）
+            }
+        }
+
+        /// <summary>
+        /// 上传图片资源到本地缓存，返回可用的文件路径。
+        /// </summary>
+        /// <param name="base64Data">base64 编码的图片数据</param>
+        /// <param name="boneId">可选骨骼 ID，传入后图片存入 Resources/Cache/{boneId}/ 子目录</param>
+        public string? UploadResource(string base64Data, string? boneId = null)
+        {
+            try
+            {
+                // 解析 data URI 或纯 base64
+                string base64 = base64Data;
+                string extension = ".png";
+
+                if (base64Data.StartsWith("data:image/"))
+                {
+                    var headerEnd = base64Data.IndexOf(";base64,");
+                    if (headerEnd > 0)
+                    {
+                        var mime = base64Data[11..headerEnd]; // "data:image/" = 11 chars
+                        extension = mime switch
+                        {
+                            "png" => ".png",
+                            "jpeg" => ".jpg",
+                            "gif" => ".gif",
+                            "webp" => ".webp",
+                            "bmp" => ".bmp",
+                            _ => ".png"
+                        };
+                        base64 = base64Data[(headerEnd + 8)..];
+                    }
+                }
+
+                var bytes = Convert.FromBase64String(base64);
+
+                var targetDir = string.IsNullOrEmpty(boneId)
+                    ? ResourceCacheDir
+                    : System.IO.Path.Combine(ResourceCacheDir, boneId);
+                System.IO.Directory.CreateDirectory(targetDir);
+
+                var fileName = $"{Guid.NewGuid():N}{extension}";
+                var filePath = System.IO.Path.Combine(targetDir, fileName);
+                System.IO.File.WriteAllBytes(filePath, bytes);
+
+                return filePath;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private void UpdateAndNotify()
         {
             _skeleton?.UpdateWorldTransforms();
@@ -349,6 +630,60 @@ namespace KfuPet.Services
                     var wp = GetWorldPosition(Str(parameters, "boneId"));
                     return CommandResponse.Ok(wp.HasValue ? new { x = wp.Value.X, y = wp.Value.Y } : null);
 
+                case "addattachment":
+                    var att = AddAttachment(
+                        Str(parameters, "boneId"), Str(parameters, "attachmentId"),
+                        Str(parameters, "name"), Str(parameters, "resourcePath"),
+                        Dbl(parameters, "offsetX"), Dbl(parameters, "offsetY"),
+                        Dbl(parameters, "pivotX", 0.5), Dbl(parameters, "pivotY", 0.5),
+                        (int)Dbl(parameters, "zOrder"));
+                    return CommandResponse.Ok(att != null);
+
+                case "removeattachment":
+                    return CommandResponse.Ok(RemoveAttachment(Str(parameters, "attachmentId")));
+
+                case "setattachmentresource":
+                    return CommandResponse.Ok(SetAttachmentResource(
+                        Str(parameters, "attachmentId"), Str(parameters, "resourceId"),
+                        Str(parameters, "resourcePath")));
+
+                case "setattachmentoffset":
+                    return CommandResponse.Ok(SetAttachmentOffset(
+                        Str(parameters, "attachmentId"), Dbl(parameters, "x"), Dbl(parameters, "y")));
+
+                case "setattachmentvisible":
+                    return CommandResponse.Ok(SetAttachmentVisible(
+                        Str(parameters, "attachmentId"), Bool(parameters, "visible")));
+
+                case "setattachmentscale":
+                    return CommandResponse.Ok(SetAttachmentScale(
+                        Str(parameters, "attachmentId"),
+                        Dbl(parameters, "scaleX", 1.0),
+                        Dbl(parameters, "scaleY", 1.0)));
+
+                case "getattachmentscale":
+                    var sc = GetAttachmentScale(Str(parameters, "attachmentId"));
+                    if (sc == null) return CommandResponse.Ok(null);
+                    return CommandResponse.Ok(new { scaleX = sc.Value.ScaleX, scaleY = sc.Value.ScaleY });
+
+                case "getattachment":
+                    var ga = GetAttachment(Str(parameters, "attachmentId"));
+                    if (ga == null) return CommandResponse.Ok(null);
+                    return CommandResponse.Ok(new
+                    {
+                        id = ga.Id,
+                        boneId = ga.BoneId,
+                        name = ga.Name,
+                        resourcePath = ga.GetCurrentResourcePath(),
+                        offsetX = ga.Offset.X, offsetY = ga.Offset.Y,
+                        pivotX = ga.Pivot.X, pivotY = ga.Pivot.Y,
+                        zOrder = ga.ZOrder,
+                        visible = ga.Visible
+                    });
+
+                case "getboneattachments":
+                    return CommandResponse.Ok(GetBoneAttachments(Str(parameters, "boneId")));
+
                 case "batch":
                     var operations = parameters?.GetValueOrDefault("operations") as JsonElement?;
                     if (operations.HasValue && operations.Value.ValueKind == JsonValueKind.Array)
@@ -370,6 +705,23 @@ namespace KfuPet.Services
                     }
                     return CommandResponse.Fail("Invalid batch operations");
 
+                case "uploadresource":
+                    var uploadedPath = UploadResource(Str(parameters, "base64Data"),
+                        Str(parameters, "boneId", null));
+                    if (uploadedPath == null)
+                        return CommandResponse.Fail("Failed to decode or save image data");
+                    return CommandResponse.Ok(new { path = uploadedPath });
+
+                case "deleteresource":
+                    return CommandResponse.Ok(DeleteResource(Str(parameters, "resourcePath")));
+
+                case "setdebugskeleton":
+                    SetDebugSkeleton(Bool(parameters, "show"));
+                    return CommandResponse.Ok();
+
+                case "getdebugskeleton":
+                    return CommandResponse.Ok(GetDebugSkeleton());
+
                 case "ping":
                     return CommandResponse.Ok();
 
@@ -384,14 +736,20 @@ namespace KfuPet.Services
             return v?.ToString() ?? string.Empty;
         }
 
-        private static double Dbl(Dictionary<string, object>? p, string key)
+        private static string? Str(Dictionary<string, object>? p, string key, string? fallback)
         {
-            if (p == null || !p.TryGetValue(key, out var v)) return 0;
+            if (p == null || !p.TryGetValue(key, out var v)) return fallback;
+            return v?.ToString() ?? fallback;
+        }
+
+        private static double Dbl(Dictionary<string, object>? p, string key, double defaultValue = 0)
+        {
+            if (p == null || !p.TryGetValue(key, out var v)) return defaultValue;
             if (v is JsonElement je && je.ValueKind == JsonValueKind.Number)
                 return je.GetDouble();
             if (double.TryParse(v?.ToString(), out var d))
                 return d;
-            return 0;
+            return defaultValue;
         }
 
         private static bool Bool(Dictionary<string, object>? p, string key)

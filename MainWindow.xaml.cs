@@ -216,6 +216,7 @@ namespace KfuPet
 
             SkeletonService.BindSkeleton(_skeleton);
             SkeletonService.SkeletonChanged += OnSkeletonServiceChanged;
+            SkeletonService.DebugSkeletonChanged += OnDebugSkeletonChanged;
         }
 
         private void OnSkeletonServiceChanged(object? sender, EventArgs e)
@@ -224,6 +225,11 @@ namespace KfuPet
             {
                 CharacterCanvas.Render();
             }
+        }
+
+        private void OnDebugSkeletonChanged(object? sender, EventArgs e)
+        {
+            CharacterCanvas.ShowDebugBones = SkeletonService.ShowDebugSkeleton;
         }
 
         private void CenterWindow()

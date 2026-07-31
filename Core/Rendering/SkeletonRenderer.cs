@@ -1,101 +1,158 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using KfuPet.Models;
 using KfuPet.Core.Math;
+using KfuPet.Models;
 
 namespace KfuPet.Core.Rendering
 {
-    // 此代码只做演示作用，后期会进行修改删除
-    // 使用黑色粗线条和圆点模拟骨骼结构，实际项目中将使用图片资源渲染角色附件
     public class SkeletonRenderer : Renderer
     {
-        // 此代码只做演示作用，后期会进行修改删除
-        private readonly Brush _boneBrush;
-        // 此代码只做演示作用，后期会进行修改删除
-        private const double BONE_LINE_THICKNESS = 4;
-        // 此代码只做演示作用，后期会进行修改删除
-        private const double JOINT_RADIUS = 6;
+        private readonly Dictionary<string, BitmapImage> _imageCache = new();
+        private const double BONE_LINE_THICKNESS = 3;
+        private const double JOINT_RADIUS = 4;
+
+        /// <summary>
+        /// 是否显示骨骼调试线框（默认关闭）。
+        /// </summary>
+        public bool ShowDebugBones { get; set; }
 
         public SkeletonRenderer(RenderContext context) : base(context)
         {
-            // 此代码只做演示作用，后期会进行修改删除
-            _boneBrush = Brushes.Black;
         }
 
         public override void Render(Skeleton skeleton)
         {
             Clear();
 
-            if (skeleton.Root != null)
+            if (ShowDebugBones)
             {
-                RenderBoneRecursive(skeleton.Root);
+                RenderDebugBones(skeleton);
+            }
+
+            var attachments = new List<(Attachment Attachment, Matrix3x3 WorldTransform, double WorldRotation)>();
+
+            foreach (var bone in skeleton.Bones)
+            {
+                if (!bone.IsActive || bone.WorldTransform == null) continue;
+
+                foreach (var attachment in bone.Attachments)
+                {
+                    if (!attachment.Visible) continue;
+
+                    var wt = bone.WorldTransform;
+                    var worldRotation = System.Math.Atan2(wt.M21, wt.M11);
+                    attachments.Add((attachment, wt, worldRotation));
+                }
+            }
+
+            // 按 ZOrder 排序后渲染
+            attachments.Sort((a, b) => a.Attachment.ZOrder.CompareTo(b.Attachment.ZOrder));
+
+            int zIndex = 0;
+            foreach (var (attachment, worldTransform, worldRotation) in attachments)
+            {
+                RenderAttachment(attachment, worldTransform, worldRotation, zIndex++);
             }
         }
 
-        private void RenderBoneRecursive(Bone bone)
+        private void RenderDebugBones(Skeleton skeleton)
         {
-            if (!bone.IsActive) return;
-
-            var worldTransform = bone.WorldTransform;
-            if (worldTransform == null) return;
-
-            var bonePosition = worldTransform.Transform(new Point(0, 0));
-
-            if (bone.Parent != null && bone.Parent.WorldTransform != null)
+            foreach (var bone in skeleton.Bones)
             {
-                var parentPosition = bone.Parent.WorldTransform.Transform(new Point(0, 0));
-                DrawBoneLine(parentPosition, bonePosition);
-            }
+                if (!bone.IsActive || bone.WorldTransform == null) continue;
 
-            DrawJoint(bonePosition);
+                var pos = bone.WorldTransform.Transform(new Point(0, 0));
 
-            foreach (var child in bone.Children)
-            {
-                RenderBoneRecursive(child);
+                // 绘制骨骼连线
+                if (bone.Parent != null && bone.Parent.IsActive && bone.Parent.WorldTransform != null)
+                {
+                    var parentPos = bone.Parent.WorldTransform.Transform(new Point(0, 0));
+                    var line = new Line
+                    {
+                        X1 = parentPos.X, Y1 = parentPos.Y,
+                        X2 = pos.X, Y2 = pos.Y,
+                        Stroke = Brushes.DodgerBlue,
+                        StrokeThickness = BONE_LINE_THICKNESS
+                    };
+                    Canvas.SetZIndex(line, 1000);
+                    Context.Canvas.Children.Add(line);
+                }
+
+                // 绘制关节圆点
+                var ellipse = new Ellipse
+                {
+                    Width = JOINT_RADIUS * 2,
+                    Height = JOINT_RADIUS * 2,
+                    Fill = Brushes.DodgerBlue
+                };
+                Canvas.SetLeft(ellipse, pos.X - JOINT_RADIUS);
+                Canvas.SetTop(ellipse, pos.Y - JOINT_RADIUS);
+                Canvas.SetZIndex(ellipse, 1001);
+                Context.Canvas.Children.Add(ellipse);
             }
         }
 
-        // 此代码只做演示作用，后期会进行修改删除
-        // 使用黑色粗线条绘制骨骼连接
-        private void DrawBoneLine(Point start, Point end)
+        private void RenderAttachment(Attachment attachment, Matrix3x3 worldTransform, double worldRotation, int zIndex)
         {
-            var line = new Line
+            var image = LoadImageForAttachment(attachment);
+            if (image == null) return;
+
+            // 附件世界位置 = 骨骼世界变换 * 附件偏移
+            var worldPos = worldTransform.Transform(attachment.Offset);
+
+            // 图片放在 Canvas 上，通过 RenderTransform 旋转
+            var imageControl = new Image
             {
-                X1 = start.X,
-                Y1 = start.Y,
-                X2 = end.X,
-                Y2 = end.Y,
-                // 此代码只做演示作用，后期会进行修改删除
-                Stroke = _boneBrush,
-                // 此代码只做演示作用，后期会进行修改删除
-                StrokeThickness = BONE_LINE_THICKNESS
+                Source = image,
+                Width = image.PixelWidth * attachment.ScaleX,
+                Height = image.PixelHeight * attachment.ScaleY
             };
 
-            Canvas.SetZIndex(line, 0);
-            Context.Canvas.Children.Add(line);
+            // 按 Pivot 放置：左上角位置 = 世界位置 - 缩放后尺寸 * 锚点
+            Canvas.SetLeft(imageControl, worldPos.X - image.PixelWidth * attachment.ScaleX * attachment.Pivot.X);
+            Canvas.SetTop(imageControl, worldPos.Y - image.PixelHeight * attachment.ScaleY * attachment.Pivot.Y);
+            Canvas.SetZIndex(imageControl, zIndex);
+
+            imageControl.RenderTransformOrigin = new Point(attachment.Pivot.X, attachment.Pivot.Y);
+            imageControl.RenderTransform = new RotateTransform(worldRotation * 180.0 / System.Math.PI);
+
+            Context.Canvas.Children.Add(imageControl);
         }
 
-        // 此代码只做演示作用，后期会进行修改删除
-        // 使用黑色圆点绘制关节点
-        private void DrawJoint(Point position)
+        private BitmapImage? LoadImageForAttachment(Attachment attachment)
         {
-            var ellipse = new Ellipse
+            var path = attachment.GetCurrentResourcePath();
+            if (string.IsNullOrEmpty(path)) return null;
+
+            if (_imageCache.TryGetValue(path, out var cached))
+                return cached;
+
+            try
             {
-                // 此代码只做演示作用，后期会进行修改删除
-                Width = JOINT_RADIUS * 2,
-                // 此代码只做演示作用，后期会进行修改删除
-                Height = JOINT_RADIUS * 2,
-                // 此代码只做演示作用，后期会进行修改删除
-                Fill = _boneBrush
-            };
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
 
-            Canvas.SetLeft(ellipse, position.X - JOINT_RADIUS);
-            Canvas.SetTop(ellipse, position.Y - JOINT_RADIUS);
-            Canvas.SetZIndex(ellipse, 1);
+                if (System.IO.Path.IsPathRooted(path))
+                {
+                    bitmap.UriSource = new Uri(path);
+                }
+                else
+                {
+                    bitmap.UriSource = new Uri(path, UriKind.RelativeOrAbsolute);
+                }
 
-            Context.Canvas.Children.Add(ellipse);
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                _imageCache[path] = bitmap;
+                return bitmap;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public override void Clear()

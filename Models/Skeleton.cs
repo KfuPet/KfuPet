@@ -32,6 +32,30 @@ namespace KfuPet.Models
             return BoneMap.TryGetValue(id, out var bone) ? bone : null;
         }
 
+        public Attachment? FindAttachment(string attachmentId)
+        {
+            foreach (var bone in Bones)
+            {
+                var attachment = bone.Attachments.FirstOrDefault(a => a.Id == attachmentId);
+                if (attachment != null) return attachment;
+            }
+            return null;
+        }
+
+        public bool RemoveAttachment(string attachmentId)
+        {
+            foreach (var bone in Bones)
+            {
+                var attachment = bone.Attachments.FirstOrDefault(a => a.Id == attachmentId);
+                if (attachment != null)
+                {
+                    bone.Attachments.Remove(attachment);
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public void BuildHierarchy()
         {
             foreach (var bone in Bones)

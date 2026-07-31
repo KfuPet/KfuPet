@@ -82,6 +82,7 @@ namespace KfuPet
         {
             _notifyIcon?.Dispose();
             _mutex?.Dispose();
+            Services.SkeletonService.CleanupCache();
             base.OnExit(e);
         }
     }

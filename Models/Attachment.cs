@@ -24,6 +24,10 @@ namespace KfuPet.Models
 
         public bool Visible { get; set; } = true;
 
+        public double ScaleX { get; set; } = 1.0;
+
+        public double ScaleY { get; set; } = 1.0;
+
         public string? GetCurrentResourcePath()
         {
             return Set.GetCurrentResourcePath();
