@@ -80,9 +80,15 @@ namespace KfuPet.Models
 
         private void UpdateBoneTransform(Bone bone, Matrix3x3 parentTransform)
         {
-            var localTransform = Matrix3x3.Rotation(bone.LocalRotation) *
-                                 Matrix3x3.Translation(bone.LocalPosition.X, bone.LocalPosition.Y) *
-                                 Matrix3x3.Scale(bone.LocalScale.X, bone.LocalScale.Y);
+            var rotation = Matrix3x3.Rotation(bone.LocalRotation);
+            var translation = Matrix3x3.Translation(bone.LocalPosition.X, bone.LocalPosition.Y);
+            var scale = Matrix3x3.Scale(bone.LocalScale.X, bone.LocalScale.Y);
+
+            // Root 的位置是世界锚点，旋转时不能连同锚点一起绕画布原点移动。
+            // 普通骨骼的旋转则作用于“父节点到当前节点”的骨骼线段。
+            var localTransform = bone.Parent == null
+                ? translation * rotation * scale
+                : rotation * translation * scale;
 
             bone.WorldTransform = parentTransform * localTransform;
 
