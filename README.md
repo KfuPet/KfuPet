@@ -1,9 +1,8 @@
 <div align="center">
 <img alt="logo" height="100" width="100" src="docs/logo.png" />
-<h2> Kfu Pet </h2>
-<p> 你的智能桌面伙伴 </p>
-<h3><s>AI桌宠</s>≠智能生命体桌宠</h3>
-<br />
+<h2>Kfu Pet</h2>
+<p>你的智能桌面伙伴</p>
+<h3><s>AI桌宠</s> ≠ 智能生命体桌宠</h3>
 
 [![Stars](https://img.shields.io/github/stars/Lrht-llw/KfuPet?style=flat)](https://github.com/Lrht-llw/KfuPet/stargazers)
 [![Version](https://img.shields.io/github/v/release/Lrht-llw/KfuPet)](https://github.com/Lrht-llw/KfuPet/releases)
@@ -12,35 +11,31 @@
 
 </div>
 
-## 说明
+## 📖 项目简介
 
-> [!WARNING]
->
-> ### 关于本项目
->
-> - 本项目 **KfuPet** 是一款基于 **WPF (.NET 8.0)** 开发的桌面宠物应用
-> - 当前版本为原型阶段，实现了透明无边框窗口、启动画面动画、长按拖动等基础功能
-> - 本项目采用 **双许可模式**：**AGPL-3.0**（含附加条款）或 **付费商业许可**，还请务必遵守相关条款
+**KfuPet** 是一款基于 **WPF (.NET 8.0)** 开发的桌面宠物应用，当前处于原型阶段。
 
-欢迎各位大佬 `Star` 😍
+已实现的基础功能：
 
-<br />
+- 透明无边框窗口
+- 启动画面动画
+- 长按拖动等基础交互
+
+> 本项目采用**双许可模式**：**AGPL-3.0**（含附加条款）或**付费商业许可**，详情请见 [开源许可](#-开源许可)。
+
+如果这个项目对你有帮助，欢迎各位大佬 `Star` 😍
+
+## 📥 开始使用
+
+| 平台 | 下载地址 |
+| --- | --- |
+| Windows | [点击下载](https://github.com/Lrht-llw/KfuPet/releases/latest) |
+| Android | [点击下载](https://github.com/KfuPet/KfuPet-for-Android/releases/latest) |
+| 开发者工具 | [点击下载](https://github.com/KfuPet/KfuPet-Tool/releases/latest) |
 
 ## 💻 更新记录
 
-### v0.0.5版本待发布
-
-<br />
-
-## 😋开始使用
-
-- 下载Windows版本：[点击下载](https://github.com/Lrht-llw/KfuPet/releases/latest)
-- 下载安卓版本：[点击下载](https://github.com/KfuPet/KfuPet-for-Android/releases/latest)
-- 下载开发者工具：[点击下载](https://github.com/KfuPet/KfuPet-Tool/releases/latest)
-
-<br />
-
-<br />
+### v0.0.5 版本待发布
 
 ## 🧑‍💻 参与贡献
 
@@ -48,9 +43,7 @@
 
 开发环境搭建、代码规范与贡献流程请参阅 [贡献指南](CONTRIBUTING.md)。
 
-<br />
-
-## 😍加入我们
+## 😍 加入我们
 
 <table align="center">
   <tr>
@@ -67,19 +60,18 @@
   </tr>
 </table>
 
+## 😘 鸣谢
 
-## 😘鸣谢
+- [xiao-Kfu](https://github.com/xiao-Kfu) — 图片模型提供
+- [SPlayer](https://github.com/SPlayer-Dev/SPlayer) — 议题模板参考
 
-- [xiao-Kfu](https://github.com/xiao-Kfu) 图片模型提供
-- [SPlayer](https://github.com/SPlayer-Dev/SPlayer) 议题模板参考
-
-### 🧑‍💻贡献者
+### 贡献者
 
 <a href="https://github.com/KfuPet/KfuPet/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=KfuPet/KfuPet" />
 </a>
 
-表单由 [contrib.rocks](https://contrib.rocks). 提供
+贡献者头像墙由 [contrib.rocks](https://contrib.rocks) 生成。
 
 ## 📜 开源许可
 
@@ -95,8 +87,5 @@
    - 联系方式：通过 [Gmail 邮箱](mailto:l2179725762@gmail.com) Lr灰弹
 
 > 欢迎社区的参与和贡献，我们鼓励开发者一同改进和维护本项目 ❤️
-> 
+>
 > 请注意：向本项目提交代码即表示你同意你的贡献以上述双许可模式进行授权。
-
-<br />
-
