@@ -10,6 +10,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\icon\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>0.0.5</Version>
+    <Authors>Grey Bullet Technology Studio</Authors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,9 +23,6 @@
     <Resource Include="Assets\icon\app.ico" />
     <Resource Include="Assets\icon\tray.ico" />
     <Resource Include="Characters\logo.png" />
-    <Content Include="Config\Version.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>

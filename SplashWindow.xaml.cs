@@ -1,6 +1,5 @@
 using System;
-using System.IO;
-using System.Text.Json;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -94,23 +93,14 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 从 Config/Version.json 读取版本号并显示，失败时不显示版本号。
+        /// 从程序集版本读取版本号并显示。
         /// </summary>
         private void LoadVersion()
         {
-            try
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            if (version is not null)
             {
-                var versionPath = Path.Combine(AppContext.BaseDirectory, "Config", "Version.json");
-                var json = File.ReadAllText(versionPath);
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("version", out var versionElement))
-                {
-                    VersionText.Text = $"v{versionElement.GetString()}";
-                }
-            }
-            catch (Exception)
-            {
-                // 版本文件读取失败时不显示版本号
+                VersionText.Text = $"v{version.ToString(3)}";
             }
         }
 
