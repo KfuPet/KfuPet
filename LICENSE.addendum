@@ -1,5 +1,58 @@
 ADDITIONAL TERMS UNDER GNU AGPLv3 SECTION 7
-These supplementary terms are legally binding for all distribution, modification and derivative works.
-This addendum is an inseparable part of the full license agreement.
+GNU AGPLv3 第 7 条允许的附加条款
 
-# 待定
+These supplementary terms apply only when you choose the GNU AGPLv3
+licensing option, and are limited to the categories permitted by
+AGPLv3 Section 7. They are an inseparable part of the AGPLv3
+licensing option for this project.
+
+本附加条款仅在你选择 GNU AGPLv3 许可选项时适用，且仅限于 AGPLv3
+第 7 条所允许的条款类别。本附加条款是本项目 AGPLv3 许可选项
+不可分割的一部分。
+
+====================================================================
+
+1. 署名与声明保留（AGPLv3 Section 7(b)）
+
+   任何分发、修改版本或衍生作品，必须保留本项目原始的版权
+   声明、作者署名以及指向原始项目仓库的链接：
+
+       KfuPet - https://github.com/Lrht-llw/KfuPet
+
+   不得以任何方式删除、隐藏或篡改上述声明与署名信息。
+
+2. 禁止歪曲来源（AGPLv3 Section 7(c)）
+
+   不得将修改版本或衍生作品歪曲陈述为原始项目，亦不得暗示
+   修改版本获得了原始作者的认可或背书。修改版本必须以合理
+   方式明确标注其与原始项目的区别。
+
+3. 名称与商标使用限制（AGPLv3 Section 7(d)）
+
+   "KfuPet" 名称、标识及原作者姓名，未经许可不得用于对修改
+   版本或衍生作品进行宣传、推广，亦不得用于暗示与原始项目
+   存在关联或获得官方认可。
+
+====================================================================
+
+商业许可（双许可说明 / DUAL LICENSING NOTICE）
+
+本项目采用双许可模式。你可以二选一：
+
+  A. GNU AGPLv3（免费）
+     在完全遵守 AGPLv3 及上述附加条款的前提下，可自由使用、
+     修改和分发本项目（包括商业用途），但衍生作品及通过网络
+     提供的服务必须以相同条款公开完整源代码。
+
+  B. 商业许可（付费）
+     如果你希望在不履行 AGPLv3 开源义务的情况下使用本项目
+     （例如：闭源集成到商业产品、不公开衍生作品源代码等），
+     必须另行与版权持有者联系并购买商业授权。商业许可的具体
+     条款以双方单独签署的协议为准。
+
+     联系方式（商业授权Lr灰弹）：
+     Gmail 邮箱：l2179725762@gmail.com
+
+注意：本说明仅是对可选商业许可的要约，不构成对 AGPLv3 授予
+权利的进一步限制。选择 AGPLv3 选项并完全遵守其条款的使用者，
+无需购买商业授权。

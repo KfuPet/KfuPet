@@ -20,7 +20,7 @@
 >
 > - 本项目 **KfuPet** 是一款基于 **WPF (.NET 8.0)** 开发的桌面宠物应用
 > - 当前版本为原型阶段，实现了透明无边框窗口、启动画面动画、长按拖动等基础功能
-> - 本项目采用 **AGPL-3.0** 协议 + 自定协议进行开源，还请务必遵守相关条款
+> - 本项目采用 **双许可模式**：**AGPL-3.0**（含附加条款）或 **付费商业许可**，还请务必遵守相关条款
 
 欢迎各位大佬 `Star` 😍
 
@@ -28,7 +28,7 @@
 
 ## 💻 更新记录
 
-### v0.0.1版本待发布
+### v0.0.5版本待发布
 
 <br />
 
@@ -98,14 +98,20 @@
 
 ## 📜 开源许可
 
-- **本项目仅供个人学习研究使用，禁止用于商业及非法用途**
-- 本项目基于 [GNU Affero General Public License (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.html) + [自定协议进行开源](LICENSE.addendum)
-  1. **修改和分发：** 任何对本项目的修改和分发都必须基于 AGPL-3.0 和 自定协议 进行，源代码必须一并提供
-  2. **网络服务：** 如果本项目的代码被用于提供网络服务，服务的用户必须能够获取完整的源代码
-  3. **派生作品：** 任何派生作品必须同样采用 AGPL-3.0 和 自定协议，并在适当的地方注明原始项目的许可证
-  4. **免责声明：** 根据 AGPL-3.0 和 自定协议，本项目不提供任何明示或暗示的担保
-  5. **社区参与：** 欢迎社区的参与和贡献，我们鼓励开发者一同改进和维护本项目
-  6. **关于协议：** This project is licensed under the GNU AGPLv3.All redistribution and derivative works are subject to both LICENSE and LICENSE.addendum.LICENSE.addendum is an inseparable supplementary term pursuant to AGPLv3 Section 7, with equal legal force.Any distribution without LICENSE.addendum constitutes a license violation.
+本项目采用 **双许可（Dual Licensing）** 模式，你可以二选一：
+
+1. **GNU AGPL-3.0（免费）**
+   - 基于 [GNU Affero General Public License (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.html) + [附加条款](LICENSE.addendum)（署名保留、商标限制等 AGPL 第 7 条允许的条款）
+   - 在完全遵守协议的前提下可自由使用、修改和分发（包括商业用途），但衍生作品及通过网络提供的服务必须以相同条款公开完整源代码
+   - 本项目不提供任何明示或暗示的担保
+
+2. **商业许可（付费）**
+   - 如需在不履行 AGPL-3.0 开源义务的情况下使用本项目（例如闭源集成到商业产品、不公开衍生作品源代码等），请联系作者购买商业授权
+   - 联系方式：通过 [Gmail 邮箱](mailto:l2179725762@gmail.com) Lr灰弹
+
+> 欢迎社区的参与和贡献，我们鼓励开发者一同改进和维护本项目 ❤️
+> 
+> 请注意：向本项目提交代码即表示你同意你的贡献以上述双许可模式进行授权。
 
 <br />
 
