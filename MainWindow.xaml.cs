@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -55,9 +54,13 @@ namespace KfuPet
 
         internal VisionService VisionService { get; } = new VisionService();
 
+        internal LogService LogService { get; } = new LogService();
+
         internal CommandDispatcher CommandDispatcher { get; } = new CommandDispatcher();
 
         private NamedPipeServer? _pipeServer;
+
+        private LogPipeServer? _logPipeServer;
 
         /// <summary>
         /// 工具端是否已连接。开发者开关等依赖工具端的功能可检查此属性。
@@ -89,18 +92,23 @@ namespace KfuPet
             _pipeServer = new NamedPipeServer(CommandDispatcher, Application.Current);
             _pipeServer.ClientStateChanged += OnToolConnectionChanged;
             _pipeServer.Start();
+
+            _logPipeServer = new LogPipeServer(LogService);
+            _logPipeServer.Start();
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             _pipeServer?.Stop();
             _pipeServer?.Dispose();
+            _logPipeServer?.Stop();
+            _logPipeServer?.Dispose();
         }
 
         private void OnToolConnectionChanged(object? sender, EventArgs e)
         {
             // 后期在这里处理开发者开关状态等逻辑
-            Debug.WriteLine($"[KfuPet] 工具端{(IsToolConnected ? "已连接" : "已断开")}");
+            LogService.Info($"工具端{(IsToolConnected ? "已连接" : "已断开")}");
         }
 
         // 此代码只做演示作用，后期会进行修改删除

@@ -1,6 +1,6 @@
 # KfuPet IPC API 文档
 
-> 通过 Named Pipe（命名管道）跨进程调用 KfuPet 的骨骼系统与图片渲染。
+> 通过 Named Pipe（命名管道）跨进程调用 KfuPet 的骨骼系统与图片渲染，并订阅运行日志。
 > 适用于开发者工具、管理器等独立外部程序。
 
 ## 架构概览
@@ -8,24 +8,28 @@
 ```
                     KfuPet.exe 
                          │ 
-             ┌───────────┴───────────┐ 
-             │                       │ 
-             ▼                       ▼ 
-        NamedPipeServer         HttpServer（后期，安卓调试用，Kestrel）
-             │                       │ 
-             └───────────┬───────────┘ 
-                         ▼ 
-                  CommandDispatcher 
-                         ▼ 
-    ┌──────────┬──────────┬──────────┬──────────┐
-    ▼          ▼          ▼          ▼
-Skeleton   Memory     Emotion     Vision
-Service    Service    Service     Service
+        ┌────────────────┼────────────────┐ 
+        │                │                │ 
+        ▼                ▼                ▼ 
+NamedPipeServer    LogPipeServer     HttpServer（后期，Kestrel）
+  KfuPet.Skeleton    KfuPet.Log        （安卓调试用） 
+  （命令，双向）      （日志，单向推送）      │ 
+        │                │                │ 
+        │                ▼                │ 
+        │             LogService          │ 
+        │             （日志缓冲）         │ 
+        ▼                                 │ 
+ CommandDispatcher ◄──────────────────────┘ 
+        ▼ 
+ Skeleton / Memory / Emotion / Vision 
+ Service 
 ```
 
 **安卓调试流程**：安卓设备通过有线/无线 ADB 连接电脑后，安卓端的开发者工具通过 HttpServer 远程调用 KfuPet API，实现骨骼调试与控制。
 
-所有服务共用同一个管道和命令分发器，通过 `service` 字段区分目标服务。本文档主要描述 `skeleton`（骨骼）服务。
+所有命令服务共用 `KfuPet.Skeleton` 管道和命令分发器，通过 `service` 字段区分目标服务。本文档主要描述 `skeleton`（骨骼）服务。
+
+日志通过独立的 `KfuPet.Log` 管道单向推送，不经过命令分发器，详见 [日志管道](#日志管道)。
 
 ## 目录
 
@@ -44,6 +48,7 @@ Service    Service    Service     Service
 - [调试控制](#调试控制)
 - [Action 列表](#action-列表)
 - [骨骼 ID 列表](#骨骼-id-列表)
+- [日志管道](#日志管道)
 
 ---
 
@@ -214,7 +219,7 @@ string? parentId = client.GetParentBoneId("arm_left_lower");
 
 ```csharp
 var children = client.GetChildBoneIds("body");
-// 返回 ["neck", "arm_left_upper", "arm_right_upper", "hip"]
+// 返回 ["neck", "arm_left_upper", "arm_right_upper"]
 ```
 
 **对应 action**：`GetChildBoneIds`
@@ -977,6 +982,8 @@ var ids = client.GetBoneAttachments("head");
 
 当前默认角色骨骼结构：
 
+> 完整的骨骼层级、用途和建议图片名称见 [SKELETON_BONES.md](./SKELETON_BONES.md)。
+
 | 骨骼 ID | 名称 | 父骨骼 | 说明 |
 |---------|------|--------|------|
 | root | Root | 无 | 根骨骼，位于画布中心 |
@@ -987,28 +994,26 @@ var ids = client.GetBoneAttachments("head");
 | arm_left_lower | LeftArmLower | arm_left_upper | 左小臂 |
 | arm_right_upper | RightArmUpper | body | 右上臂 |
 | arm_right_lower | RightArmLower | arm_right_upper | 右小臂 |
-| hip | Hip | body | 臀部 |
-| leg_left_upper | LeftLegUpper | hip | 左大腿 |
+| leg_left_upper | LeftLegUpper | root | 左大腿 |
 | leg_left_lower | LeftLegLower | leg_left_upper | 左小腿 |
-| leg_right_upper | RightLegUpper | hip | 右大腿 |
+| leg_right_upper | RightLegUpper | root | 右大腿 |
 | leg_right_lower | RightLegLower | leg_right_upper | 右小腿 |
 
 ### 骨骼层次结构
 
 ```
 root
-└── body
-    ├── neck
-    │   └── head
-    ├── arm_left_upper
-    │   └── arm_left_lower
-    ├── arm_right_upper
-    │   └── arm_right_lower
-    └── hip
-        ├── leg_left_upper
-        │   └── leg_left_lower
-        └── leg_right_upper
-            └── leg_right_lower
+├── body
+│   ├── neck
+│   │   └── head
+│   ├── arm_left_upper
+│   │   └── arm_left_lower
+│   └── arm_right_upper
+│       └── arm_right_lower
+├── leg_left_upper
+│   └── leg_left_lower
+└── leg_right_upper
+    └── leg_right_lower
 ```
 
 ---
@@ -1110,6 +1115,65 @@ client.Batch(b =>
 // 旋转手臂 — 图片会自动跟随骨骼
 client.SetRotation("arm_left_upper", 45);
 ```
+
+---
+
+## 日志管道
+
+KfuPet 通过独立的命名管道 `KfuPet.Log` 向外部工具单向推送运行日志，供开发者工具实时查看程序状态。日志管道采用「推送」模型：客户端连接后先收到历史日志，之后实时接收新日志。
+
+### 管道信息
+
+| 项目 | 值 |
+|------|-----|
+| 管道名称 | `KfuPet.Log` |
+| 方向 | 双向（InOut） |
+| 传输模式 | Message |
+| 数据格式 | JSON（逐行传输） |
+
+> 日志数据仍为单向（服务端 → 客户端），反向读取仅用于服务端检测客户端断开。
+
+### 准备工作
+
+将客户端 SDK 复制到你的项目中：
+
+- 文件路径：`Services/Ipc/LogPipeClient.cs`
+- 命名空间：`KfuPet.Ipc.Client`
+- 依赖：`System.IO.Pipes`（.NET 内置）、`System.Text.Json`（.NET 内置）
+
+### 接收日志
+
+```csharp
+using KfuPet.Ipc.Client;
+
+using var client = new LogPipeClient();
+
+client.LogReceived += (_, m) =>
+{
+    Console.WriteLine($"[{m.Level}] {m.Message}");
+};
+
+await client.ConnectAsync();
+
+// 保持运行，持续接收日志
+Console.ReadLine();
+```
+
+### 日志消息格式
+
+每条日志为一行 JSON：
+
+```json
+{"Timestamp":"2026-08-18T12:00:00.0000000Z","Level":"Info","Message":"工具端已连接"}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| Timestamp | string | 日志时间（UTC，ISO 8601） |
+| Level | string | 日志级别：`Debug` / `Info` / `Warning` / `Error` |
+| Message | string | 日志内容 |
+
+> 连接建立后，服务端会先补发最近 1000 条历史日志，再实时推送新日志。
 
 ---
 
