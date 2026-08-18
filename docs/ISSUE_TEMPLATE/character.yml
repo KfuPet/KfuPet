@@ -1,0 +1,62 @@
+name: Character Package
+description: 提交自定义角色包
+labels: [character]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        感谢你为 KfuPet 贡献角色包！请填写以下信息。
+
+  - type: input
+    validations:
+      required: true
+    attributes:
+      label: "角色名称"
+      placeholder: "如：KfuPet"
+
+  - type: input
+    attributes:
+      label: "作者"
+      placeholder: "你的名字或团队名称"
+
+  - type: input
+    attributes:
+      label: "版本"
+      placeholder: "如：1.0.0"
+
+  - type: textarea
+    attributes:
+      label: "描述"
+      description: "描述这个角色的特点和风格"
+      placeholder: "一个可爱的AI桌面伴侣..."
+
+  - type: checkboxes
+    attributes:
+      label: "资源清单"
+      description: "请确认你的角色包包含以下文件"
+      options:
+        - label: "骨骼定义 (skeleton.json)"
+        - label: "附件配置 (attachments.json)"
+        - label: "表情配置 (expressions.json)"
+        - label: "角色信息 (character.json)"
+        - label: "图片资源 (images/)"
+        - label: "动画数据 (animations/)"
+
+  - type: textarea
+    attributes:
+      label: "预览截图"
+      description: "请提供角色的预览截图链接或图片"
+      placeholder: "可以使用 Imgur、GitHub 图片等链接"
+
+  - type: textarea
+    attributes:
+      label: "使用说明"
+      description: "如何使用这个角色包"
+      placeholder: "将角色文件夹放入 Characters/ 目录即可..."
+
+  - type: textarea
+    attributes:
+      label: "附加信息"
+      description: "其他相关信息，如角色包下载链接等"
+      placeholder: "角色包下载链接：..."
