@@ -233,9 +233,11 @@ Avoid placing business logic inside XAML code-behind.
 
 # Character System
 
-Characters must be loaded dynamically.
+Character resources (images, animations, expressions, voice, metadata) must be loaded dynamically.
 
 Never hardcode character resources.
+
+The character skeleton (bone hierarchy) is fixed for this project — only human characters are supported — so the skeleton definition may be hardcoded in code.
 
 Future character package contains:
 
