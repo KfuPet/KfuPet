@@ -128,20 +128,19 @@ coverage*.info
 # -------------------- ClickOnce 发布 --------------------
 *.publish
 *.publishproj
-*.pubxml
 publish/
 [Pp]ublish/
 *.deploy
 *.application
 *.manifest
+!app.manifest
 
 # -------------------- Publish 输出 --------------------
 publish/
 [Pp]ublish[Aa]rtifacts/
-[Pp]ublish[Pp]rofiles/
 *.publishproj
 *.publishproj.user
-*.pubxml
+**/*.pubxml.user
 
 # -------------------- Blend / XAML 设计器 --------------------
 *_wpftmp.csproj
