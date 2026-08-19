@@ -10,7 +10,13 @@ namespace KfuPet.Core.Rendering
 {
     public class SkeletonRenderer : Renderer
     {
-        private readonly Dictionary<string, BitmapImage> _imageCache = new();
+        private const int MAX_IMAGE_CACHE = 256;
+
+        private static readonly string _resourceRootDir = System.IO.Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, "Resources");
+
+        private readonly Dictionary<string, (BitmapImage Image, DateTime LastWriteUtc)> _imageCache = new();
+
         private const double BONE_LINE_THICKNESS = 3;
         private const double JOINT_RADIUS = 4;
 
@@ -132,31 +138,58 @@ namespace KfuPet.Core.Rendering
             var path = attachment.GetCurrentResourcePath();
             if (string.IsNullOrEmpty(path)) return null;
 
-            if (_imageCache.TryGetValue(path, out var cached))
-                return cached;
+            var fullPath = ResolveResourcePath(path);
+            var lastWriteUtc = GetLastWriteTimeUtc(fullPath);
+
+            // 文件未变化时复用缓存，避免重复解码；文件更新后自动重新加载。
+            if (_imageCache.TryGetValue(fullPath, out var entry) && entry.LastWriteUtc == lastWriteUtc)
+                return entry.Image;
 
             try
             {
                 var bitmap = new BitmapImage();
                 bitmap.BeginInit();
-
-                if (System.IO.Path.IsPathRooted(path))
-                {
-                    bitmap.UriSource = new Uri(path);
-                }
-                else
-                {
-                    bitmap.UriSource = new Uri(path, UriKind.RelativeOrAbsolute);
-                }
-
+                bitmap.UriSource = new Uri(fullPath);
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
                 bitmap.EndInit();
-                _imageCache[path] = bitmap;
+                bitmap.Freeze();
+
+                if (_imageCache.Count >= MAX_IMAGE_CACHE)
+                    _imageCache.Clear();
+
+                _imageCache[fullPath] = (bitmap, lastWriteUtc);
                 return bitmap;
             }
             catch
             {
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// 将相对资源路径解析到统一的资源根目录（{BaseDirectory}/Resources）下。
+        /// </summary>
+        private static string ResolveResourcePath(string path)
+        {
+            return System.IO.Path.IsPathRooted(path)
+                ? path
+                : System.IO.Path.Combine(_resourceRootDir, path);
+        }
+
+        /// <summary>
+        /// 获取文件最后写入时间，用于缓存失效判断；文件不存在或不可读时返回 MinValue。
+        /// </summary>
+        private static DateTime GetLastWriteTimeUtc(string fullPath)
+        {
+            try
+            {
+                var fileInfo = new FileInfo(fullPath);
+                return fileInfo.Exists ? fileInfo.LastWriteTimeUtc : DateTime.MinValue;
+            }
+            catch
+            {
+                return DateTime.MinValue;
             }
         }
 
