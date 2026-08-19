@@ -16,6 +16,8 @@ namespace KfuPet.Core.Rendering
 
         /// <summary>
         /// 是否显示骨骼调试线框（默认关闭）。
+        /// 这是给创作者对照模型资源、定位骨骼摆放位置的参考工具，长期保留，不会移除。
+        /// 由开发工具端通过开关控制启用。
         /// </summary>
         public bool ShowDebugBones { get; set; }
 
@@ -58,6 +60,9 @@ namespace KfuPet.Core.Rendering
             }
         }
 
+        /// <summary>
+        /// 绘制骨骼调试线框（骨骼连线与关节圆点），供创作者对照模型资源定位骨骼。
+        /// </summary>
         private void RenderDebugBones(Skeleton skeleton)
         {
             foreach (var bone in skeleton.Bones)
