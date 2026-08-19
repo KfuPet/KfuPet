@@ -282,13 +282,14 @@ namespace KfuPet.Services
 
         /// <summary>
         /// 为指定骨骼添加图片附件。
+        /// root 骨骼是世界锚点，不是身体部位，不承载图片资源。
         /// </summary>
         public Attachment? AddAttachment(string boneId, string attachmentId, string name,
             string resourcePath, double offsetX = 0, double offsetY = 0,
             double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0)
         {
             var bone = _skeleton?.FindBone(boneId);
-            if (bone == null) return null;
+            if (bone == null || bone.ParentId == null) return null; // root 不挂图
 
             var attachment = new Attachment
             {

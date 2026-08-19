@@ -598,6 +598,8 @@ if (worldPos.HasValue)
 
 将图片挂载到骨骼上的机制。图片会跟随骨骼移动和旋转，用于渲染角色的身体部位（头部、躯干、四肢等）。
 
+> **注意**：`root` 骨骼是世界锚点，不是身体部位，不接受图片挂载。挂载到 `root` 会返回 `false`。
+
 ### 完整流程
 
 从工具端上传图片并挂载到骨骼的标准流程：
@@ -708,9 +710,10 @@ bool success = client.AddAttachment(
 | pivotY | double | 旋转锚点 Y（0-1，默认 0.5 居中） |
 | zOrder | int | 渲染层级（默认 0） |
 
-**返回值**：`bool` — `true` 添加成功，`false` 骨骼不存在
+**返回值**：`bool` — `true` 添加成功，`false` 骨骼不存在或为 `root` 骨骼
 
 > **注意**：`pivotX` / `pivotY` 定义了图片的旋转中心（0=左上角，1=右下角）。默认 `0.5, 0.5` 为图片中心。
+> `root` 骨骼不承载图片资源，传入 `boneId: "root"` 会返回 `false`。
 
 ### AddAttachmentAsync（异步版本）
 
@@ -986,7 +989,7 @@ var ids = client.GetBoneAttachments("head");
 
 | 骨骼 ID | 名称 | 父骨骼 | 说明 |
 |---------|------|--------|------|
-| root | Root | 无 | 根骨骼，位于画布中心 |
+| root | Root | 无 | 根骨骼（世界锚点），位于画布中心，不承载图片 |
 | body | Body | root | 身体主干 |
 | neck | Neck | body | 颈部 |
 | head | Head | neck | 头部 |

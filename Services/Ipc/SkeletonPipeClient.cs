@@ -75,7 +75,10 @@ namespace KfuPet.Ipc.Client
         private async Task<bool> CallSkeletonBoolAsync(string action, object? parameters = null, CancellationToken ct = default)
         {
             var response = await SendRequestAsync("skeleton", action, parameters, ct);
-            return response.Success;
+            if (!response.Success) return false;
+            if (response.Data is JsonElement je) return je.ValueKind == JsonValueKind.True;
+            if (response.Data is bool b) return b;
+            return true; // Data 为空时（Batch / ResetAll / SetDebugSkeleton），按命令已成功执行处理
         }
 
         /// <summary>
