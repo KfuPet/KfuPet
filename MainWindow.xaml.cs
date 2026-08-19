@@ -43,7 +43,6 @@ namespace KfuPet
         private double _dpiScaleX = double.NaN;
         private double _dpiScaleY = double.NaN;
 
-        // 此代码只做演示作用，后期会进行修改删除
         private Skeleton? _skeleton;
 
         internal SkeletonService SkeletonService { get; } = new SkeletonService();
@@ -111,15 +110,11 @@ namespace KfuPet
             LogService.Info($"工具端{(IsToolConnected ? "已连接" : "已断开")}");
         }
 
-        // 此代码只做演示作用，后期会进行修改删除
-        // 手动创建演示用骨骼结构，实际项目中将从配置文件加载角色数据
         private void InitializeSkeleton(double dpiScale)
         {
-            // 此代码只做演示作用，后期会进行修改删除
             _skeleton = new Skeleton();
 
             // ==================== 根骨骼 ====================
-            // 此代码只做演示作用，后期会进行修改删除
             _skeleton.AddBone(new Bone
             {
                 Id = "root",
@@ -217,9 +212,7 @@ namespace KfuPet
             });
 
             // ==================== 更新变换 ====================
-            // 此代码只做演示作用，后期会进行修改删除
             _skeleton.UpdateWorldTransforms();  // 计算所有骨骼的世界坐标
-            // 此代码只做演示作用，后期会进行修改删除
             CharacterCanvas.Skeleton = _skeleton;  // 将骨骼绑定到渲染画布
 
             SkeletonService.BindSkeleton(_skeleton);

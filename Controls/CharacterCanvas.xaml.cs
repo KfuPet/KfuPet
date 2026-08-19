@@ -54,11 +54,9 @@ namespace KfuPet.Controls
             }
         }
 
-        // 此代码只做演示作用，后期会进行修改删除
         private void InitializeRenderer()
         {
             _renderContext = new RenderContext(RenderCanvas);
-            // 此代码只做演示作用，后期会进行修改删除
             _skeletonRenderer = new SkeletonRenderer(_renderContext);
         }
 
@@ -70,21 +68,17 @@ namespace KfuPet.Controls
             }
         }
 
-        // 此代码只做演示作用，后期会进行修改删除
         public void Render()
         {
             if (_skeletonRenderer != null && Skeleton != null)
             {
                 Skeleton.UpdateWorldTransforms();
-                // 此代码只做演示作用，后期会进行修改删除
                 _skeletonRenderer.Render(Skeleton);
             }
         }
 
-        // 此代码只做演示作用，后期会进行修改删除
         public void Clear()
         {
-            // 此代码只做演示作用，后期会进行修改删除
             _skeletonRenderer?.Clear();
         }
     }
