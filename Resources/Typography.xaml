@@ -1,0 +1,12 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <!-- 字体族令牌（主题无关） -->
+    <FontFamily x:Key="FontFamilyDisplay">Segoe UI Variable Display, Segoe UI</FontFamily>
+    <FontFamily x:Key="FontFamilyBody">Segoe UI Variable Text, Segoe UI</FontFamily>
+
+    <!-- 字号层级令牌 -->
+    <sys:Double x:Key="FontSizeTitle">22</sys:Double>
+    <sys:Double x:Key="FontSizeSubtitle">18</sys:Double>
+    <sys:Double x:Key="FontSizeCaption">14</sys:Double>
+</ResourceDictionary>

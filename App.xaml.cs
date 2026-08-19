@@ -25,6 +25,9 @@ namespace KfuPet
 
             base.OnStartup(e);
 
+            // 根据系统主题加载配色令牌
+            ApplySystemTheme();
+
             // 初始化系统托盘图标
             InitializeTrayIcon();
 
@@ -76,6 +79,48 @@ namespace KfuPet
             contextMenu.Items.Add(exitItem);
 
             _notifyIcon.ContextMenuStrip = contextMenu;
+        }
+
+        /// <summary>
+        /// 根据系统深色/浅色模式加载对应的配色令牌资源。
+        /// </summary>
+        private void ApplySystemTheme()
+        {
+            if (!IsSystemDarkMode())
+            {
+                return;
+            }
+
+            var dictionaries = Resources.MergedDictionaries;
+            for (var i = 0; i < dictionaries.Count; i++)
+            {
+                var source = dictionaries[i].Source?.OriginalString;
+                if (source != null && source.Contains("Colors.Light.xaml"))
+                {
+                    dictionaries[i] = new ResourceDictionary
+                    {
+                        Source = new Uri("Resources/Colors.Dark.xaml", UriKind.Relative)
+                    };
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 通过注册表检测系统是否使用深色模式。
+        /// </summary>
+        private static bool IsSystemDarkMode()
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+                return key?.GetValue("AppsUseLightTheme") is int v && v == 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         protected override void OnExit(ExitEventArgs e)

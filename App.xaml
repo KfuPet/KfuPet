@@ -1,7 +1,15 @@
-﻿<Application x:Class="KfuPet.App"
+<Application x:Class="KfuPet.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:KfuPet">
     <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 默认浅色主题，运行时根据系统主题在 App 中切换为深色 -->
+                <ResourceDictionary Source="Resources/Colors.Light.xaml"/>
+                <!-- 字体与字号令牌（主题无关） -->
+                <ResourceDictionary Source="Resources/Typography.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

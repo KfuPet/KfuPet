@@ -15,7 +15,8 @@
         ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen">
 
-    <Grid x:Name="RootGrid">
+    <Grid x:Name="RootGrid"
+          Background="{DynamicResource AppBackgroundBrush}">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
             <Image x:Name="LogoImage"
                    Source="pack://application:,,,/Assets/icon/Startlogo.png"
@@ -24,6 +25,9 @@
                    Stretch="Uniform"
                    Opacity="0"
                    RenderTransformOrigin="0.5,0.5">
+                <Image.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="0" Opacity="0.35" Color="Black"/>
+                </Image.Effect>
                 <Image.RenderTransform>
                     <ScaleTransform x:Name="LogoScale" ScaleX="0.5" ScaleY="0.5"/>
                 </Image.RenderTransform>
@@ -39,8 +43,9 @@
                            Text="你的智能桌面伙伴"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
-                           FontSize="18"
-                           Foreground="#FF9B9B9B">
+                           FontFamily="{StaticResource FontFamilyBody}"
+                           FontSize="{StaticResource FontSizeSubtitle}"
+                           Foreground="{DynamicResource AppTextSecondaryBrush}">
                     <TextBlock.RenderTransform>
                         <!-- X="-32": 初始向左偏移使文字从遮罩外开始，与遮罩左端对齐 -->
                         <TranslateTransform x:Name="SubtitleTransform" X="-32"/>
@@ -63,8 +68,10 @@
                            Text="KfuPet"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
-                           FontSize="22"
+                           FontFamily="{StaticResource FontFamilyDisplay}"
+                           FontSize="{StaticResource FontSizeTitle}"
                            FontWeight="Bold"
+                           Foreground="{DynamicResource AppTextPrimaryBrush}"
                            Opacity="0">
                     <TextBlock.RenderTransform>
                         <!-- Y="-30": 初始从上方滑入，使标题文字从上方不可见位置开始 -->
@@ -78,8 +85,9 @@
                    HorizontalAlignment="Center"
                    VerticalAlignment="Bottom"
                    Margin="0,0,0,30"
-                   FontSize="14"
-                   Foreground="#FF9B9B9B"
+                   FontFamily="{StaticResource FontFamilyBody}"
+                   FontSize="{StaticResource FontSizeCaption}"
+                   Foreground="{DynamicResource AppTextSecondaryBrush}"
                    Opacity="0"/>
 
         <Grid.Resources>

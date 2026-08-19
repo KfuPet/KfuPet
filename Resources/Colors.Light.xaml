@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 浅色主题配色令牌 -->
+
+    <!-- 背景与表面 -->
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFF7F7F9"/>
+
+    <!-- 文本 -->
+    <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#FF1A1A1E"/>
+    <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#FF6B6B76"/>
+    <SolidColorBrush x:Key="AppTextDisabledBrush" Color="#FFB4B4BC"/>
+
+    <!-- 边框 -->
+    <SolidColorBrush x:Key="AppBorderBrush" Color="#FFE5E5EA"/>
+
+    <!-- 品牌强调色 -->
+    <SolidColorBrush x:Key="AppAccentBrush" Color="#FF7C5CFF"/>
+    <SolidColorBrush x:Key="AppAccentHoverBrush" Color="#FF9678FF"/>
+    <SolidColorBrush x:Key="AppAccentForegroundBrush" Color="#FFFFFFFF"/>
+</ResourceDictionary>

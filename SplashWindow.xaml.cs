@@ -20,46 +20,10 @@ namespace KfuPet
         public SplashWindow()
         {
             InitializeComponent();
-            ApplySystemTheme();
             LoadVersion();
             SetupMask();
             StartEntranceAnimation();
             StartCountdown();
-        }
-
-        /// <summary>
-        /// 读取 Windows 个性化设置中的深色/浅色模式并应用主题色。
-        /// </summary>
-        private void ApplySystemTheme()
-        {
-            bool isDark = IsSystemDarkMode();
-            var bgColor = isDark ? Color.FromRgb(0x1E, 0x1E, 0x1E) : Colors.White;
-            var titleFg = isDark ? Brushes.White : Brushes.Black;
-            var subtitleFg = isDark
-                ? new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA))
-                : new SolidColorBrush(Color.FromRgb(0x9B, 0x9B, 0x9B));
-
-            RootGrid.Background = new SolidColorBrush(bgColor);
-            TitleText.Foreground = titleFg;
-            SubtitleText.Foreground = subtitleFg;
-            VersionText.Foreground = subtitleFg;
-        }
-
-        /// <summary>
-        /// 通过注册表检测系统是否使用深色模式。
-        /// </summary>
-        private static bool IsSystemDarkMode()
-        {
-            try
-            {
-                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-                return key?.GetValue("AppsUseLightTheme") is int v && v == 0;
-            }
-            catch
-            {
-                return false;
-            }
         }
 
         private void StartEntranceAnimation()
