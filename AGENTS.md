@@ -239,6 +239,8 @@ Never hardcode character resources.
 
 The character skeleton (bone hierarchy) is fixed for this project — only human characters are supported — so the skeleton definition may be hardcoded in code.
 
+The debug bone overlay (ShowDebugBones) is a permanent creator tool for aligning the model against the skeleton reference. It is off by default and toggled from the developer tool. Do NOT treat it as temporary debug code to be removed.
+
 Future character package contains:
 
 - Images
