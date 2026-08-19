@@ -105,6 +105,14 @@ namespace KfuPet.Ipc.Client
             return (je.GetProperty("x").GetDouble(), je.GetProperty("y").GetDouble());
         }
 
+        /// <summary>
+        /// root 骨骼是世界锚点，不承载图片资源，挂载操作直接返回 false。
+        /// </summary>
+        private static bool IsRootBoneId(string? boneId)
+        {
+            return string.Equals(boneId, "root", StringComparison.OrdinalIgnoreCase);
+        }
+
         public IReadOnlyList<string> GetBoneIds()
         {
             return CallSkeletonAsync<IReadOnlyList<string>>("GetBoneIds").GetAwaiter().GetResult()
@@ -240,6 +248,7 @@ namespace KfuPet.Ipc.Client
             string resourcePath, double offsetX = 0, double offsetY = 0,
             double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0)
         {
+            if (IsRootBoneId(boneId)) return false;
             return CallSkeletonBoolAsync("AddAttachment", new
             {
                 boneId, attachmentId, name, resourcePath,
@@ -251,6 +260,7 @@ namespace KfuPet.Ipc.Client
             string resourcePath, double offsetX = 0, double offsetY = 0,
             double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0, CancellationToken ct = default)
         {
+            if (IsRootBoneId(boneId)) return false;
             return await CallSkeletonBoolAsync("AddAttachment", new
             {
                 boneId, attachmentId, name, resourcePath,
