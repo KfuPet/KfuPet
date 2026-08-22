@@ -156,11 +156,11 @@
                 </DoubleAnimation>
 
                 <!-- "KfuPet" 和遮罩同步向左滑，"你的智能桌面伙伴" 向右滑露出 -->
-                <!-- 以下偏移量(-82/-82/50)需要根据实际文字宽度和布局调整，与上方魔数耦合 -->
+                <!-- 三个动画的 To 值由代码后置按实际文字宽度计算，使两文字间空隙的中心与 Logo 中心线对齐 -->
                 <DoubleAnimation
                     Storyboard.TargetName="TitleTransform"
                     Storyboard.TargetProperty="X"
-                    From="0" To="-82"
+                    From="0"
                     Duration="0:0:0.6"
                     BeginTime="0:0:1.5">
                     <DoubleAnimation.EasingFunction>
@@ -170,7 +170,7 @@
                 <DoubleAnimation
                     Storyboard.TargetName="MaskTransform"
                     Storyboard.TargetProperty="X"
-                    From="0" To="-82"
+                    From="0"
                     Duration="0:0:0.6"
                     BeginTime="0:0:1.5">
                     <DoubleAnimation.EasingFunction>
@@ -180,7 +180,7 @@
                 <DoubleAnimation
                     Storyboard.TargetName="SubtitleTransform"
                     Storyboard.TargetProperty="X"
-                    From="-32" To="50"
+                    From="-32"
                     Duration="0:0:0.6"
                     BeginTime="0:0:1.5">
                     <DoubleAnimation.EasingFunction>

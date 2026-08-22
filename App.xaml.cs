@@ -1,4 +1,5 @@
 using System.Windows;
+using KfuPet.Views;
 
 namespace KfuPet
 {
@@ -9,6 +10,7 @@ namespace KfuPet
     {
         private MainWindow? _mainWindow;
         private System.Windows.Forms.NotifyIcon? _notifyIcon;
+        private SettingsWindow? _settingsWindow;
         private Mutex? _mutex;
 
         protected override void OnStartup(StartupEventArgs e)
@@ -67,6 +69,8 @@ namespace KfuPet
             var settingsItem = new System.Windows.Forms.ToolStripMenuItem("设置");
             var exitItem = new System.Windows.Forms.ToolStripMenuItem("退出");
 
+            settingsItem.Click += (s, args) => OpenSettingsWindow();
+
             exitItem.Click += (s, args) =>
             {
                 _notifyIcon?.Dispose();
@@ -79,6 +83,23 @@ namespace KfuPet
             contextMenu.Items.Add(exitItem);
 
             _notifyIcon.ContextMenuStrip = contextMenu;
+        }
+
+        /// <summary>
+        /// 打开设置窗口（单例），再次点击时激活已有窗口。
+        /// </summary>
+        private void OpenSettingsWindow()
+        {
+            if (_mainWindow == null) return;
+
+            if (_settingsWindow == null)
+            {
+                _settingsWindow = new SettingsWindow(_mainWindow);
+                _settingsWindow.Closed += (s, e) => _settingsWindow = null;
+            }
+
+            _settingsWindow.Show();
+            _settingsWindow.Activate();
         }
 
         /// <summary>

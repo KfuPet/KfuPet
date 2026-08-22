@@ -55,16 +55,26 @@ namespace KfuPet
 
         internal LogService LogService { get; } = new LogService();
 
+        internal DeveloperModeService DeveloperModeService { get; } = new DeveloperModeService();
+
         internal CommandDispatcher CommandDispatcher { get; } = new CommandDispatcher();
 
         private NamedPipeServer? _pipeServer;
 
         private LogPipeServer? _logPipeServer;
 
+        private DispatcherTimer? _toolMonitorTimer;
+        private bool _wasToolRunning;
+
         /// <summary>
-        /// 工具端是否已连接。开发者开关等依赖工具端的功能可检查此属性。
+        /// 开发者工具（KfuPet-Tool）进程是否正在运行。
         /// </summary>
-        public bool IsToolConnected => _pipeServer?.IsClientConnected ?? false;
+        public bool IsToolRunning => DeveloperModeService.IsToolRunning();
+
+        /// <summary>
+        /// 开发者工具运行状态变化时触发，供设置界面同步显示。
+        /// </summary>
+        public event EventHandler? ToolRunningChanged;
 
         public MainWindow()
         {
@@ -89,25 +99,69 @@ namespace KfuPet
             CommandDispatcher.RegisterService(VisionService);
 
             _pipeServer = new NamedPipeServer(CommandDispatcher, Application.Current);
-            _pipeServer.ClientStateChanged += OnToolConnectionChanged;
-            _pipeServer.Start();
-
             _logPipeServer = new LogPipeServer(LogService);
-            _logPipeServer.Start();
+
+            // 管道由开发者模式开关控制，默认关闭
+            DeveloperModeService.EnabledChanged += OnDeveloperModeChanged;
+            ApplyDeveloperMode();
+
+            StartToolMonitor();
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            _toolMonitorTimer?.Stop();
             _pipeServer?.Stop();
             _pipeServer?.Dispose();
             _logPipeServer?.Stop();
             _logPipeServer?.Dispose();
         }
 
-        private void OnToolConnectionChanged(object? sender, EventArgs e)
+        private void OnDeveloperModeChanged(object? sender, EventArgs e)
         {
-            // 后期在这里处理开发者开关状态等逻辑
-            LogService.Info($"工具端{(IsToolConnected ? "已连接" : "已断开")}");
+            ApplyDeveloperMode();
+            ToolRunningChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 根据开发者模式开关状态启动或停止供开发者工具连接的命名管道。
+        /// </summary>
+        private void ApplyDeveloperMode()
+        {
+            if (DeveloperModeService.IsEnabled)
+            {
+                _pipeServer?.Start();
+                _logPipeServer?.Start();
+                LogService.Info("开发者模式已开启");
+            }
+            else
+            {
+                _pipeServer?.Stop();
+                _logPipeServer?.Stop();
+                LogService.Info("开发者模式已关闭");
+            }
+        }
+
+        /// <summary>
+        /// 定时检测开发者工具进程是否运行，状态变化时通知设置界面。
+        /// </summary>
+        private void StartToolMonitor()
+        {
+            _wasToolRunning = DeveloperModeService.IsToolRunning();
+
+            _toolMonitorTimer = new DispatcherTimer();
+            _toolMonitorTimer.Interval = TimeSpan.FromSeconds(2);
+            _toolMonitorTimer.Tick += (s, e) =>
+            {
+                var running = DeveloperModeService.IsToolRunning();
+                if (running != _wasToolRunning)
+                {
+                    _wasToolRunning = running;
+                    LogService.Info($"开发者工具{(running ? "已启动" : "已退出")}");
+                    ToolRunningChanged?.Invoke(this, EventArgs.Empty);
+                }
+            };
+            _toolMonitorTimer.Start();
         }
 
         private void InitializeSkeleton(double dpiScale)

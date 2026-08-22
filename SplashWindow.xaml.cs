@@ -1,6 +1,8 @@
 using System;
+using System.Globalization;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -13,6 +15,11 @@ namespace KfuPet
     public partial class SplashWindow : Window
     {
         /// <summary>
+        /// 标题与副标题之间空隙的目标宽度（设备无关像素）。
+        /// </summary>
+        private const double TextGap = 16;
+
+        /// <summary>
         /// 启动动画完成（含淡出）时触发，主窗口监听此事件后显示。
         /// </summary>
         public event EventHandler? SplashCompleted;
@@ -22,6 +29,7 @@ namespace KfuPet
             InitializeComponent();
             LoadVersion();
             SetupMask();
+            AlignTextGapToCenter();
             StartEntranceAnimation();
             StartCountdown();
         }
@@ -30,6 +38,55 @@ namespace KfuPet
         {
             var storyboard = (Storyboard)RootGrid.Resources["FadeInStoryboard"];
             storyboard.Begin();
+        }
+
+        /// <summary>
+        /// 根据实际文字宽度计算标题、遮罩与副标题位移动画的最终偏移，
+        /// 使标题与副标题之间空隙的中心与上方 Logo 的中心线对齐。
+        /// 必须在入场动画开始前调用。
+        /// </summary>
+        private void AlignTextGapToCenter()
+        {
+            double titleWidth = MeasureTextWidth(TitleText);
+            double subtitleWidth = MeasureTextWidth(SubtitleText);
+
+            double titleX = -(TextGap + titleWidth) / 2;
+            double subtitleX = (TextGap + subtitleWidth) / 2;
+
+            var storyboard = (Storyboard)RootGrid.Resources["FadeInStoryboard"];
+            foreach (var timeline in storyboard.Children)
+            {
+                if (timeline is DoubleAnimation animation
+                    && Storyboard.GetTargetProperty(animation)?.Path == "X")
+                {
+                    switch (Storyboard.GetTargetName(animation))
+                    {
+                        case "TitleTransform":
+                        case "MaskTransform":
+                            animation.To = titleX;
+                            break;
+                        case "SubtitleTransform":
+                            animation.To = subtitleX;
+                            break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 测量 TextBlock 文字的实际渲染宽度。
+        /// </summary>
+        private static double MeasureTextWidth(TextBlock textBlock)
+        {
+            var formattedText = new FormattedText(
+                textBlock.Text,
+                CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                new Typeface(textBlock.FontFamily, textBlock.FontStyle, textBlock.FontWeight, textBlock.FontStretch),
+                textBlock.FontSize,
+                Brushes.Black,
+                pixelsPerDip: 1.0);
+            return formattedText.Width;
         }
 
         /// <summary>
