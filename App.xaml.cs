@@ -11,6 +11,7 @@ namespace KfuPet
         private MainWindow? _mainWindow;
         private System.Windows.Forms.NotifyIcon? _notifyIcon;
         private SettingsWindow? _settingsWindow;
+        private TrayMenuWindow? _trayMenu;
         private Mutex? _mutex;
 
         protected override void OnStartup(StartupEventArgs e)
@@ -19,7 +20,7 @@ namespace KfuPet
             _mutex = new Mutex(true, "KfuPet_SingleInstance", out bool createdNew);
             if (!createdNew)
             {
-                MessageBox.Show("KfuPet 已在运行中。", "KfuPet", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("我已经在桌面上啦，不用再叫醒我一次～", "KfuPet", MessageBoxButton.OK, MessageBoxImage.Information);
                 _mutex = null;
                 Shutdown();
                 return;
@@ -49,7 +50,7 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 初始化系统托盘图标及右键菜单。
+        /// 初始化系统托盘图标，右键点击时弹出 WPF 自绘菜单。
         /// </summary>
         private void InitializeTrayIcon()
         {
@@ -63,26 +64,33 @@ namespace KfuPet
                 Text = "KfuPet"
             };
 
-            var contextMenu = new System.Windows.Forms.ContextMenuStrip();
-
-            var checkUpdateItem = new System.Windows.Forms.ToolStripMenuItem("检查更新");
-            var settingsItem = new System.Windows.Forms.ToolStripMenuItem("设置");
-            var exitItem = new System.Windows.Forms.ToolStripMenuItem("退出");
-
-            settingsItem.Click += (s, args) => OpenSettingsWindow();
-
-            exitItem.Click += (s, args) =>
+            _notifyIcon.MouseUp += (s, args) =>
             {
-                _notifyIcon?.Dispose();
-                Shutdown();
+                if (args.Button == System.Windows.Forms.MouseButtons.Right)
+                {
+                    ShowTrayMenu();
+                }
             };
+        }
 
-            contextMenu.Items.Add(checkUpdateItem);
-            contextMenu.Items.Add(settingsItem);
-            contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-            contextMenu.Items.Add(exitItem);
+        /// <summary>
+        /// 在光标处显示托盘菜单（单例），并挂接菜单项动作。
+        /// </summary>
+        private void ShowTrayMenu()
+        {
+            if (_trayMenu == null)
+            {
+                _trayMenu = new TrayMenuWindow();
+                _trayMenu.SettingsClicked += (s, e) => OpenSettingsWindow();
+                _trayMenu.ExitClicked += (s, e) =>
+                {
+                    _notifyIcon?.Dispose();
+                    Shutdown();
+                };
+                // TODO: 检查更新功能将在后续版本提供
+            }
 
-            _notifyIcon.ContextMenuStrip = contextMenu;
+            _trayMenu.ShowNearCursor();
         }
 
         /// <summary>

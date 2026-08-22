@@ -1,5 +1,9 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 namespace KfuPet.Views
 {
@@ -20,6 +24,14 @@ namespace KfuPet.Views
             LoadDeveloperState();
             UpdateToolStatus();
 
+            Loaded += (s, e) => PlayEntranceAnimation();
+            KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Escape)
+                {
+                    Close();
+                }
+            };
             Closed += SettingsWindow_Closed;
         }
 
@@ -29,6 +41,29 @@ namespace KfuPet.Views
             _mainWindow.ToolRunningChanged -= OnToolRunningChanged;
         }
 
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        /// <summary>
+        /// 窗口打开时的淡入 + 轻微放大动画。
+        /// </summary>
+        private void PlayEntranceAnimation()
+        {
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            RootGrid.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });
+
+            if (RootGrid.RenderTransform is ScaleTransform scale)
+            {
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty,
+                    new DoubleAnimation(0.97, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty,
+                    new DoubleAnimation(0.97, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });
+            }
+        }
+
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (ModelConfigPanel == null || DeveloperPanel == null) return;
@@ -36,6 +71,24 @@ namespace KfuPet.Views
             var showModel = NavList.SelectedIndex == 0;
             ModelConfigPanel.Visibility = showModel ? Visibility.Visible : Visibility.Collapsed;
             DeveloperPanel.Visibility = showModel ? Visibility.Collapsed : Visibility.Visible;
+
+            PlayPageEnterAnimation(showModel ? ModelConfigPanel : DeveloperPanel);
+        }
+
+        /// <summary>
+        /// 页面切换时，新页面从下方轻微滑入并淡入。
+        /// </summary>
+        private static void PlayPageEnterAnimation(FrameworkElement panel)
+        {
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            panel.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
+
+            if (panel.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(10, 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
+            }
         }
 
         private void LoadDeveloperState()
@@ -69,8 +122,8 @@ namespace KfuPet.Views
         private void UpdateToolStatus()
         {
             ToolStatusText.Text = _mainWindow.IsToolRunning
-                ? "开发者工具：已启动"
-                : "开发者工具：未启动";
+                ? "开发者工具已经连上我啦，随时欢迎来研究～"
+                : "开发者工具还没连过来，想研究我的话记得启动它。";
         }
     }
 }
