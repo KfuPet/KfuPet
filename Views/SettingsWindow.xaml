@@ -236,7 +236,7 @@
             </Setter>
         </Style>
 
-        <!-- 开关：滑块缓动滑动，轨道强调色淡入淡出 -->
+        <!-- 开关：滑块缓动滑动 + 拇指弹性缩放回弹，轨道强调色淡入淡出 -->
         <Style x:Key="ToggleSwitchStyle" TargetType="ToggleButton">
             <Setter Property="Width" Value="44"/>
             <Setter Property="Height" Value="24"/>
@@ -259,7 +259,10 @@
                                          VerticalAlignment="Center"
                                          Margin="3,0,0,0">
                                     <Ellipse.RenderTransform>
-                                        <TranslateTransform x:Name="ThumbTransform"/>
+                                        <TransformGroup>
+                                            <TranslateTransform x:Name="ThumbTransform"/>
+                                            <ScaleTransform x:Name="ThumbScale" CenterX="9" CenterY="9"/>
+                                        </TransformGroup>
                                     </Ellipse.RenderTransform>
                                 </Ellipse>
                             </Grid>
@@ -271,14 +274,34 @@
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetName="ThumbTransform"
                                                              Storyboard.TargetProperty="X"
-                                                             To="20" Duration="0:0:0.2">
+                                                             To="20" Duration="0:0:0.28">
                                                 <DoubleAnimation.EasingFunction>
                                                     <CubicEase EasingMode="EaseOut"/>
                                                 </DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ThumbScale"
+                                                                           Storyboard.TargetProperty="ScaleX">
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.12" Value="1.25">
+                                                    <EasingDoubleKeyFrame.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </EasingDoubleKeyFrame.EasingFunction>
+                                                </EasingDoubleKeyFrame>
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.24" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ThumbScale"
+                                                                           Storyboard.TargetProperty="ScaleY">
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.12" Value="1.25">
+                                                    <EasingDoubleKeyFrame.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </EasingDoubleKeyFrame.EasingFunction>
+                                                </EasingDoubleKeyFrame>
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.24" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
                                             <DoubleAnimation Storyboard.TargetName="TrackOn"
                                                              Storyboard.TargetProperty="Opacity"
-                                                             To="1" Duration="0:0:0.2"/>
+                                                             To="1" Duration="0:0:0.25"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
@@ -287,19 +310,102 @@
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetName="ThumbTransform"
                                                              Storyboard.TargetProperty="X"
-                                                             To="0" Duration="0:0:0.2">
+                                                             To="0" Duration="0:0:0.28">
                                                 <DoubleAnimation.EasingFunction>
                                                     <CubicEase EasingMode="EaseOut"/>
                                                 </DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ThumbScale"
+                                                                           Storyboard.TargetProperty="ScaleX">
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.12" Value="1.2">
+                                                    <EasingDoubleKeyFrame.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </EasingDoubleKeyFrame.EasingFunction>
+                                                </EasingDoubleKeyFrame>
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.24" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ThumbScale"
+                                                                           Storyboard.TargetProperty="ScaleY">
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.12" Value="1.2">
+                                                    <EasingDoubleKeyFrame.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </EasingDoubleKeyFrame.EasingFunction>
+                                                </EasingDoubleKeyFrame>
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.24" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
                                             <DoubleAnimation Storyboard.TargetName="TrackOn"
                                                              Storyboard.TargetProperty="Opacity"
-                                                             To="0" Duration="0:0:0.2"/>
+                                                             To="0" Duration="0:0:0.25"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
                         </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 滚动条分页按钮：透明占位，仅保留滚动功能 -->
+        <Style x:Key="ScrollBarPageButtonStyle" TargetType="RepeatButton">
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 滚动条滑块：圆角细条，悬停强调色 -->
+        <Style x:Key="ScrollBarThumbStyle" TargetType="Thumb">
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbBorder"
+                                Background="{DynamicResource AppBorderBrush}"
+                                CornerRadius="3"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbBorder"
+                                        Property="Background"
+                                        Value="{DynamicResource AppAccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 细滚动条：窄轨道 + 圆角滑块，悬停变色 -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="6"/>
+            <Setter Property="MinWidth" Value="6"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand"
+                                                  Style="{StaticResource ScrollBarPageButtonStyle}"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollBarThumbStyle}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand"
+                                                  Style="{StaticResource ScrollBarPageButtonStyle}"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -506,58 +612,67 @@
 
                 <!-- 右侧内容区 -->
                 <Grid Grid.Column="1" Margin="28,20,28,24">
-                    <!-- 模型配置页 -->
-                    <StackPanel x:Name="ModelConfigPanel">
-                        <StackPanel.RenderTransform>
+                    <!-- 模型配置页（内容超出时可滚动） -->
+                    <ScrollViewer x:Name="ModelConfigPanel"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer.RenderTransform>
                             <TranslateTransform/>
-                        </StackPanel.RenderTransform>
+                        </ScrollViewer.RenderTransform>
 
-                        <TextBlock Text="模型配置" Style="{StaticResource SectionTitleStyle}"/>
-                        <TextBlock Text="这里是我和 AI 大脑连线的地方。不过我还不太会记事，关掉窗口就会忘光——保存功能下个版本见～"
-                                   Style="{StaticResource HintTextStyle}"
-                                   Margin="0,6,0,20"/>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="模型配置" Style="{StaticResource SectionTitleStyle}"/>
+                            <TextBlock Text="这里是我和 AI 大脑连线的地方。不过我还不太会记事，关掉窗口就会忘光——保存功能下个版本见～"
+                                       Style="{StaticResource HintTextStyle}"
+                                       Margin="0,6,0,20"/>
 
-                        <TextBlock Text="服务商" Style="{StaticResource FieldLabelStyle}"/>
-                        <TextBox x:Name="ProviderBox" Style="{StaticResource FieldInputStyle}"/>
+                            <TextBlock Text="服务商" Style="{StaticResource FieldLabelStyle}"/>
+                            <TextBox x:Name="ProviderBox" Style="{StaticResource FieldInputStyle}"/>
 
-                        <TextBlock Text="Base URL" Style="{StaticResource FieldLabelStyle}"/>
-                        <TextBox x:Name="BaseUrlBox" Style="{StaticResource FieldInputStyle}"/>
+                            <TextBlock Text="Base URL" Style="{StaticResource FieldLabelStyle}"/>
+                            <TextBox x:Name="BaseUrlBox" Style="{StaticResource FieldInputStyle}"/>
 
-                        <TextBlock Text="API Key" Style="{StaticResource FieldLabelStyle}"/>
-                        <PasswordBox x:Name="ApiKeyBox" Style="{StaticResource FieldPasswordStyle}"/>
+                            <TextBlock Text="API Key" Style="{StaticResource FieldLabelStyle}"/>
+                            <PasswordBox x:Name="ApiKeyBox" Style="{StaticResource FieldPasswordStyle}"/>
 
-                        <TextBlock Text="模型名称" Style="{StaticResource FieldLabelStyle}"/>
-                        <TextBox x:Name="ModelBox" Style="{StaticResource FieldInputStyle}"/>
-                    </StackPanel>
+                            <TextBlock Text="模型名称" Style="{StaticResource FieldLabelStyle}"/>
+                            <TextBox x:Name="ModelBox" Style="{StaticResource FieldInputStyle}"/>
+                        </StackPanel>
+                    </ScrollViewer>
 
                     <!-- 开发者模式页 -->
-                    <StackPanel x:Name="DeveloperPanel" Visibility="Collapsed">
-                        <StackPanel.RenderTransform>
+                    <ScrollViewer x:Name="DeveloperPanel"
+                                  Visibility="Collapsed"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer.RenderTransform>
                             <TranslateTransform/>
-                        </StackPanel.RenderTransform>
+                        </ScrollViewer.RenderTransform>
 
-                        <TextBlock Text="开发者模式" Style="{StaticResource SectionTitleStyle}"/>
-                        <TextBlock Text="想看看我身体里的构造吗？打开开关，就把骨骼和调试工具都摆出来给你看。"
-                                   Style="{StaticResource HintTextStyle}"
-                                   Margin="0,6,0,24"/>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="开发者模式" Style="{StaticResource SectionTitleStyle}"/>
+                            <TextBlock Text="想看看我身体里的构造吗？打开开关，就把骨骼和调试工具都摆出来给你看。"
+                                       Style="{StaticResource HintTextStyle}"
+                                       Margin="0,6,0,24"/>
 
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="启用开发者模式"
-                                       FontFamily="{StaticResource FontFamilyBody}"
-                                       FontSize="{StaticResource FontSizeBody}"
-                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                       VerticalAlignment="Center"/>
-                            <ToggleButton x:Name="DeveloperModeToggle"
-                                          Style="{StaticResource ToggleSwitchStyle}"
-                                          Margin="12,0,0,0"
-                                          Checked="DeveloperModeToggle_Changed"
-                                          Unchecked="DeveloperModeToggle_Changed"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="启用开发者模式"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                                <ToggleButton x:Name="DeveloperModeToggle"
+                                              Style="{StaticResource ToggleSwitchStyle}"
+                                              Margin="12,0,0,0"
+                                              Checked="DeveloperModeToggle_Changed"
+                                              Unchecked="DeveloperModeToggle_Changed"/>
+                            </StackPanel>
+
+                            <TextBlock x:Name="ToolStatusText"
+                                       Style="{StaticResource HintTextStyle}"
+                                       Margin="0,14,0,0"/>
                         </StackPanel>
-
-                        <TextBlock x:Name="ToolStatusText"
-                                   Style="{StaticResource HintTextStyle}"
-                                   Margin="0,14,0,0"/>
-                    </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </Grid>
         </Grid>
