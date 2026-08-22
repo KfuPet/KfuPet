@@ -1,6 +1,8 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 
@@ -23,12 +25,58 @@ namespace KfuPet.Views
         // 用于取消未完成的淡出关闭：每次显示/关闭递增，过期的淡出完成回调直接忽略
         private int _showToken;
 
+        // ── Win32：全局低级鼠标钩子 ──────────────────────
+        // 菜单以非激活方式弹出（ShowActivated=False），不抢占前台焦点，
+        // 系统托盘栏因此不会失焦收起；改用全局鼠标钩子监听“点击菜单窗口外”来收起菜单。
+        private const int WH_MOUSE_LL = 14;
+        private const int WM_LBUTTONDOWN = 0x0201;
+        private const int WM_RBUTTONDOWN = 0x0204;
+        private const int WM_NCLBUTTONDOWN = 0x00A1;
+        private const int WM_NCRBUTTONDOWN = 0x00A4;
+
+        private IntPtr _hookHandle;
+        private HookProc? _hookProc;
+        private RECT _screenBounds; // 菜单窗口在屏幕上的物理像素矩形，供钩子回调判断点击是否落在窗口外
+
+        private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT { public int X; public int Y; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MSLLHOOKSTRUCT
+        {
+            public POINT pt;
+            public uint mouseData;
+            public uint flags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string? lpModuleName);
+
         public TrayMenuWindow()
         {
             InitializeComponent();
 
-            Deactivated += (s, e) => CloseMenu();
-            MouseDown += OnWindowMouseDown;
             KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Escape)
@@ -40,6 +88,8 @@ namespace KfuPet.Views
             CheckUpdateItem.Click += (s, e) => OnItemClicked(CheckUpdateClicked);
             SettingsItem.Click += (s, e) => OnItemClicked(SettingsClicked);
             ExitItem.Click += (s, e) => OnItemClicked(ExitClicked);
+
+            Closed += (s, e) => StopMouseHook();
         }
 
         /// <summary>
@@ -52,23 +102,10 @@ namespace KfuPet.Views
             Show();
             UpdateLayout();
             PositionNearCursor();
-            Activate();
             PlayEntranceAnimation();
 
-            // 捕获鼠标：点击窗口外任何位置（任务栏、其他应用）都会路由到本窗口，从而收起菜单
-            Mouse.Capture(this, CaptureMode.SubTree);
-        }
-
-        /// <summary>
-        /// 捕获鼠标期间，窗口外点击的坐标会落在窗口边界之外，据此收起菜单。
-        /// </summary>
-        private void OnWindowMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            var pos = e.GetPosition(this);
-            if (pos.X < 0 || pos.Y < 0 || pos.X > ActualWidth || pos.Y > ActualHeight)
-            {
-                CloseMenu();
-            }
+            // 菜单以非激活状态显示，用全局鼠标钩子监听外部点击来收起
+            StartMouseHook();
         }
 
         /// <summary>
@@ -131,7 +168,7 @@ namespace KfuPet.Views
             {
                 if (token == _showToken)
                 {
-                    ReleaseMouseCapture();
+                    StopMouseHook();
                     Hide();
                 }
             };
@@ -142,9 +179,61 @@ namespace KfuPet.Views
         {
             // 菜单项点击后立即收起，再执行对应动作
             _showToken++;
-            ReleaseMouseCapture();
+            StopMouseHook();
             Hide();
             handler?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 安装全局低级鼠标钩子，用于检测“点击菜单窗口外”并收起菜单。
+        /// </summary>
+        private void StartMouseHook()
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            GetWindowRect(hwnd, out _screenBounds);
+
+            _hookProc = MouseHookProc;
+            _hookHandle = SetWindowsHookEx(WH_MOUSE_LL, _hookProc, GetModuleHandle(null), 0);
+        }
+
+        /// <summary>
+        /// 卸载全局鼠标钩子。
+        /// </summary>
+        private void StopMouseHook()
+        {
+            if (_hookHandle != IntPtr.Zero)
+            {
+                UnhookWindowsHookEx(_hookHandle);
+                _hookHandle = IntPtr.Zero;
+            }
+            _hookProc = null;
+        }
+
+        /// <summary>
+        /// 全局鼠标钩子回调：按下事件落在菜单窗口矩形外时，切回 UI 线程收起菜单。
+        /// </summary>
+        private IntPtr MouseHookProc(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            if (nCode >= 0)
+            {
+                int msg = wParam.ToInt32();
+                if (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN ||
+                    msg == WM_NCLBUTTONDOWN || msg == WM_NCRBUTTONDOWN)
+                {
+                    var data = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                    bool isOutside = data.pt.X < _screenBounds.Left ||
+                                     data.pt.X > _screenBounds.Right ||
+                                     data.pt.Y < _screenBounds.Top ||
+                                     data.pt.Y > _screenBounds.Bottom;
+
+                    if (isOutside)
+                    {
+                        Dispatcher.BeginInvoke(new Action(CloseMenu));
+                    }
+                }
+            }
+
+            return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
         }
     }
 }

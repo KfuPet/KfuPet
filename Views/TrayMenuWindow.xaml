@@ -9,6 +9,7 @@
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
+        ShowActivated="False"
         Focusable="True">
 
     <Window.Resources>
