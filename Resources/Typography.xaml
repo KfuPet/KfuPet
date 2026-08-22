@@ -8,5 +8,6 @@
     <!-- 字号层级令牌 -->
     <sys:Double x:Key="FontSizeTitle">22</sys:Double>
     <sys:Double x:Key="FontSizeSubtitle">18</sys:Double>
+    <sys:Double x:Key="FontSizeBody">15</sys:Double>
     <sys:Double x:Key="FontSizeCaption">14</sys:Double>
 </ResourceDictionary>

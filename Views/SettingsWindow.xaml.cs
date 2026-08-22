@@ -47,15 +47,26 @@ namespace KfuPet.Views
         }
 
         /// <summary>
+        /// 拖动标题栏移动窗口（无边框窗口无系统标题栏，需手动实现）。
+        /// </summary>
+        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+            {
+                DragMove();
+            }
+        }
+
+        /// <summary>
         /// 窗口打开时的淡入 + 轻微放大动画。
         /// </summary>
         private void PlayEntranceAnimation()
         {
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            RootGrid.BeginAnimation(OpacityProperty,
+            RootCard.BeginAnimation(OpacityProperty,
                 new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });
 
-            if (RootGrid.RenderTransform is ScaleTransform scale)
+            if (RootCard.RenderTransform is ScaleTransform scale)
             {
                 scale.BeginAnimation(ScaleTransform.ScaleXProperty,
                     new DoubleAnimation(0.97, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });

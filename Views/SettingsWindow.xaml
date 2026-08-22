@@ -2,22 +2,13 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="设置"
-        Width="760"
-        Height="520"
-        MinWidth="620"
-        MinHeight="420"
+        Width="792"
+        Height="552"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
-        Background="{DynamicResource AppBackgroundBrush}">
-
-    <!-- WindowChrome：去掉系统标题栏但保留原生缩放、贴靠与阴影 -->
-    <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="44"
-                      ResizeBorderThickness="8"
-                      GlassFrameThickness="0"
-                      CornerRadius="0"
-                      UseAeroCaptionButtons="False"/>
-    </WindowChrome.WindowChrome>
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        Background="{x:Null}">
 
     <Window.Resources>
         <FontFamily x:Key="FontFamilyIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
@@ -31,9 +22,9 @@
 
         <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
 
         <Style x:Key="HintTextStyle" TargetType="TextBlock">
@@ -43,7 +34,7 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
-        <!-- 标题栏关闭按钮：悬停时红色背景淡入 -->
+        <!-- 标题栏关闭按钮：悬停时红色背景淡入，右上角跟随窗口圆角 -->
         <Style x:Key="TitleBarCloseStyle" TargetType="Button">
             <Setter Property="Width" Value="46"/>
             <Setter Property="Height" Value="44"/>
@@ -55,7 +46,7 @@
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}">
                             <Grid>
-                                <Border x:Name="HoverBg" Background="#E81123" Opacity="0"/>
+                                <Border x:Name="HoverBg" Background="#E81123" CornerRadius="0,10,0,0" Opacity="0"/>
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
@@ -89,14 +80,14 @@
 
         <!-- 输入框：圆角，悬停/聚焦时描边环淡入（叠加层方案，兼容主题画刷） -->
         <Style x:Key="FieldInputStyle" TargetType="TextBox">
-            <Setter Property="Margin" Value="0,0,0,18"/>
-            <Setter Property="Padding" Value="12,9"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Padding" Value="12,11"/>
             <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
             <Setter Property="CaretBrush" Value="{DynamicResource AppTextPrimaryBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -168,14 +159,14 @@
 
         <!-- 密码框：与输入框同款外观（WPF 模板无法跨控件类型复用，故分开定义） -->
         <Style x:Key="FieldPasswordStyle" TargetType="PasswordBox">
-            <Setter Property="Margin" Value="0,0,0,18"/>
-            <Setter Property="Padding" Value="12,9"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Padding" Value="12,11"/>
             <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
             <Setter Property="CaretBrush" Value="{DynamicResource AppTextPrimaryBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="PasswordBox">
@@ -315,80 +306,89 @@
         </Style>
     </Window.Resources>
 
-    <Grid x:Name="RootGrid"
-          Opacity="0"
-          RenderTransformOrigin="0.5,0.5">
-        <Grid.RenderTransform>
+    <!-- 圆角卡片：Margin 为投影留出空间，窗口透明区域点击穿透 -->
+    <Border x:Name="RootCard"
+            Margin="16"
+            Background="{DynamicResource AppBackgroundBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="12"
+            Opacity="0"
+            RenderTransformOrigin="0.5,0.5">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.3" Color="Black"/>
+        </Border.Effect>
+        <Border.RenderTransform>
             <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
-        </Grid.RenderTransform>
+        </Border.RenderTransform>
 
-        <Grid.RowDefinitions>
-            <RowDefinition Height="44"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <!-- 自定义标题栏（CaptionHeight 覆盖区域支持拖动与双击最大化） -->
-        <Border Grid.Row="0"
-                BorderBrush="{DynamicResource AppBorderBrush}"
-                BorderThickness="0,0,0,1">
-            <Grid>
-                <StackPanel Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="16,0,0,0">
-                    <Image Source="pack://application:,,,/Assets/icon/app.ico"
-                           Width="18" Height="18"/>
-                    <TextBlock Text="设置"
-                               Margin="10,0,0,0"
-                               FontFamily="{StaticResource FontFamilyBody}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource AppTextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-                <Button x:Name="CloseButton"
-                        Style="{StaticResource TitleBarCloseStyle}"
-                        HorizontalAlignment="Right"
-                        WindowChrome.IsHitTestVisibleInChrome="True"
-                        Click="CloseButton_Click">
-                    <TextBlock Text="&#xE8BB;"
-                               FontFamily="{StaticResource FontFamilyIcon}"
-                               FontSize="10"/>
-                </Button>
-            </Grid>
-        </Border>
-
-        <!-- 内容区 -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="200"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- 左侧导航栏 -->
-            <Border Grid.Column="0"
-                    Background="{DynamicResource AppSurfaceBrush}"
+            <!-- 自定义标题栏（可拖动；Background 让整个标题栏参与命中测试） -->
+            <Border Grid.Row="0"
+                    Background="Transparent"
                     BorderBrush="{DynamicResource AppBorderBrush}"
-                    BorderThickness="0,0,1,0">
-                <ListBox x:Name="NavList"
-                         Margin="0,12,0,0"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         SelectionChanged="NavList_SelectionChanged">
-                    <ListBox.Resources>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Margin" Value="12,2"/>
-                            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-                            <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
-                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="Bd"
-                                                Background="Transparent"
-                                                CornerRadius="8"
-                                                Padding="12,10">
+                    BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="16,0,0,0">
+                        <Image Source="pack://application:,,,/Assets/icon/app.ico"
+                               Width="18" Height="18"/>
+                        <TextBlock Text="设置"
+                                   Margin="10,0,0,0"
+                                   FontFamily="{StaticResource FontFamilyBody}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button x:Name="CloseButton"
+                            Style="{StaticResource TitleBarCloseStyle}"
+                            HorizontalAlignment="Right"
+                            Click="CloseButton_Click">
+                        <TextBlock Text="&#xE8BB;"
+                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                   FontSize="10"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- 内容区 -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="210"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 左侧导航栏（左下角跟随窗口圆角） -->
+                <Border Grid.Column="0"
+                        Background="{DynamicResource AppSurfaceBrush}"
+                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        BorderThickness="0,0,1,0"
+                        CornerRadius="0,0,0,11">
+                    <ListBox x:Name="NavList"
+                             Margin="0,12,0,0"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             SelectionChanged="NavList_SelectionChanged">
+                        <ListBox.Resources>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Margin" Value="12,2"/>
+                                <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
+                                <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <!-- 背景层放在内容 Padding 外侧，铺满整个选项槽位，上下选项背景之间无间隙 -->
                                             <Grid>
                                                 <Border x:Name="HoverBg"
                                                         Background="{DynamicResource AppBorderBrush}"
@@ -398,162 +398,168 @@
                                                         Background="{DynamicResource AppBorderBrush}"
                                                         CornerRadius="8"
                                                         Opacity="0"/>
-                                                <Border x:Name="Indicator"
-                                                        Width="3" Height="16"
-                                                        CornerRadius="1.5"
-                                                        HorizontalAlignment="Left"
-                                                        Margin="-6,0,0,0"
-                                                        Background="{DynamicResource AppAccentBrush}"
-                                                        Opacity="0"
-                                                        RenderTransformOrigin="0.5,0.5">
-                                                    <Border.RenderTransform>
-                                                        <ScaleTransform ScaleY="0.3"/>
-                                                    </Border.RenderTransform>
+                                                <Border x:Name="Bd"
+                                                        Background="Transparent"
+                                                        Padding="12,8">
+                                                    <Grid>
+                                                        <Border x:Name="Indicator"
+                                                                Width="3" Height="18"
+                                                                CornerRadius="1.5"
+                                                                HorizontalAlignment="Left"
+                                                                Margin="-6,0,0,0"
+                                                                Background="{DynamicResource AppAccentBrush}"
+                                                                Opacity="0"
+                                                                RenderTransformOrigin="0.5,0.5">
+                                                            <Border.RenderTransform>
+                                                                <ScaleTransform ScaleY="0.3"/>
+                                                            </Border.RenderTransform>
+                                                        </Border>
+                                                        <ContentPresenter/>
+                                                    </Grid>
                                                 </Border>
-                                                <ContentPresenter/>
                                             </Grid>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Trigger.EnterActions>
-                                                    <BeginStoryboard>
-                                                        <Storyboard>
-                                                            <DoubleAnimation Storyboard.TargetName="HoverBg"
-                                                                             Storyboard.TargetProperty="Opacity"
-                                                                             To="1" Duration="0:0:0.12"/>
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </Trigger.EnterActions>
-                                                <Trigger.ExitActions>
-                                                    <BeginStoryboard>
-                                                        <Storyboard>
-                                                            <DoubleAnimation Storyboard.TargetName="HoverBg"
-                                                                             Storyboard.TargetProperty="Opacity"
-                                                                             To="0" Duration="0:0:0.18"/>
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </Trigger.ExitActions>
-                                            </Trigger>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
-                                                <Trigger.EnterActions>
-                                                    <BeginStoryboard>
-                                                        <Storyboard>
-                                                            <DoubleAnimation Storyboard.TargetName="SelectedBg"
-                                                                             Storyboard.TargetProperty="Opacity"
-                                                                             To="1" Duration="0:0:0.18"/>
-                                                            <DoubleAnimation Storyboard.TargetName="Indicator"
-                                                                             Storyboard.TargetProperty="Opacity"
-                                                                             To="1" Duration="0:0:0.18"/>
-                                                            <DoubleAnimation Storyboard.TargetName="Indicator"
-                                                                             Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                                             To="1" Duration="0:0:0.25">
-                                                                <DoubleAnimation.EasingFunction>
-                                                                    <CubicEase EasingMode="EaseOut"/>
-                                                                </DoubleAnimation.EasingFunction>
-                                                            </DoubleAnimation>
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </Trigger.EnterActions>
-                                                <Trigger.ExitActions>
-                                                    <BeginStoryboard>
-                                                        <Storyboard>
-                                                            <DoubleAnimation Storyboard.TargetName="SelectedBg"
-                                                                             Storyboard.TargetProperty="Opacity"
-                                                                             To="0" Duration="0:0:0.15"/>
-                                                            <DoubleAnimation Storyboard.TargetName="Indicator"
-                                                                             Storyboard.TargetProperty="Opacity"
-                                                                             To="0" Duration="0:0:0.15"/>
-                                                            <DoubleAnimation Storyboard.TargetName="Indicator"
-                                                                             Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                                             To="0.3" Duration="0:0:0.15"/>
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </Trigger.ExitActions>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.Resources>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Trigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="HoverBg"
+                                                                                 Storyboard.TargetProperty="Opacity"
+                                                                                 To="1" Duration="0:0:0.12"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.EnterActions>
+                                                    <Trigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="HoverBg"
+                                                                                 Storyboard.TargetProperty="Opacity"
+                                                                                 To="0" Duration="0:0:0.18"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.ExitActions>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
+                                                    <Trigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="SelectedBg"
+                                                                                 Storyboard.TargetProperty="Opacity"
+                                                                                 To="1" Duration="0:0:0.18"/>
+                                                                <DoubleAnimation Storyboard.TargetName="Indicator"
+                                                                                 Storyboard.TargetProperty="Opacity"
+                                                                                 To="1" Duration="0:0:0.18"/>
+                                                                <DoubleAnimation Storyboard.TargetName="Indicator"
+                                                                                 Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                                                 To="1" Duration="0:0:0.25">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.EnterActions>
+                                                    <Trigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="SelectedBg"
+                                                                                 Storyboard.TargetProperty="Opacity"
+                                                                                 To="0" Duration="0:0:0.15"/>
+                                                                <DoubleAnimation Storyboard.TargetName="Indicator"
+                                                                                 Storyboard.TargetProperty="Opacity"
+                                                                                 To="0" Duration="0:0:0.15"/>
+                                                                <DoubleAnimation Storyboard.TargetName="Indicator"
+                                                                                 Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                                                 To="0.3" Duration="0:0:0.15"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.ExitActions>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.Resources>
 
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE753;"
-                                       FontFamily="{StaticResource FontFamilyIcon}"
-                                       FontSize="14" Width="24"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="模型配置" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xEC7A;"
-                                       FontFamily="{StaticResource FontFamilyIcon}"
-                                       FontSize="14" Width="24"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="开发者模式" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                </ListBox>
-            </Border>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE753;"
+                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                           FontSize="15" Width="26"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="模型配置" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xEC7A;"
+                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                           FontSize="15" Width="26"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="开发者模式" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                    </ListBox>
+                </Border>
 
-            <!-- 右侧内容区 -->
-            <Grid Grid.Column="1" Margin="28,20,28,24">
-                <!-- 模型配置页 -->
-                <StackPanel x:Name="ModelConfigPanel">
-                    <StackPanel.RenderTransform>
-                        <TranslateTransform/>
-                    </StackPanel.RenderTransform>
+                <!-- 右侧内容区 -->
+                <Grid Grid.Column="1" Margin="28,20,28,24">
+                    <!-- 模型配置页 -->
+                    <StackPanel x:Name="ModelConfigPanel">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform/>
+                        </StackPanel.RenderTransform>
 
-                    <TextBlock Text="模型配置" Style="{StaticResource SectionTitleStyle}"/>
-                    <TextBlock Text="这里是我和 AI 大脑连线的地方。不过我还不太会记事，关掉窗口就会忘光——保存功能下个版本见～"
-                               Style="{StaticResource HintTextStyle}"
-                               Margin="0,6,0,20"/>
+                        <TextBlock Text="模型配置" Style="{StaticResource SectionTitleStyle}"/>
+                        <TextBlock Text="这里是我和 AI 大脑连线的地方。不过我还不太会记事，关掉窗口就会忘光——保存功能下个版本见～"
+                                   Style="{StaticResource HintTextStyle}"
+                                   Margin="0,6,0,20"/>
 
-                    <TextBlock Text="服务商" Style="{StaticResource FieldLabelStyle}"/>
-                    <TextBox x:Name="ProviderBox" Style="{StaticResource FieldInputStyle}"/>
+                        <TextBlock Text="服务商" Style="{StaticResource FieldLabelStyle}"/>
+                        <TextBox x:Name="ProviderBox" Style="{StaticResource FieldInputStyle}"/>
 
-                    <TextBlock Text="Base URL" Style="{StaticResource FieldLabelStyle}"/>
-                    <TextBox x:Name="BaseUrlBox" Style="{StaticResource FieldInputStyle}"/>
+                        <TextBlock Text="Base URL" Style="{StaticResource FieldLabelStyle}"/>
+                        <TextBox x:Name="BaseUrlBox" Style="{StaticResource FieldInputStyle}"/>
 
-                    <TextBlock Text="API Key" Style="{StaticResource FieldLabelStyle}"/>
-                    <PasswordBox x:Name="ApiKeyBox" Style="{StaticResource FieldPasswordStyle}"/>
+                        <TextBlock Text="API Key" Style="{StaticResource FieldLabelStyle}"/>
+                        <PasswordBox x:Name="ApiKeyBox" Style="{StaticResource FieldPasswordStyle}"/>
 
-                    <TextBlock Text="模型名称" Style="{StaticResource FieldLabelStyle}"/>
-                    <TextBox x:Name="ModelBox" Style="{StaticResource FieldInputStyle}"/>
-                </StackPanel>
-
-                <!-- 开发者模式页 -->
-                <StackPanel x:Name="DeveloperPanel" Visibility="Collapsed">
-                    <StackPanel.RenderTransform>
-                        <TranslateTransform/>
-                    </StackPanel.RenderTransform>
-
-                    <TextBlock Text="开发者模式" Style="{StaticResource SectionTitleStyle}"/>
-                    <TextBlock Text="想看看我身体里的构造吗？打开开关，就把骨骼和调试工具都摆出来给你看。"
-                               Style="{StaticResource HintTextStyle}"
-                               Margin="0,6,0,24"/>
-
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="启用开发者模式"
-                                   FontFamily="{StaticResource FontFamilyBody}"
-                                   FontSize="{StaticResource FontSizeCaption}"
-                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                   VerticalAlignment="Center"/>
-                        <ToggleButton x:Name="DeveloperModeToggle"
-                                      Style="{StaticResource ToggleSwitchStyle}"
-                                      Margin="12,0,0,0"
-                                      Checked="DeveloperModeToggle_Changed"
-                                      Unchecked="DeveloperModeToggle_Changed"/>
+                        <TextBlock Text="模型名称" Style="{StaticResource FieldLabelStyle}"/>
+                        <TextBox x:Name="ModelBox" Style="{StaticResource FieldInputStyle}"/>
                     </StackPanel>
 
-                    <TextBlock x:Name="ToolStatusText"
-                               Style="{StaticResource HintTextStyle}"
-                               Margin="0,14,0,0"/>
-                </StackPanel>
+                    <!-- 开发者模式页 -->
+                    <StackPanel x:Name="DeveloperPanel" Visibility="Collapsed">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform/>
+                        </StackPanel.RenderTransform>
+
+                        <TextBlock Text="开发者模式" Style="{StaticResource SectionTitleStyle}"/>
+                        <TextBlock Text="想看看我身体里的构造吗？打开开关，就把骨骼和调试工具都摆出来给你看。"
+                                   Style="{StaticResource HintTextStyle}"
+                                   Margin="0,6,0,24"/>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="启用开发者模式"
+                                       FontFamily="{StaticResource FontFamilyBody}"
+                                       FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                       VerticalAlignment="Center"/>
+                            <ToggleButton x:Name="DeveloperModeToggle"
+                                          Style="{StaticResource ToggleSwitchStyle}"
+                                          Margin="12,0,0,0"
+                                          Checked="DeveloperModeToggle_Changed"
+                                          Unchecked="DeveloperModeToggle_Changed"/>
+                        </StackPanel>
+
+                        <TextBlock x:Name="ToolStatusText"
+                                   Style="{StaticResource HintTextStyle}"
+                                   Margin="0,14,0,0"/>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Grid>
-    </Grid>
+    </Border>
 </Window>

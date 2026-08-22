@@ -28,6 +28,7 @@ namespace KfuPet.Views
             InitializeComponent();
 
             Deactivated += (s, e) => CloseMenu();
+            MouseDown += OnWindowMouseDown;
             KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Escape)
@@ -53,6 +54,21 @@ namespace KfuPet.Views
             PositionNearCursor();
             Activate();
             PlayEntranceAnimation();
+
+            // 捕获鼠标：点击窗口外任何位置（任务栏、其他应用）都会路由到本窗口，从而收起菜单
+            Mouse.Capture(this, CaptureMode.SubTree);
+        }
+
+        /// <summary>
+        /// 捕获鼠标期间，窗口外点击的坐标会落在窗口边界之外，据此收起菜单。
+        /// </summary>
+        private void OnWindowMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            var pos = e.GetPosition(this);
+            if (pos.X < 0 || pos.Y < 0 || pos.X > ActualWidth || pos.Y > ActualHeight)
+            {
+                CloseMenu();
+            }
         }
 
         /// <summary>
@@ -115,6 +131,7 @@ namespace KfuPet.Views
             {
                 if (token == _showToken)
                 {
+                    ReleaseMouseCapture();
                     Hide();
                 }
             };
@@ -125,6 +142,7 @@ namespace KfuPet.Views
         {
             // 菜单项点击后立即收起，再执行对应动作
             _showToken++;
+            ReleaseMouseCapture();
             Hide();
             handler?.Invoke(this, EventArgs.Empty);
         }
