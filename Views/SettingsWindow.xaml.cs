@@ -102,6 +102,86 @@ namespace KfuPet.Views
             }
         }
 
+        /// <summary>
+        /// 添加模型按钮点击：弹出配置对话框，确认后把新模型插入列表。
+        /// </summary>
+        private void AddModelButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new AddModelDialog { Owner = this };
+            dialog.ModelConfirmed += (s, args) =>
+            {
+                AddModelCard(args.ModelName);
+            };
+            dialog.ShowDialog();
+        }
+
+        /// <summary>
+        /// 向列表添加一个模型卡片，并绑定删除按钮事件。
+        /// </summary>
+        private void AddModelCard(string modelName)
+        {
+            var item = new ListBoxItem
+            {
+                Content = modelName,
+                RenderTransform = new TranslateTransform()
+            };
+
+            // 等模板应用后再找删除按钮并挂事件
+            item.Loaded += (s, e) =>
+            {
+                if (item.Template.FindName("DeleteModelButton", item) is Button deleteButton)
+                {
+                    deleteButton.Click += (s2, e2) => RemoveModelCard(item);
+                }
+            };
+
+            ModelList.Items.Add(item);
+            UpdateModelListVisibility();
+
+            // 入场动画
+            item.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+
+            if (item.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            }
+        }
+
+        /// <summary>
+        /// 从列表移除模型卡片，带淡出动画。
+        /// </summary>
+        private void RemoveModelCard(ListBoxItem item)
+        {
+            var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(200))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            fadeOut.Completed += (s, e) =>
+            {
+                ModelList.Items.Remove(item);
+                UpdateModelListVisibility();
+            };
+            item.BeginAnimation(OpacityProperty, fadeOut);
+
+            if (item.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(0, -8, TimeSpan.FromMilliseconds(200)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } });
+            }
+        }
+
+        /// <summary>
+        /// 根据列表是否为空切换空状态提示的显示。
+        /// </summary>
+        private void UpdateModelListVisibility()
+        {
+            ModelEmptyText.Visibility = ModelList.Items.Count == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
         private void LoadDeveloperState()
         {
             _mainWindow.DeveloperModeService.EnabledChanged += OnDeveloperModeChanged;
