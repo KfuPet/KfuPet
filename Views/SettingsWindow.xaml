@@ -468,7 +468,7 @@
             </Setter>
         </Style>
 
-        <!-- 模型列表项：圆角卡片，左侧名称，右侧删除按钮 + 开关（界面完整，功能空壳） -->
+        <!-- 模型列表项：圆角卡片，左侧名称，右侧删除按钮 + 开关 -->
         <Style x:Key="ModelItemStyle" TargetType="ListBoxItem">
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="Padding" Value="0"/>
@@ -538,7 +538,7 @@
                                     </Button.Template>
                                 </Button>
 
-                                <!-- 开关（空壳，仅展示） -->
+                                <!-- 开关：切换当前使用的模型 -->
                                 <ToggleButton x:Name="ModelToggle"
                                               Grid.Column="2"
                                               Style="{StaticResource ToggleSwitchStyle}"
@@ -822,7 +822,7 @@
                                        Style="{StaticResource HintTextStyle}"
                                        Margin="0,0,0,16"/>
 
-                            <!-- 模型列表（空壳数据，界面完整可用） -->
+                            <!-- 模型列表（数据由 ModelConfigService 本地持久化） -->
                             <ItemsControl x:Name="ModelList"
                                           Background="Transparent"
                                           BorderThickness="0"

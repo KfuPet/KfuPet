@@ -57,6 +57,8 @@ namespace KfuPet
 
         internal DeveloperModeService DeveloperModeService { get; } = new DeveloperModeService();
 
+        internal ModelConfigService ModelConfigService { get; } = new ModelConfigService();
+
         internal CommandDispatcher CommandDispatcher { get; } = new CommandDispatcher();
 
         private NamedPipeServer? _pipeServer;

@@ -1,9 +1,12 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using KfuPet.Models;
+using KfuPet.Services;
 
 namespace KfuPet.Views
 {
@@ -14,6 +17,9 @@ namespace KfuPet.Views
     {
         private readonly MainWindow _mainWindow;
         private bool _suppressToggleEvents;
+        private bool _suppressModelToggleEvents;
+
+        private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
 
         public SettingsWindow(MainWindow mainWindow)
         {
@@ -22,6 +28,7 @@ namespace KfuPet.Views
 
             NavList.SelectedIndex = 0;
             LoadDeveloperState();
+            LoadModels();
             UpdateToolStatus();
 
             Loaded += (s, e) => PlayEntranceAnimation();
@@ -110,28 +117,50 @@ namespace KfuPet.Views
             var dialog = new AddModelDialog { Owner = this };
             dialog.ModelConfirmed += (s, args) =>
             {
-                AddModelCard(args.ModelName);
+                var model = ModelConfigService.Add(args.Provider, args.BaseUrl, args.ApiKey, args.ModelName);
+                AddModelCard(model);
             };
             dialog.ShowDialog();
         }
 
         /// <summary>
-        /// 向列表添加一个模型卡片，并绑定删除按钮事件。
+        /// 加载已保存的模型配置并重建列表。
         /// </summary>
-        private void AddModelCard(string modelName)
+        private void LoadModels()
+        {
+            ModelList.Items.Clear();
+            foreach (var model in ModelConfigService.Models)
+            {
+                AddModelCard(model);
+            }
+            UpdateModelListVisibility();
+        }
+
+        /// <summary>
+        /// 向列表添加一个模型卡片，并绑定删除按钮与开关事件。
+        /// </summary>
+        private void AddModelCard(ModelConfig model)
         {
             var item = new ListBoxItem
             {
-                Content = modelName,
+                Content = model.ModelName,
+                Tag = model,
                 RenderTransform = new TranslateTransform()
             };
 
-            // 等模板应用后再找删除按钮并挂事件
+            // 等模板应用后再找删除按钮与开关并挂事件
             item.Loaded += (s, e) =>
             {
                 if (item.Template.FindName("DeleteModelButton", item) is Button deleteButton)
                 {
                     deleteButton.Click += (s2, e2) => RemoveModelCard(item);
+                }
+
+                if (item.Template.FindName("ModelToggle", item) is ToggleButton toggle)
+                {
+                    toggle.IsChecked = model.IsActive;
+                    toggle.Checked += (s2, e2) => OnModelToggleChanged(item, true);
+                    toggle.Unchecked += (s2, e2) => OnModelToggleChanged(item, false);
                 }
             };
 
@@ -150,10 +179,46 @@ namespace KfuPet.Views
         }
 
         /// <summary>
+        /// 模型开关切换：勾选表示设为当前使用，取消勾选表示不选中任何模型。
+        /// </summary>
+        private void OnModelToggleChanged(ListBoxItem item, bool isChecked)
+        {
+            if (_suppressModelToggleEvents) return;
+
+            if (item.Tag is ModelConfig model)
+            {
+                ModelConfigService.SetActiveModel(isChecked ? model.Id : null);
+                RefreshModelToggles();
+            }
+        }
+
+        /// <summary>
+        /// 依据服务端最新状态刷新所有卡片的开关显示。
+        /// </summary>
+        private void RefreshModelToggles()
+        {
+            _suppressModelToggleEvents = true;
+            foreach (var item in ModelList.Items.OfType<ListBoxItem>())
+            {
+                if (item.Tag is ModelConfig model &&
+                    item.Template.FindName("ModelToggle", item) is ToggleButton toggle)
+                {
+                    toggle.IsChecked = model.IsActive;
+                }
+            }
+            _suppressModelToggleEvents = false;
+        }
+
+        /// <summary>
         /// 从列表移除模型卡片，带淡出动画。
         /// </summary>
         private void RemoveModelCard(ListBoxItem item)
         {
+            if (item.Tag is ModelConfig model)
+            {
+                ModelConfigService.Remove(model.Id);
+            }
+
             var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(200))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
