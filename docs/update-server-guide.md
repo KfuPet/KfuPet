@@ -18,7 +18,7 @@
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `version` | string | 是 | 最新版本号，如 `0.0.8` 或 `v0.0.8` |
-| `downloadUrl` | string | 是 | 下载地址 |
+| `releasePageUrl` | string | 是 | 发布页地址 |
 | `releaseNotes` | string | 否 | 更新说明 |
 
 响应示例：
@@ -26,13 +26,13 @@
 ```json
 {
   "version": "0.0.8",
-  "downloadUrl": "https://example.com/kfupet/download",
+  "releasePageUrl": "https://example.com/kfupet/releases",
   "releaseNotes": "- 修复已知问题\n- 新增功能"
 }
 ```
 
-> 说明：客户端解析时要求字段名与 `ReleaseInfo` 的 C# 属性名一致（`Version` / `DownloadUrl` / `ReleaseNotes`），
-> 因此 JSON 用 `version` / `downloadUrl` / `releaseNotes`，后续如需不同命名可在反序列化时配置 `JsonSerializerOptions.PropertyNameCaseInsensitive` 或 `JsonPropertyName`。
+> 说明：客户端解析时要求字段名与 `ReleaseInfo` 的 C# 属性名一致（`Version` / `ReleasePageUrl` / `ReleaseNotes`），
+> 因此 JSON 用 `version` / `releasePageUrl` / `releaseNotes`，后续如需不同命名可在反序列化时配置 `JsonSerializerOptions.PropertyNameCaseInsensitive` 或 `JsonPropertyName`。
 
 ## 客户端实现步骤（替换空壳）
 
