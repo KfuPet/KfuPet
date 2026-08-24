@@ -4,7 +4,7 @@
         Title="检查更新"
         Width="440"
         SizeToContent="Height"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="NoResize"
