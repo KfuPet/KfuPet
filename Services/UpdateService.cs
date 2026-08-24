@@ -75,7 +75,7 @@ namespace KfuPet.Services
                 normalized = normalized.Substring(1);
             }
 
-            return Version.TryParse(normalized, out version);
+            return Version.TryParse(normalized, out version!);
         }
     }
 }

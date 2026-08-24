@@ -122,25 +122,30 @@ namespace KfuPet
 
             if (result == null)
             {
-                MessageBox.Show("检查更新失败，请稍后重试。", "KfuPet", MessageBoxButton.OK, MessageBoxImage.Warning);
+                var failDialog = new UpdateDialog(false, "未知", "未知", null)
+                {
+                    Owner = _settingsWindow
+                };
+                failDialog.TitleText.Text = "检查更新";
+                failDialog.StatusIcon.Text = "\uE783"; // 警告图标
+                failDialog.StatusTitleText.Text = "检查更新失败";
+                failDialog.StatusDetailText.Text = "请检查网络后重试";
+                failDialog.ConfirmButton.Content = "确定";
+                failDialog.ShowDialog();
                 return;
             }
 
-            if (!result.IsUpdateAvailable)
+            var dialog = new UpdateDialog(
+                result.IsUpdateAvailable,
+                result.CurrentVersion.ToString(3),
+                result.LatestVersion.ToString(3),
+                result.ReleaseNotes)
             {
-                MessageBox.Show($"当前已是最新版本（v{result.CurrentVersion.ToString(3)}）。",
-                    "KfuPet", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
+                Owner = _settingsWindow
+            };
 
-            var choice = MessageBox.Show(
-                $"是否前往下载 v{result.LatestVersion.ToString(3)} 新版本？",
-                "KfuPet", MessageBoxButton.YesNo, MessageBoxImage.Information);
-
-            if (choice == MessageBoxResult.Yes)
-            {
-                OpenReleasePage(result.ReleasePageUrl);
-            }
+            dialog.DownloadConfirmed += (s, e) => OpenReleasePage(result.ReleasePageUrl);
+            dialog.ShowDialog();
         }
 
         /// <summary>
