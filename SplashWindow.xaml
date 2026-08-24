@@ -15,8 +15,10 @@
         ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen">
 
-    <Grid x:Name="RootGrid"
-          Background="{DynamicResource AppBackgroundBrush}">
+    <Border x:Name="RootCard"
+            Background="{DynamicResource AppBackgroundBrush}"
+            CornerRadius="16">
+        <Grid x:Name="RootGrid">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
             <Image x:Name="LogoImage"
                    Source="pack://application:,,,/Assets/icon/Startlogo.png"
@@ -190,7 +192,7 @@
             </Storyboard>
             <Storyboard x:Key="FadeOutStoryboard">
                 <DoubleAnimation
-                    Storyboard.TargetName="RootGrid"
+                    Storyboard.TargetName="RootCard"
                     Storyboard.TargetProperty="Opacity"
                     From="1" To="0"
                     Duration="0:0:0.5">
@@ -200,5 +202,6 @@
                 </DoubleAnimation>
             </Storyboard>
         </Grid.Resources>
-    </Grid>
+        </Grid>
+    </Border>
 </Window>
