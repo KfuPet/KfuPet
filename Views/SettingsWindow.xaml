@@ -11,12 +11,10 @@
         Background="{x:Null}">
 
     <Window.Resources>
-        <FontFamily x:Key="FontFamilyIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
-
         <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource FontFamilyDisplay}"/>
             <Setter Property="FontSize" Value="{StaticResource FontSizeSubtitle}"/>
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontWeight" Value="{StaticResource FontWeightBold}"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
         </Style>
 
@@ -596,7 +594,7 @@
                                    Margin="10,0,0,0"
                                    FontFamily="{StaticResource FontFamilyBody}"
                                    FontSize="{StaticResource FontSizeBody}"
-                                   FontWeight="SemiBold"
+                                   FontWeight="{StaticResource FontWeightSemiBold}"
                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
@@ -606,7 +604,7 @@
                             Click="CloseButton_Click">
                         <TextBlock Text="&#xE8BB;"
                                    FontFamily="{StaticResource FontFamilyIcon}"
-                                   FontSize="10"/>
+                                   FontSize="{StaticResource FontSizeIconTiny}"/>
                     </Button>
                 </Grid>
             </Border>
@@ -739,7 +737,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE753;"
                                            FontFamily="{StaticResource FontFamilyIcon}"
-                                           FontSize="15" Width="26"
+                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
                                            VerticalAlignment="Center"/>
                                 <TextBlock Text="模型" VerticalAlignment="Center"/>
                             </StackPanel>
@@ -748,7 +746,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xEC7A;"
                                            FontFamily="{StaticResource FontFamilyIcon}"
-                                           FontSize="15" Width="26"
+                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
                                            VerticalAlignment="Center"/>
                                 <TextBlock Text="开发者模式" VerticalAlignment="Center"/>
                             </StackPanel>
@@ -796,13 +794,13 @@
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="&#xE710;"
                                                                FontFamily="{StaticResource FontFamilyIcon}"
-                                                               FontSize="12"
+                                                               FontSize="{StaticResource FontSizeIconSmall}"
                                                                VerticalAlignment="Center"
                                                                Margin="0,0,6,0"/>
                                                     <TextBlock Text="添加模型"
                                                                FontFamily="{StaticResource FontFamilyBody}"
                                                                FontSize="{StaticResource FontSizeBody}"
-                                                               FontWeight="SemiBold"
+                                                               FontWeight="{StaticResource FontWeightSemiBold}"
                                                                VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Border>

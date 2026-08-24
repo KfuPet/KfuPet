@@ -72,7 +72,7 @@
                            VerticalAlignment="Center"
                            FontFamily="{StaticResource FontFamilyDisplay}"
                            FontSize="{StaticResource FontSizeTitle}"
-                           FontWeight="Bold"
+                           FontWeight="{StaticResource FontWeightBold}"
                            Foreground="{DynamicResource AppTextPrimaryBrush}"
                            Opacity="0">
                     <TextBlock.RenderTransform>

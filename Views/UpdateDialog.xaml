@@ -11,8 +11,6 @@
         Background="{x:Null}">
 
     <Window.Resources>
-        <FontFamily x:Key="FontFamilyIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
-
         <Style x:Key="DialogButtonStyle" TargetType="Button">
             <Setter Property="MinWidth" Value="88"/>
             <Setter Property="Padding" Value="16,8"/>
@@ -71,7 +69,7 @@
                                Margin="16,0,0,0"
                                FontFamily="{StaticResource FontFamilyBody}"
                                FontSize="{StaticResource FontSizeBody}"
-                               FontWeight="SemiBold"
+                               FontWeight="{StaticResource FontWeightSemiBold}"
                                Foreground="{DynamicResource AppTextPrimaryBrush}"
                                VerticalAlignment="Center"/>
                     <Button x:Name="CloseButton"
@@ -116,7 +114,7 @@
                         </Button.Template>
                         <TextBlock Text="&#xE8BB;"
                                    FontFamily="{StaticResource FontFamilyIcon}"
-                                   FontSize="10"/>
+                                   FontSize="{StaticResource FontSizeIconTiny}"/>
                     </Button>
                 </Grid>
             </Border>
@@ -139,7 +137,7 @@
                         <TextBlock x:Name="StatusIcon"
                                    Text="&#xE72C;"
                                    FontFamily="{StaticResource FontFamilyIcon}"
-                                   FontSize="22"
+                                   FontSize="{StaticResource FontSizeIconLarge}"
                                    Foreground="{DynamicResource AppAccentBrush}"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
@@ -150,7 +148,7 @@
                                    Text="正在检查更新..."
                                    FontFamily="{StaticResource FontFamilyBody}"
                                    FontSize="{StaticResource FontSizeBody}"
-                                   FontWeight="SemiBold"
+                                   FontWeight="{StaticResource FontWeightSemiBold}"
                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock x:Name="StatusDetailText"
@@ -174,7 +172,7 @@
                         <TextBlock Text="更新内容"
                                    FontFamily="{StaticResource FontFamilyBody}"
                                    FontSize="{StaticResource FontSizeCaption}"
-                                   FontWeight="SemiBold"
+                                   FontWeight="{StaticResource FontWeightSemiBold}"
                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
                                    Margin="0,0,0,6"/>
                         <TextBlock x:Name="ReleaseNotesText"

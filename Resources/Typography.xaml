@@ -4,10 +4,22 @@
     <!-- 字体族令牌（主题无关） -->
     <FontFamily x:Key="FontFamilyDisplay">Segoe UI Variable Display, Segoe UI</FontFamily>
     <FontFamily x:Key="FontFamilyBody">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <!-- 图标字体（Win11 用 Fluent，Win10 回退 MDL2） -->
+    <FontFamily x:Key="FontFamilyIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
     <!-- 字号层级令牌 -->
     <sys:Double x:Key="FontSizeTitle">22</sys:Double>
     <sys:Double x:Key="FontSizeSubtitle">18</sys:Double>
     <sys:Double x:Key="FontSizeBody">15</sys:Double>
     <sys:Double x:Key="FontSizeCaption">14</sys:Double>
+
+    <!-- 图标字号令牌 -->
+    <sys:Double x:Key="FontSizeIconTiny">10</sys:Double>
+    <sys:Double x:Key="FontSizeIconSmall">12</sys:Double>
+    <sys:Double x:Key="FontSizeIcon">15</sys:Double>
+    <sys:Double x:Key="FontSizeIconLarge">22</sys:Double>
+
+    <!-- 字重令牌 -->
+    <FontWeight x:Key="FontWeightSemiBold">SemiBold</FontWeight>
+    <FontWeight x:Key="FontWeightBold">Bold</FontWeight>
 </ResourceDictionary>

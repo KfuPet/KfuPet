@@ -13,8 +13,6 @@
         Focusable="True">
 
     <Window.Resources>
-        <FontFamily x:Key="FontFamilyIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
-
         <!-- 菜单项：背景层铺满整个选项槽位，悬停时淡入；项间留 4px 缝隙 -->
         <Style x:Key="MenuItemStyle" TargetType="Button">
             <Setter Property="Margin" Value="0,2"/>
@@ -85,7 +83,7 @@
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE72C;"
                                FontFamily="{StaticResource FontFamilyIcon}"
-                               FontSize="15" Width="26"
+                               FontSize="{StaticResource FontSizeIcon}" Width="26"
                                VerticalAlignment="Center"
                                Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                     <TextBlock Text="检查更新"
@@ -100,7 +98,7 @@
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE713;"
                                FontFamily="{StaticResource FontFamilyIcon}"
-                               FontSize="15" Width="26"
+                               FontSize="{StaticResource FontSizeIcon}" Width="26"
                                VerticalAlignment="Center"
                                Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                     <TextBlock Text="设置"
@@ -119,7 +117,7 @@
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE7E8;"
                                FontFamily="{StaticResource FontFamilyIcon}"
-                               FontSize="15" Width="26"
+                               FontSize="{StaticResource FontSizeIcon}" Width="26"
                                VerticalAlignment="Center"
                                Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                     <TextBlock Text="退出"

@@ -11,8 +11,6 @@
         Background="{x:Null}">
 
     <Window.Resources>
-        <FontFamily x:Key="FontFamilyIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
-
         <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
             <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
@@ -183,7 +181,7 @@
                                Margin="16,0,0,0"
                                FontFamily="{StaticResource FontFamilyBody}"
                                FontSize="{StaticResource FontSizeBody}"
-                               FontWeight="SemiBold"
+                               FontWeight="{StaticResource FontWeightSemiBold}"
                                Foreground="{DynamicResource AppTextPrimaryBrush}"
                                VerticalAlignment="Center"/>
                     <Button x:Name="CloseButton"
@@ -228,7 +226,7 @@
                         </Button.Template>
                         <TextBlock Text="&#xE8BB;"
                                    FontFamily="{StaticResource FontFamilyIcon}"
-                                   FontSize="10"/>
+                                   FontSize="{StaticResource FontSizeIconTiny}"/>
                     </Button>
                 </Grid>
             </Border>
