@@ -53,6 +53,12 @@ namespace KfuPet
             double titleX = -(TextGap + titleWidth) / 2;
             double subtitleX = (TextGap + subtitleWidth) / 2;
 
+            // 遮罩右边缘（含渐变收尾区）最终要滑过文字空隙右端，
+            // 否则渐变尾部会压住副标题文字左侧
+            double maskRestRight = SubtitleMask.Margin.Left + SubtitleMask.Width;
+            double gapRight = ((FrameworkElement)SubtitleMask.Parent).Width / 2 + TextGap / 2;
+            double maskX = gapRight - maskRestRight - 2;
+
             var storyboard = (Storyboard)RootGrid.Resources["FadeInStoryboard"];
             foreach (var timeline in storyboard.Children)
             {
@@ -62,8 +68,10 @@ namespace KfuPet
                     switch (Storyboard.GetTargetName(animation))
                     {
                         case "TitleTransform":
-                        case "MaskTransform":
                             animation.To = titleX;
+                            break;
+                        case "MaskTransform":
+                            animation.To = maskX;
                             break;
                         case "SubtitleTransform":
                             animation.To = subtitleX;
@@ -90,11 +98,11 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 根据根网格背景色构建渐变遮罩，用于副标题文字的滑动显隐效果。
+        /// 根据根卡片背景色构建渐变遮罩，用于副标题文字的滑动显隐效果。
         /// </summary>
         private void SetupMask()
         {
-            if (RootGrid.Background is SolidColorBrush brush)
+            if (RootCard.Background is SolidColorBrush brush)
             {
                 var color = brush.Color;
                 var transparent = Color.FromArgb(0, color.R, color.G, color.B);
