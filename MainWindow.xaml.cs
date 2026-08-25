@@ -1,5 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -68,6 +73,14 @@ namespace KfuPet
         private DispatcherTimer? _toolMonitorTimer;
         private bool _wasToolRunning;
 
+        // ── AI 聊天 ──────────────────────────────────
+        private readonly ChatService _chatService = new();
+        private bool _isSending;
+        private bool _isHoveringPet;
+        private bool _isHoveringInput;
+        private DispatcherTimer? _inputHideTimer;
+        private CancellationTokenSource? _bubbleCts;
+
         /// <summary>
         /// 开发者工具（KfuPet-Tool）进程是否正在运行。
         /// </summary>
@@ -112,6 +125,7 @@ namespace KfuPet
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            _bubbleCts?.Cancel();
             _toolMonitorTimer?.Stop();
             _pipeServer?.Stop();
             _pipeServer?.Dispose();
@@ -308,6 +322,12 @@ namespace KfuPet
 
         private void RootGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // 点击落在输入框区域时不触发长按拖动，交给输入框处理
+            if (ChatInputPanel.IsMouseOver)
+            {
+                return;
+            }
+
             GetCursorPos(out _dragStartCursorPos);
             _windowStartLeft = Left;
             _windowStartTop = Top;
@@ -326,6 +346,8 @@ namespace KfuPet
 
         private void RootGrid_MouseMove(object sender, MouseEventArgs e)
         {
+            UpdatePetHover(e.GetPosition(CharacterCanvas));
+
             if (_holdTimer == null && !_isDragging) return;
 
             if (!_isDragging)
@@ -385,6 +407,246 @@ namespace KfuPet
             }
 
             Mouse.Capture(null);
+        }
+
+        // ── AI 聊天：悬停输入框 ─────────────────────
+
+        /// <summary>
+        /// 鼠标移动时检测是否悬停在角色不透明区域，控制输入框显隐。
+        /// </summary>
+        private void UpdatePetHover(Point canvasPoint)
+        {
+            var hovering = CharacterCanvas.HitTestOpaque(canvasPoint);
+            if (hovering == _isHoveringPet) return;
+
+            _isHoveringPet = hovering;
+            if (hovering)
+            {
+                ShowChatInput();
+            }
+            else
+            {
+                ScheduleChatInputHide();
+            }
+        }
+
+        private void RootGrid_MouseLeave(object sender, MouseEventArgs e)
+        {
+            _isHoveringPet = false;
+            ScheduleChatInputHide();
+        }
+
+        private void ChatInputPanel_MouseEnter(object sender, MouseEventArgs e)
+        {
+            _isHoveringInput = true;
+            _inputHideTimer?.Stop();
+        }
+
+        private void ChatInputPanel_MouseLeave(object sender, MouseEventArgs e)
+        {
+            _isHoveringInput = false;
+            ScheduleChatInputHide();
+        }
+
+        /// <summary>
+        /// 显示输入框（淡入 + 轻微上浮），并把焦点交给文本框。
+        /// </summary>
+        private void ShowChatInput()
+        {
+            _inputHideTimer?.Stop();
+            if (ChatInputPanel.Visibility == Visibility.Visible) return;
+
+            ChatInputPanel.Visibility = Visibility.Visible;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            ChatInputPanel.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)) { EasingFunction = ease });
+
+            if (ChatInputPanel.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(8, 0, TimeSpan.FromMilliseconds(180)) { EasingFunction = ease });
+            }
+        }
+
+        /// <summary>
+        /// 延迟收起输入框：给鼠标从角色移到输入框留出缓冲时间。
+        /// </summary>
+        private void ScheduleChatInputHide()
+        {
+            if (ChatInputPanel.Visibility != Visibility.Visible) return;
+
+            _inputHideTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+            _inputHideTimer.Tick -= InputHideTimer_Tick;
+            _inputHideTimer.Tick += InputHideTimer_Tick;
+            _inputHideTimer.Stop();
+            _inputHideTimer.Start();
+        }
+
+        private void InputHideTimer_Tick(object? sender, EventArgs e)
+        {
+            _inputHideTimer?.Stop();
+            if (_isHoveringPet || _isHoveringInput || ChatInputBox.IsKeyboardFocused) return;
+
+            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(150));
+            fade.Completed += (s, args) =>
+            {
+                if (!_isHoveringPet && !_isHoveringInput && !ChatInputBox.IsKeyboardFocused)
+                {
+                    ChatInputPanel.Visibility = Visibility.Collapsed;
+                }
+            };
+            ChatInputPanel.BeginAnimation(OpacityProperty, fade);
+        }
+
+        // ── AI 聊天：发送与气泡 ─────────────────────
+
+        private void ChatInputBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            ChatInputHint.Visibility = string.IsNullOrEmpty(ChatInputBox.Text)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void ChatInputBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                _ = SendChatAsync();
+            }
+        }
+
+        private void ChatSendButton_Click(object sender, RoutedEventArgs e)
+        {
+            _ = SendChatAsync();
+        }
+
+        /// <summary>
+        /// 发送用户输入：调用当前启用的模型，回复通过气泡分批显示。
+        /// </summary>
+        private async Task SendChatAsync()
+        {
+            if (_isSending) return;
+
+            var text = ChatInputBox.Text.Trim();
+            if (text.Length == 0) return;
+
+            var model = ModelConfigService.Models.FirstOrDefault(m => m.IsActive);
+            if (model == null)
+            {
+                ShowBubbleBatches(new List<string> { "主人还没有配置模型哦，去设置里添加一个再来找我吧～" });
+                return;
+            }
+
+            _isSending = true;
+            ChatInputBox.Clear();
+            ShowBubbleBatches(new List<string> { "唔……" });
+            try
+            {
+                var reply = await _chatService.SendAsync(model, text);
+                ShowBubbleBatches(SplitIntoBatches(reply));
+            }
+            catch (Exception ex)
+            {
+                ShowBubbleBatches(new List<string> { $"连接失败了……{ex.Message}" });
+            }
+            finally
+            {
+                _isSending = false;
+            }
+        }
+
+        /// <summary>
+        /// 把长回复按句子边界切成多批，每批不超过 60 字。
+        /// </summary>
+        private static List<string> SplitIntoBatches(string text)
+        {
+            const int maxBatchLength = 60;
+            var batches = new List<string>();
+            var current = new StringBuilder();
+
+            foreach (var ch in text)
+            {
+                current.Append(ch);
+                // 句子结束标点处切分；超长时强制切分
+                if ("。！？!?\n".Contains(ch) || current.Length >= maxBatchLength)
+                {
+                    var batch = current.ToString().Trim();
+                    if (batch.Length > 0)
+                    {
+                        batches.Add(batch);
+                    }
+                    current.Clear();
+                }
+            }
+
+            var tail = current.ToString().Trim();
+            if (tail.Length > 0)
+            {
+                batches.Add(tail);
+            }
+
+            return batches.Count > 0 ? batches : new List<string> { text };
+        }
+
+        /// <summary>
+        /// 气泡分批显示：每批淡入展示一段时间，播完后自动淡出。
+        /// 新的显示请求会打断上一轮的播放。
+        /// </summary>
+        private void ShowBubbleBatches(List<string> batches)
+        {
+            _bubbleCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            _bubbleCts = cts;
+
+            _ = RunBubbleBatchesAsync(batches, cts.Token);
+        }
+
+        private async Task RunBubbleBatchesAsync(List<string> batches, CancellationToken token)
+        {
+            try
+            {
+                for (var i = 0; i < batches.Count; i++)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    ChatBubbleText.Text = batches[i];
+                    ChatBubble.Visibility = Visibility.Visible;
+                    ChatBubble.BeginAnimation(OpacityProperty,
+                        new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
+                        {
+                            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                        });
+
+                    // 每批停留时长随字数增加，保证可读
+                    var dwellMs = Math.Clamp(1200 + batches[i].Length * 90, 1500, 6000);
+                    await Task.Delay(dwellMs, token);
+
+                    if (i < batches.Count - 1)
+                    {
+                        await FadeBubbleAsync(0, token);
+                    }
+                }
+
+                await Task.Delay(1200, token);
+                await FadeBubbleAsync(0, token);
+                ChatBubble.Visibility = Visibility.Collapsed;
+            }
+            catch (OperationCanceledException)
+            {
+                // 被新一轮显示打断，直接退出
+            }
+        }
+
+        private Task FadeBubbleAsync(double to, CancellationToken token)
+        {
+            var tcs = new TaskCompletionSource();
+            token.Register(() => tcs.TrySetCanceled());
+
+            var fade = new DoubleAnimation(to, TimeSpan.FromMilliseconds(150));
+            fade.Completed += (s, args) => tcs.TrySetResult();
+            ChatBubble.BeginAnimation(OpacityProperty, fade);
+            return tcs.Task;
         }
     }
 }
