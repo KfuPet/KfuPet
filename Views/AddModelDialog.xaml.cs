@@ -1,4 +1,5 @@
 using System;
+using System.Media;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -107,6 +108,45 @@ namespace KfuPet.Views
             else
             {
                 ConfirmSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+            }
+        }
+
+        /// <summary>
+        /// 已有添加窗口时被再次触发：把窗口带到前台，短暂置顶提醒并播放系统提示音。
+        /// </summary>
+        public async void FlashToFront()
+        {
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
+
+            PlayReminderSound();
+
+            // 窗口已在前台或已置顶时无需再激活/置顶，避免 Topmost 来回切换造成闪烁
+            if (IsActive || Topmost)
+            {
+                return;
+            }
+
+            Activate();
+            Topmost = true;
+            await Task.Delay(2000);
+            Topmost = false;
+        }
+
+        /// <summary>
+        /// 播放一次系统提示音，失败时静默忽略。
+        /// </summary>
+        private static void PlayReminderSound()
+        {
+            try
+            {
+                SystemSounds.Exclamation.Play();
+            }
+            catch
+            {
+                // 提示音播放失败不影响主流程
             }
         }
 
