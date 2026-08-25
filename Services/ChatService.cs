@@ -27,7 +27,7 @@ namespace KfuPet.Services
 
             var payload = new
             {
-                model = model.ModelName,
+                model = model.ModelId,
                 messages = new[]
                 {
                     new { role = "system", content = _promptService.BuildSystemPrompt() },

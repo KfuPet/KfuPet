@@ -26,14 +26,14 @@ namespace KfuPet.Services
         /// <summary>
         /// 新增一条模型配置。若当前没有任何模型，则新模型默认设为当前使用。
         /// </summary>
-        public ModelConfig Add(string provider, string baseUrl, string apiKey, string modelName)
+        public ModelConfig Add(string baseUrl, string apiKey, string modelName, string modelId)
         {
             var model = new ModelConfig
             {
-                Provider = provider,
                 BaseUrl = baseUrl,
                 ApiKey = apiKey,
                 ModelName = modelName,
+                ModelId = modelId,
                 IsActive = _models.Count == 0
             };
             _models.Add(model);
@@ -66,15 +66,15 @@ namespace KfuPet.Services
         /// <summary>
         /// 更新已有模型配置，按标识定位。
         /// </summary>
-        public void Update(string id, string provider, string baseUrl, string apiKey, string modelName)
+        public void Update(string id, string baseUrl, string apiKey, string modelName, string modelId)
         {
             var model = _models.FirstOrDefault(m => m.Id == id);
             if (model == null) return;
 
-            model.Provider = provider;
             model.BaseUrl = baseUrl;
             model.ApiKey = apiKey;
             model.ModelName = modelName;
+            model.ModelId = modelId;
             Save();
         }
 

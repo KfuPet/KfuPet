@@ -45,9 +45,9 @@ namespace KfuPet.Views
         /// </summary>
         public void LoadModel(ModelConfig model)
         {
-            ProviderBox.Text = model.Provider;
             BaseUrlBox.Text = model.BaseUrl;
             ApiKeyBox.Password = model.ApiKey;
+            ModelIdBox.Text = model.ModelId;
             ModelNameBox.Text = model.ModelName;
             DialogTitleText.Text = "编辑模型";
         }
@@ -72,9 +72,15 @@ namespace KfuPet.Views
 
         private async void ConfirmButton_Click(object sender, RoutedEventArgs e)
         {
-            var provider = ProviderBox.Text.Trim();
             var baseUrl = BaseUrlBox.Text.Trim();
             var apiKey = ApiKeyBox.Password;
+
+            var modelId = ModelIdBox.Text.Trim();
+            if (string.IsNullOrEmpty(modelId))
+            {
+                ShowError("模型 ID 不能为空，请填写服务商支持的模型标识（例如 deepseek-v4-pro）");
+                return;
+            }
 
             var modelName = ModelNameBox.Text.Trim();
             if (string.IsNullOrEmpty(modelName))
@@ -100,9 +106,9 @@ namespace KfuPet.Views
 
             ModelConfirmed?.Invoke(this, new ModelConfigEventArgs
             {
-                Provider = provider,
                 BaseUrl = baseUrl,
                 ApiKey = apiKey,
+                ModelId = modelId,
                 ModelName = modelName
             });
 
@@ -222,9 +228,9 @@ namespace KfuPet.Views
     /// <summary>模型配置表单数据。</summary>
     public class ModelConfigEventArgs : EventArgs
     {
-        public string Provider { get; set; } = string.Empty;
         public string BaseUrl { get; set; } = string.Empty;
         public string ApiKey { get; set; } = string.Empty;
+        public string ModelId { get; set; } = string.Empty;
         public string ModelName { get; set; } = string.Empty;
     }
 }
