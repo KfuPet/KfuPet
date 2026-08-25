@@ -96,7 +96,14 @@ namespace KfuPet.Services.Ipc
                 }
                 catch
                 {
-                    await Task.Delay(500, token);
+                    try
+                    {
+                        await Task.Delay(500, token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
                 }
             }
         }

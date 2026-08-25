@@ -82,7 +82,14 @@ namespace KfuPet.Services.Ipc
                 catch
                 {
                     stream.Dispose();
-                    await Task.Delay(500, token);
+                    try
+                    {
+                        await Task.Delay(500, token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
                     continue;
                 }
 

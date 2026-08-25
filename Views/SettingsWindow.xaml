@@ -914,6 +914,22 @@
                                               Unchecked="DeveloperModeToggle_Changed"/>
                             </StackPanel>
 
+                            <StackPanel x:Name="DebugBonesPanel"
+                                        Orientation="Horizontal"
+                                        Margin="0,14,0,0"
+                                        Visibility="Collapsed">
+                                <TextBlock Text="显示骨骼调试线框"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                                <ToggleButton x:Name="DebugBonesToggle"
+                                              Style="{StaticResource ToggleSwitchStyle}"
+                                              Margin="12,0,0,0"
+                                              Checked="DebugBonesToggle_Changed"
+                                              Unchecked="DebugBonesToggle_Changed"/>
+                            </StackPanel>
+
                             <TextBlock x:Name="ToolStatusText"
                                        Style="{StaticResource HintTextStyle}"
                                        Margin="0,14,0,0"/>

@@ -22,6 +22,7 @@ namespace KfuPet.Views
         private readonly UpdateService _updateService = new();
         private bool _suppressToggleEvents;
         private bool _suppressModelToggleEvents;
+        private bool _suppressDebugBonesEvents;
         private bool _isCheckingUpdate;
         private AddModelDialog? _addModelDialog;
 
@@ -54,6 +55,7 @@ namespace KfuPet.Views
         {
             _mainWindow.DeveloperModeService.EnabledChanged -= OnDeveloperModeChanged;
             _mainWindow.ToolRunningChanged -= OnToolRunningChanged;
+            _mainWindow.SkeletonService.DebugSkeletonChanged -= OnDebugSkeletonChanged;
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -302,10 +304,13 @@ namespace KfuPet.Views
         {
             _mainWindow.DeveloperModeService.EnabledChanged += OnDeveloperModeChanged;
             _mainWindow.ToolRunningChanged += OnToolRunningChanged;
+            _mainWindow.SkeletonService.DebugSkeletonChanged += OnDebugSkeletonChanged;
 
             _suppressToggleEvents = true;
             DeveloperModeToggle.IsChecked = _mainWindow.DeveloperModeService.IsEnabled;
             _suppressToggleEvents = false;
+
+            UpdateDebugBonesPanel();
         }
 
         private void OnDeveloperModeChanged(object? sender, EventArgs e)
@@ -313,6 +318,43 @@ namespace KfuPet.Views
             _suppressToggleEvents = true;
             DeveloperModeToggle.IsChecked = _mainWindow.DeveloperModeService.IsEnabled;
             _suppressToggleEvents = false;
+
+            // 关闭开发者模式时，一并关闭调试线框，避免线框残留显示
+            if (!_mainWindow.DeveloperModeService.IsEnabled)
+            {
+                _mainWindow.SkeletonService.SetDebugSkeleton(false);
+            }
+
+            UpdateDebugBonesPanel();
+        }
+
+        /// <summary>
+        /// 开发者模式开启时显示“骨骼调试线框”开关，关闭时隐藏。
+        /// </summary>
+        private void UpdateDebugBonesPanel()
+        {
+            var enabled = _mainWindow.DeveloperModeService.IsEnabled;
+            DebugBonesPanel.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+
+            _suppressDebugBonesEvents = true;
+            DebugBonesToggle.IsChecked = _mainWindow.SkeletonService.ShowDebugSkeleton;
+            _suppressDebugBonesEvents = false;
+        }
+
+        /// <summary>
+        /// 骨骼调试线框状态变化（可能来自开发者工具 IPC）时同步开关显示。
+        /// </summary>
+        private void OnDebugSkeletonChanged(object? sender, EventArgs e)
+        {
+            _suppressDebugBonesEvents = true;
+            DebugBonesToggle.IsChecked = _mainWindow.SkeletonService.ShowDebugSkeleton;
+            _suppressDebugBonesEvents = false;
+        }
+
+        private void DebugBonesToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressDebugBonesEvents) return;
+            _mainWindow.SkeletonService.SetDebugSkeleton(DebugBonesToggle.IsChecked == true);
         }
 
         private void OnToolRunningChanged(object? sender, EventArgs e)
