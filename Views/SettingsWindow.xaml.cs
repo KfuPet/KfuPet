@@ -1,4 +1,7 @@
 using System;
+using System.Diagnostics;
+using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -11,11 +14,12 @@ using KfuPet.Services;
 namespace KfuPet.Views
 {
     /// <summary>
-    /// 设置窗口，左侧导航在“模型配置”与“开发者模式”之间切换。
+    /// 设置窗口，左侧导航在“模型配置”、“开发者模式”与“关于”之间切换。
     /// </summary>
     public partial class SettingsWindow : Window
     {
         private readonly MainWindow _mainWindow;
+        private readonly UpdateService _updateService = new();
         private bool _suppressToggleEvents;
         private bool _suppressModelToggleEvents;
 
@@ -30,6 +34,8 @@ namespace KfuPet.Views
             LoadDeveloperState();
             LoadModels();
             UpdateToolStatus();
+
+            VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
 
             Loaded += (s, e) => PlayEntranceAnimation();
             KeyDown += (s, e) =>
@@ -92,13 +98,19 @@ namespace KfuPet.Views
 
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ModelConfigPanel == null || DeveloperPanel == null) return;
+            if (ModelConfigPanel == null || DeveloperPanel == null || AboutPanel == null) return;
 
-            var showModel = NavList.SelectedIndex == 0;
-            ModelConfigPanel.Visibility = showModel ? Visibility.Visible : Visibility.Collapsed;
-            DeveloperPanel.Visibility = showModel ? Visibility.Collapsed : Visibility.Visible;
+            ModelConfigPanel.Visibility = NavList.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
+            DeveloperPanel.Visibility = NavList.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+            AboutPanel.Visibility = NavList.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
 
-            PlayPageEnterAnimation(showModel ? ModelConfigPanel : DeveloperPanel);
+            var currentPanel = NavList.SelectedIndex switch
+            {
+                1 => DeveloperPanel,
+                2 => AboutPanel,
+                _ => ModelConfigPanel
+            };
+            PlayPageEnterAnimation(currentPanel);
         }
 
         /// <summary>
@@ -288,6 +300,74 @@ namespace KfuPet.Views
             ToolStatusText.Text = _mainWindow.IsToolRunning
                 ? "开发者工具已经连上我啦，随时欢迎来研究～"
                 : "开发者工具还没连过来，想研究我的话记得启动它。";
+        }
+
+        /// <summary>
+        /// 关于页“检查更新”按钮点击。
+        /// </summary>
+        private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            await CheckForUpdatesAsync();
+        }
+
+        /// <summary>
+        /// 检查更新：已是最新时提示，有新版本时先询问用户，确认后用默认浏览器打开发布页面。
+        /// </summary>
+        private async Task CheckForUpdatesAsync()
+        {
+            var result = await _updateService.CheckAsync();
+
+            if (result == null)
+            {
+                var failDialog = new UpdateDialog(false, "未知", "未知", null)
+                {
+                    Owner = this
+                };
+                failDialog.TitleText.Text = "检查更新";
+                failDialog.StatusIcon.Text = "\uE783"; // 警告图标
+                failDialog.StatusTitleText.Text = "检查更新失败";
+                failDialog.StatusDetailText.Text = "请检查网络后重试";
+                failDialog.ConfirmButton.Content = "确定";
+                failDialog.ShowDialog();
+                return;
+            }
+
+            var dialog = new UpdateDialog(
+                result.IsUpdateAvailable,
+                result.CurrentVersion.ToString(3),
+                result.LatestVersion.ToString(3),
+                result.ReleaseNotes)
+            {
+                Owner = this
+            };
+
+            dialog.DownloadConfirmed += (s, e) => OpenReleasePage(result.ReleasePageUrl);
+            dialog.ShowDialog();
+        }
+
+        /// <summary>
+        /// 用系统默认浏览器打开发布页面。
+        /// </summary>
+        private static void OpenReleasePage(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch
+            {
+                MessageBox.Show($"打开下载页面失败，请手动访问：\n{url}",
+                    "KfuPet", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
     }
 }

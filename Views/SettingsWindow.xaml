@@ -751,6 +751,15 @@
                                 <TextBlock Text="开发者模式" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE946;"
+                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="关于" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
                     </ListBox>
                 </Border>
 
@@ -872,6 +881,114 @@
                             <TextBlock x:Name="ToolStatusText"
                                        Style="{StaticResource HintTextStyle}"
                                        Margin="0,14,0,0"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- 关于页 -->
+                    <ScrollViewer x:Name="AboutPanel"
+                                  Style="{StaticResource OverlayScrollViewerStyle}"
+                                  Visibility="Collapsed"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer.RenderTransform>
+                            <TranslateTransform/>
+                        </ScrollViewer.RenderTransform>
+
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="关于软件" Style="{StaticResource SectionTitleStyle}"/>
+
+                            <!-- 软件信息卡片：图标 + 名称 + 版本徽章，下方为操作按钮 -->
+                            <Border Margin="0,16,0,0"
+                                    Padding="18,16"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Image Source="pack://application:,,,/Assets/icon/app.ico"
+                                               Width="40" Height="40"/>
+                                        <TextBlock Text="KfuPet"
+                                                   Margin="14,0,0,0"
+                                                   FontFamily="{StaticResource FontFamilyDisplay}"
+                                                   FontSize="{StaticResource FontSizeSubtitle}"
+                                                   FontWeight="{StaticResource FontWeightSemiBold}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <Border Margin="10,0,0,0"
+                                                Padding="8,2"
+                                                VerticalAlignment="Center"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                            <TextBlock x:Name="VersionText"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <Button x:Name="CheckUpdateButton"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,14,0,0"
+                                            Padding="14,7"
+                                            Background="{DynamicResource AppSurfaceBrush}"
+                                            Cursor="Hand"
+                                            FocusVisualStyle="{x:Null}"
+                                            Click="CheckUpdateButton_Click">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="BtnBg"
+                                                        Background="{TemplateBinding Background}"
+                                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="8"
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE72C;"
+                                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="0,0,6,0"/>
+                                                        <TextBlock Text="检查更新"
+                                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                                   FontSize="{StaticResource FontSizeBody}"
+                                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="BtnBg"
+                                                                Property="BorderBrush"
+                                                                Value="{DynamicResource AppAccentBrush}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 项目介绍卡片 -->
+                            <Border Margin="0,12,0,0"
+                                    Padding="18,16"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <StackPanel>
+                                    <TextBlock Text="项目介绍"
+                                               FontFamily="{StaticResource FontFamilyBody}"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               FontWeight="{StaticResource FontWeightSemiBold}"
+                                               Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                    <TextBlock Text="KfuPet 是一个 AI 驱动的二次元桌面宠物平台。她住在你的桌面上，可以陪你聊天互动，未来还会逐步拥有记忆、情感、骨骼动画、插件扩展等能力，成为一个真正懂你的桌面伙伴。"
+                                               Style="{StaticResource HintTextStyle}"
+                                               Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>

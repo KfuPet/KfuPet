@@ -1,6 +1,4 @@
-using System.Diagnostics;
 using System.Windows;
-using KfuPet.Services;
 using KfuPet.Views;
 
 namespace KfuPet
@@ -15,7 +13,6 @@ namespace KfuPet
         private SettingsWindow? _settingsWindow;
         private TrayMenuWindow? _trayMenu;
         private Mutex? _mutex;
-        private readonly UpdateService _updateService = new();
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -115,66 +112,6 @@ namespace KfuPet
 
             _settingsWindow.Show();
             _settingsWindow.Activate();
-        }
-
-        /// <summary>
-        /// 检查更新：已是最新时提示，有新版本时先询问用户，确认后用默认浏览器打开发布页面。
-        /// </summary>
-        private async Task CheckForUpdatesAsync()
-        {
-            var result = await _updateService.CheckAsync();
-
-            if (result == null)
-            {
-                var failDialog = new UpdateDialog(false, "未知", "未知", null)
-                {
-                    Owner = _settingsWindow
-                };
-                failDialog.TitleText.Text = "检查更新";
-                failDialog.StatusIcon.Text = "\uE783"; // 警告图标
-                failDialog.StatusTitleText.Text = "检查更新失败";
-                failDialog.StatusDetailText.Text = "请检查网络后重试";
-                failDialog.ConfirmButton.Content = "确定";
-                failDialog.ShowDialog();
-                return;
-            }
-
-            var dialog = new UpdateDialog(
-                result.IsUpdateAvailable,
-                result.CurrentVersion.ToString(3),
-                result.LatestVersion.ToString(3),
-                result.ReleaseNotes)
-            {
-                Owner = _settingsWindow
-            };
-
-            dialog.DownloadConfirmed += (s, e) => OpenReleasePage(result.ReleasePageUrl);
-            dialog.ShowDialog();
-        }
-
-        /// <summary>
-        /// 用系统默认浏览器打开发布页面。
-        /// </summary>
-        private static void OpenReleasePage(string url)
-        {
-            if (string.IsNullOrWhiteSpace(url))
-            {
-                return;
-            }
-
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = url,
-                    UseShellExecute = true
-                });
-            }
-            catch
-            {
-                MessageBox.Show($"打开下载页面失败，请手动访问：\n{url}",
-                    "KfuPet", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
         }
 
         /// <summary>
