@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="设置"
-        Width="792"
-        Height="552"
+        Width="960"
+        Height="640"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -906,25 +906,25 @@
                                     CornerRadius="10">
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
-                                        <Image Source="pack://application:,,,/Assets/icon/app.ico"
-                                               Width="40" Height="40"/>
+                                        <Image Source="pack://application:,,,/Assets/icon/Startlogo.png"
+                                               Width="56" Height="56"/>
                                         <TextBlock Text="KfuPet"
                                                    Margin="14,0,0,0"
                                                    FontFamily="{StaticResource FontFamilyDisplay}"
-                                                   FontSize="{StaticResource FontSizeSubtitle}"
+                                                   FontSize="{StaticResource FontSizeTitle}"
                                                    FontWeight="{StaticResource FontWeightSemiBold}"
                                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
                                                    VerticalAlignment="Center"/>
+                                        <!-- 版本徽章：底色用边框色，比卡片面深一档以便区分 -->
                                         <Border Margin="10,0,0,0"
-                                                Padding="8,2"
+                                                Padding="8,3"
                                                 VerticalAlignment="Center"
-                                                BorderBrush="{DynamicResource AppBorderBrush}"
-                                                BorderThickness="1"
+                                                Background="{DynamicResource AppBorderBrush}"
                                                 CornerRadius="6">
                                             <TextBlock x:Name="VersionText"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeCaption}"
-                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
                                         </Border>
                                     </StackPanel>
 
@@ -973,20 +973,26 @@
 
                             <!-- 项目介绍卡片 -->
                             <Border Margin="0,12,0,0"
-                                    Padding="18,16"
+                                    Padding="18,20"
                                     Background="{DynamicResource AppSurfaceBrush}"
                                     BorderBrush="{DynamicResource AppBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="10">
                                 <StackPanel>
                                     <TextBlock Text="项目介绍"
-                                               FontFamily="{StaticResource FontFamilyBody}"
-                                               FontSize="{StaticResource FontSizeBody}"
+                                               HorizontalAlignment="Center"
+                                               FontFamily="{StaticResource FontFamilyDisplay}"
+                                               FontSize="{StaticResource FontSizeSubtitle}"
                                                FontWeight="{StaticResource FontWeightSemiBold}"
                                                Foreground="{DynamicResource AppTextPrimaryBrush}"/>
                                     <TextBlock Text="KfuPet 是一个 AI 驱动的二次元桌面宠物平台。她住在你的桌面上，可以陪你聊天互动，未来还会逐步拥有记忆、情感、骨骼动画、插件扩展等能力，成为一个真正懂你的桌面伙伴。"
-                                               Style="{StaticResource HintTextStyle}"
-                                               Margin="0,8,0,0"/>
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center"
+                                               Margin="0,12,0,0"
+                                               FontFamily="{StaticResource FontFamilyBody}"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                               TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
