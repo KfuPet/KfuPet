@@ -90,7 +90,11 @@ namespace KfuPet
                     _notifyIcon?.Dispose();
                     Shutdown();
                 };
-                _trayMenu.CheckUpdateClicked += async (s, e) => await CheckForUpdatesAsync();
+                _trayMenu.ModelConfigClicked += (s, e) =>
+                {
+                    OpenSettingsWindow();
+                    _settingsWindow?.ShowModelConfigPage();
+                };
             }
 
             _trayMenu.ShowNearCursor();

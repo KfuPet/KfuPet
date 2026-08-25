@@ -13,8 +13,8 @@ namespace KfuPet.Views
     /// </summary>
     public partial class TrayMenuWindow : Window
     {
-        /// <summary>点击“检查更新”时触发。</summary>
-        public event EventHandler? CheckUpdateClicked;
+        /// <summary>点击“模型配置”时触发。</summary>
+        public event EventHandler? ModelConfigClicked;
 
         /// <summary>点击“设置”时触发。</summary>
         public event EventHandler? SettingsClicked;
@@ -85,7 +85,7 @@ namespace KfuPet.Views
                 }
             };
 
-            CheckUpdateItem.Click += (s, e) => OnItemClicked(CheckUpdateClicked);
+            ModelConfigItem.Click += (s, e) => OnItemClicked(ModelConfigClicked);
             SettingsItem.Click += (s, e) => OnItemClicked(SettingsClicked);
             ExitItem.Click += (s, e) => OnItemClicked(ExitClicked);
 

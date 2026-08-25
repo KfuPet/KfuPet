@@ -82,6 +82,14 @@ namespace KfuPet.Views
             }
         }
 
+        /// <summary>
+        /// 切换到左侧导航的“模型配置”页。
+        /// </summary>
+        public void ShowModelConfigPage()
+        {
+            NavList.SelectedIndex = 0;
+        }
+
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (ModelConfigPanel == null || DeveloperPanel == null) return;

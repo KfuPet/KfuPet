@@ -79,14 +79,14 @@
         </Border.RenderTransform>
 
         <StackPanel>
-            <Button x:Name="CheckUpdateItem" Style="{StaticResource MenuItemStyle}">
+            <Button x:Name="ModelConfigItem" Style="{StaticResource MenuItemStyle}">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE72C;"
+                    <TextBlock Text="&#xE8F1;"
                                FontFamily="{StaticResource FontFamilyIcon}"
                                FontSize="{StaticResource FontSizeIcon}" Width="26"
                                VerticalAlignment="Center"
                                Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-                    <TextBlock Text="检查更新"
+                    <TextBlock Text="模型配置"
                                FontFamily="{StaticResource FontFamilyBody}"
                                FontSize="{StaticResource FontSizeBody}"
                                VerticalAlignment="Center"
