@@ -112,9 +112,9 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 已有添加窗口时被再次触发：把窗口带到前台，短暂置顶提醒并播放系统提示音。
+        /// 已有添加窗口时被再次触发：把它恢复到初始位置并带到前台，同时播放提示音。
         /// </summary>
-        public async void FlashToFront()
+        public void FlashToFront()
         {
             if (WindowState == WindowState.Minimized)
             {
@@ -123,16 +123,20 @@ namespace KfuPet.Views
 
             PlayReminderSound();
 
-            // 窗口已在前台或已置顶时无需再激活/置顶，避免 Topmost 来回切换造成闪烁
-            if (IsActive || Topmost)
-            {
-                return;
-            }
+            // 回到程序默认打开的位置（屏幕居中），而不是单纯置顶（置顶切换会造成闪烁）
+            CenterToDefaultPosition();
 
             Activate();
-            Topmost = true;
-            await Task.Delay(2000);
-            Topmost = false;
+        }
+
+        /// <summary>
+        /// 把窗口居中到屏幕工作区，即程序默认打开的位置。
+        /// </summary>
+        private void CenterToDefaultPosition()
+        {
+            var workArea = SystemParameters.WorkArea;
+            Left = workArea.Left + (workArea.Width - ActualWidth) / 2;
+            Top = workArea.Top + (workArea.Height - ActualHeight) / 2;
         }
 
         /// <summary>
