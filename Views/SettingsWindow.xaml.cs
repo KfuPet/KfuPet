@@ -22,6 +22,7 @@ namespace KfuPet.Views
         private readonly UpdateService _updateService = new();
         private bool _suppressToggleEvents;
         private bool _suppressModelToggleEvents;
+        private bool _isCheckingUpdate;
 
         private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
 
@@ -307,7 +308,20 @@ namespace KfuPet.Views
         /// </summary>
         private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
         {
-            await CheckForUpdatesAsync();
+            if (_isCheckingUpdate)
+            {
+                return;
+            }
+
+            _isCheckingUpdate = true;
+            try
+            {
+                await CheckForUpdatesAsync();
+            }
+            finally
+            {
+                _isCheckingUpdate = false;
+            }
         }
 
         /// <summary>
