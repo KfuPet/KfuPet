@@ -26,7 +26,7 @@ namespace KfuPet.Services
         /// <summary>
         /// 新增一条模型配置。若当前没有任何模型，则新模型默认设为当前使用。
         /// </summary>
-        public ModelConfig Add(string baseUrl, string apiKey, string modelName, string modelId)
+        public ModelConfig Add(string baseUrl, string apiKey, string modelName, string modelId, string embeddingModelId = "")
         {
             var model = new ModelConfig
             {
@@ -34,6 +34,7 @@ namespace KfuPet.Services
                 ApiKey = apiKey,
                 ModelName = modelName,
                 ModelId = modelId,
+                EmbeddingModelId = embeddingModelId,
                 IsActive = _models.Count == 0
             };
             _models.Add(model);
@@ -66,7 +67,7 @@ namespace KfuPet.Services
         /// <summary>
         /// 更新已有模型配置，按标识定位。
         /// </summary>
-        public void Update(string id, string baseUrl, string apiKey, string modelName, string modelId)
+        public void Update(string id, string baseUrl, string apiKey, string modelName, string modelId, string embeddingModelId = "")
         {
             var model = _models.FirstOrDefault(m => m.Id == id);
             if (model == null) return;
@@ -75,6 +76,7 @@ namespace KfuPet.Services
             model.ApiKey = apiKey;
             model.ModelName = modelName;
             model.ModelId = modelId;
+            model.EmbeddingModelId = embeddingModelId;
             Save();
         }
 

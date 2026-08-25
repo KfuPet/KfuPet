@@ -74,7 +74,8 @@ namespace KfuPet
         private bool _wasToolRunning;
 
         // ── AI 聊天 ──────────────────────────────────
-        private readonly ChatService _chatService = new();
+        private readonly ChatService _chatService;
+        private readonly List<ChatMessage> _chatHistory = new();
         private bool _isSending;
         private bool _isHoveringPet;
         private bool _isHoveringInput;
@@ -94,6 +95,7 @@ namespace KfuPet
         public MainWindow()
         {
             InitializeComponent();
+            _chatService = new ChatService(LogService);
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
@@ -543,8 +545,16 @@ namespace KfuPet
             ShowBubbleBatches(new List<string> { "唔……" });
             try
             {
-                var reply = await _chatService.SendAsync(model, text);
+                var reply = await _chatService.SendAsync(model, _chatHistory, text);
                 ShowBubbleBatches(SplitIntoBatches(reply));
+
+                // 更新短期记忆（会话上下文），并限制长度
+                _chatHistory.Add(new ChatMessage { Role = "user", Content = text });
+                _chatHistory.Add(new ChatMessage { Role = "assistant", Content = reply });
+                TrimChatHistory();
+
+                // 后台提取并写入长期记忆，不阻塞回复显示
+                _ = _chatService.ExtractAndStoreAsync(model, text, reply);
             }
             catch (Exception ex)
             {
@@ -553,6 +563,18 @@ namespace KfuPet
             finally
             {
                 _isSending = false;
+            }
+        }
+
+        /// <summary>
+        /// 限制短期记忆长度，只保留最近 20 条消息（约 10 轮），避免上下文过长。
+        /// </summary>
+        private void TrimChatHistory()
+        {
+            const int maxMessages = 20;
+            if (_chatHistory.Count > maxMessages)
+            {
+                _chatHistory.RemoveRange(0, _chatHistory.Count - maxMessages);
             }
         }
 

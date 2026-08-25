@@ -48,6 +48,7 @@ namespace KfuPet.Views
             BaseUrlBox.Text = model.BaseUrl;
             ApiKeyBox.Password = model.ApiKey;
             ModelIdBox.Text = model.ModelId;
+            EmbeddingModelIdBox.Text = model.EmbeddingModelId;
             ModelNameBox.Text = model.ModelName;
             DialogTitleText.Text = "编辑模型";
         }
@@ -88,6 +89,8 @@ namespace KfuPet.Views
                 modelName = "未命名模型";
             }
 
+            var embeddingModelId = EmbeddingModelIdBox.Text.Trim();
+
             SetConfirmBusy(true);
             HideError();
             try
@@ -109,6 +112,7 @@ namespace KfuPet.Views
                 BaseUrl = baseUrl,
                 ApiKey = apiKey,
                 ModelId = modelId,
+                EmbeddingModelId = embeddingModelId,
                 ModelName = modelName
             });
 
@@ -231,6 +235,7 @@ namespace KfuPet.Views
         public string BaseUrl { get; set; } = string.Empty;
         public string ApiKey { get; set; } = string.Empty;
         public string ModelId { get; set; } = string.Empty;
+        public string EmbeddingModelId { get; set; } = string.Empty;
         public string ModelName { get; set; } = string.Empty;
     }
 }

@@ -148,7 +148,7 @@ namespace KfuPet.Views
             _addModelDialog = new AddModelDialog();
             _addModelDialog.ModelConfirmed += (s, args) =>
             {
-                var model = ModelConfigService.Add(args.BaseUrl, args.ApiKey, args.ModelName, args.ModelId);
+                var model = ModelConfigService.Add(args.BaseUrl, args.ApiKey, args.ModelName, args.ModelId, args.EmbeddingModelId);
                 AddModelCard(model);
             };
             _addModelDialog.Closed += (s, args) => _addModelDialog = null;
@@ -284,7 +284,7 @@ namespace KfuPet.Views
             var dialog = new AddModelDialog(model);
             dialog.ModelConfirmed += (s, args) =>
             {
-                ModelConfigService.Update(model.Id, args.BaseUrl, args.ApiKey, args.ModelName, args.ModelId);
+                ModelConfigService.Update(model.Id, args.BaseUrl, args.ApiKey, args.ModelName, args.ModelId, args.EmbeddingModelId);
                 item.Content = args.ModelName;
             };
             dialog.Show();

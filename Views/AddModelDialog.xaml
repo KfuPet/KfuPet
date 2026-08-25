@@ -286,6 +286,9 @@
 
                 <TextBlock Text="模型 ID（服务商支持的模型标识，如 deepseek-v4-pro）" Style="{StaticResource FieldLabelStyle}"/>
                 <TextBox x:Name="ModelIdBox" Style="{StaticResource FieldInputStyle}"/>
+
+                <TextBlock Text="Embedding 模型 ID（可选，用于长期记忆检索，留空则用关键词匹配）" Style="{StaticResource FieldLabelStyle}"/>
+                <TextBox x:Name="EmbeddingModelIdBox" Style="{StaticResource FieldInputStyle}"/>
             </StackPanel>
 
             <!-- 按钮栏 -->

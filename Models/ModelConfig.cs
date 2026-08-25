@@ -20,6 +20,9 @@ namespace KfuPet.Models
         /// <summary>模型 ID，发送给服务商的真实模型标识（例如 deepseek-v4-pro）。</summary>
         public string ModelId { get; set; } = string.Empty;
 
+        /// <summary>Embedding 模型 ID，用于长期记忆的向量检索；为空时记忆检索回退为关键词匹配。</summary>
+        public string EmbeddingModelId { get; set; } = string.Empty;
+
         /// <summary>是否当前正在使用的模型（同时最多一个生效）。</summary>
         public bool IsActive { get; set; }
     }
