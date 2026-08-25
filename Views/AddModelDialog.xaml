@@ -4,7 +4,7 @@
         Title="添加模型"
         Width="520"
         SizeToContent="Height"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="NoResize"

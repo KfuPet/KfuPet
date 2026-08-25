@@ -131,17 +131,17 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 添加模型按钮点击：弹出配置对话框，确认后把新模型插入列表。
+        /// 添加模型按钮点击：以非模态方式打开配置窗口，确认后把新模型插入列表。
         /// </summary>
         private void AddModelButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new AddModelDialog { Owner = this };
+            var dialog = new AddModelDialog();
             dialog.ModelConfirmed += (s, args) =>
             {
                 var model = ModelConfigService.Add(args.Provider, args.BaseUrl, args.ApiKey, args.ModelName);
                 AddModelCard(model);
             };
-            dialog.ShowDialog();
+            dialog.Show();
         }
 
         /// <summary>

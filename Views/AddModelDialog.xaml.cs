@@ -25,7 +25,6 @@ namespace KfuPet.Views
             {
                 if (e.Key == Key.Escape)
                 {
-                    DialogResult = false;
                     Close();
                 }
             };
@@ -41,13 +40,11 @@ namespace KfuPet.Views
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            DialogResult = false;
             Close();
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            DialogResult = false;
             Close();
         }
 
@@ -87,7 +84,6 @@ namespace KfuPet.Views
                 ModelName = modelName
             });
 
-            DialogResult = true;
             Close();
         }
 
