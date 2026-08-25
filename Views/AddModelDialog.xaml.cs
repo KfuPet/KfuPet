@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using KfuPet.Services;
 
 namespace KfuPet.Views
 {
@@ -11,6 +12,8 @@ namespace KfuPet.Views
     /// </summary>
     public partial class AddModelDialog : Window
     {
+        private readonly AiConnectivityService _connectivityService = new();
+
         /// <summary>确认添加时触发，携带表单数据。</summary>
         public event EventHandler<ModelConfigEventArgs>? ModelConfirmed;
 
@@ -48,24 +51,67 @@ namespace KfuPet.Views
             Close();
         }
 
-        private void ConfirmButton_Click(object sender, RoutedEventArgs e)
+        private async void ConfirmButton_Click(object sender, RoutedEventArgs e)
         {
+            var provider = ProviderBox.Text.Trim();
+            var baseUrl = BaseUrlBox.Text.Trim();
+            var apiKey = ApiKeyBox.Password;
+
             var modelName = ModelNameBox.Text.Trim();
             if (string.IsNullOrEmpty(modelName))
             {
                 modelName = "未命名模型";
             }
 
+            SetConfirmBusy(true);
+            try
+            {
+                await _connectivityService.TestAsync(baseUrl, apiKey);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"连接失败，请检查服务商、Base URL 与 API Key 是否正确。\n\n{ex.Message}",
+                    "KfuPet", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            finally
+            {
+                SetConfirmBusy(false);
+            }
+
             ModelConfirmed?.Invoke(this, new ModelConfigEventArgs
             {
-                Provider = ProviderBox.Text.Trim(),
-                BaseUrl = BaseUrlBox.Text.Trim(),
-                ApiKey = ApiKeyBox.Password,
+                Provider = provider,
+                BaseUrl = baseUrl,
+                ApiKey = apiKey,
                 ModelName = modelName
             });
 
             DialogResult = true;
             Close();
+        }
+
+        /// <summary>
+        /// 切换确认按钮为“验证连接中”的转圈样式，避免重复提交。
+        /// </summary>
+        private void SetConfirmBusy(bool busy)
+        {
+            ConfirmText.Visibility = busy ? Visibility.Collapsed : Visibility.Visible;
+            ConfirmSpinner.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+            ConfirmButton.IsEnabled = !busy;
+
+            if (busy)
+            {
+                ConfirmSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty,
+                    new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1.5))
+                    {
+                        RepeatBehavior = RepeatBehavior.Forever
+                    });
+            }
+            else
+            {
+                ConfirmSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+            }
         }
 
         private void PlayEntranceAnimation()

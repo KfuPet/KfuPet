@@ -267,8 +267,27 @@
                             Background="{DynamicResource AppAccentBrush}"
                             Foreground="{DynamicResource AppAccentForegroundBrush}"
                             BorderBrush="{DynamicResource AppAccentBrush}"
-                            Content="添加"
-                            Click="ConfirmButton_Click"/>
+                            Click="ConfirmButton_Click">
+                        <Grid>
+                            <TextBlock x:Name="ConfirmText"
+                                       Text="添加"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                            <Path x:Name="ConfirmSpinner"
+                                  Width="16" Height="16"
+                                  Data="M 15,8 A 7,7 0 0 1 8,15"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  RenderTransformOrigin="0.5,0.5"
+                                  Visibility="Collapsed">
+                                <Path.RenderTransform>
+                                    <RotateTransform x:Name="ConfirmSpinnerRotate"/>
+                                </Path.RenderTransform>
+                            </Path>
+                        </Grid>
+                    </Button>
                 </StackPanel>
             </Border>
         </Grid>
