@@ -83,14 +83,14 @@ namespace KfuPet.Views
             }
 
             SetConfirmBusy(true);
+            HideError();
             try
             {
                 await _connectivityService.TestAsync(baseUrl, apiKey);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"连接失败，请检查服务商、Base URL 与 API Key 是否正确。\n\n{ex.Message}",
-                    "KfuPet", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowError(ex.Message);
                 return;
             }
             finally
@@ -107,6 +107,34 @@ namespace KfuPet.Views
             });
 
             Close();
+        }
+
+        /// <summary>
+        /// 显示连接失败横幅，带淡入 + 下滑动画。
+        /// </summary>
+        private void ShowError(string detail)
+        {
+            ErrorDetailText.Text = detail;
+            ErrorDetailText.ToolTip = detail;
+            ErrorBanner.Visibility = Visibility.Visible;
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            ErrorBanner.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+
+            if (ErrorBanner.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+            }
+        }
+
+        /// <summary>
+        /// 隐藏连接失败横幅（重新发起验证时调用）。
+        /// </summary>
+        private void HideError()
+        {
+            ErrorBanner.Visibility = Visibility.Collapsed;
         }
 
         /// <summary>

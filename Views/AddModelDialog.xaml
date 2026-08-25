@@ -234,6 +234,47 @@
 
             <!-- 表单内容 -->
             <StackPanel Grid.Row="1" Margin="20,20,20,0">
+                <!-- 连接失败提示横幅：默认隐藏，失败时淡入并轻微下滑 -->
+                <Border x:Name="ErrorBanner"
+                        Margin="0,0,0,14"
+                        Padding="12,10"
+                        Background="#22E81123"
+                        BorderBrush="#E81123"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Opacity="0"
+                        Visibility="Collapsed">
+                    <Border.RenderTransform>
+                        <TranslateTransform Y="-6"/>
+                    </Border.RenderTransform>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE783;"
+                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                   FontSize="{StaticResource FontSizeIcon}"
+                                   Foreground="#E81123"
+                                   VerticalAlignment="Top"
+                                   Margin="0,1,8,0"/>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="连接失败，请检查服务商、Base URL 与 API Key 是否正确"
+                                       FontFamily="{StaticResource FontFamilyBody}"
+                                       FontSize="{StaticResource FontSizeBody}"
+                                       FontWeight="{StaticResource FontWeightSemiBold}"
+                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock x:Name="ErrorDetailText"
+                                       Margin="0,4,0,0"
+                                       FontFamily="{StaticResource FontFamilyBody}"
+                                       FontSize="{StaticResource FontSizeCaption}"
+                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
                 <TextBlock Text="服务商" Style="{StaticResource FieldLabelStyle}"/>
                 <TextBox x:Name="ProviderBox" Style="{StaticResource FieldInputStyle}"/>
 
