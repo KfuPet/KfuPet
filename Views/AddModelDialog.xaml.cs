@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using KfuPet.Models;
 using KfuPet.Services;
 
 namespace KfuPet.Views
@@ -29,6 +30,26 @@ namespace KfuPet.Views
                     Close();
                 }
             };
+        }
+
+        /// <summary>
+        /// 编辑模式构造函数：用已有模型配置预填表单。
+        /// </summary>
+        public AddModelDialog(ModelConfig model) : this()
+        {
+            LoadModel(model);
+        }
+
+        /// <summary>
+        /// 用已有模型配置填充表单，并切换标题为“编辑模型”。
+        /// </summary>
+        public void LoadModel(ModelConfig model)
+        {
+            ProviderBox.Text = model.Provider;
+            BaseUrlBox.Text = model.BaseUrl;
+            ApiKeyBox.Password = model.ApiKey;
+            ModelNameBox.Text = model.ModelName;
+            DialogTitleText.Text = "编辑模型";
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

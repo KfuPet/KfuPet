@@ -490,6 +490,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
                                 <!-- 模型名称（绑定 Content，支持字符串或 ListBoxItem） -->
@@ -501,11 +502,46 @@
                                            VerticalAlignment="Center"
                                            TextTrimming="CharacterEllipsis"/>
 
-                                <!-- 删除按钮（界面完整，点击由后台代码处理） -->
-                                <Button x:Name="DeleteModelButton"
+                                <!-- 编辑按钮 -->
+                                <Button x:Name="EditModelButton"
                                         Grid.Column="1"
                                         Width="32" Height="32"
-                                        Margin="8,0,8,0"
+                                        Margin="8,0,4,0"
+                                        Background="Transparent"
+                                        Cursor="Hand"
+                                        FocusVisualStyle="{x:Null}"
+                                        ToolTip="编辑模型">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="EditBg"
+                                                    Background="Transparent"
+                                                    CornerRadius="6"
+                                                    Padding="6">
+                                                <Path x:Name="EditIcon"
+                                                      Data="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+                                                      Fill="{DynamicResource AppTextSecondaryBrush}"
+                                                      Stretch="Uniform"
+                                                      Width="14" Height="14"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="EditBg"
+                                                            Property="Background"
+                                                            Value="{DynamicResource AppBorderBrush}"/>
+                                                    <Setter TargetName="EditIcon"
+                                                            Property="Fill"
+                                                            Value="{DynamicResource AppAccentBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <!-- 删除按钮（界面完整，点击由后台代码处理） -->
+                                <Button x:Name="DeleteModelButton"
+                                        Grid.Column="2"
+                                        Width="32" Height="32"
+                                        Margin="0,0,8,0"
                                         Background="Transparent"
                                         Cursor="Hand"
                                         FocusVisualStyle="{x:Null}"
@@ -538,7 +574,7 @@
 
                                 <!-- 开关：切换当前使用的模型 -->
                                 <ToggleButton x:Name="ModelToggle"
-                                              Grid.Column="2"
+                                              Grid.Column="3"
                                               Style="{StaticResource ToggleSwitchStyle}"
                                               VerticalAlignment="Center"/>
                             </Grid>

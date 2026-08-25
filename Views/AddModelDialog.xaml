@@ -177,7 +177,8 @@
                     BorderThickness="0,0,0,1"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid>
-                    <TextBlock Text="添加模型"
+                    <TextBlock x:Name="DialogTitleText"
+                               Text="添加模型"
                                Margin="16,0,0,0"
                                FontFamily="{StaticResource FontFamilyBody}"
                                FontSize="{StaticResource FontSizeBody}"

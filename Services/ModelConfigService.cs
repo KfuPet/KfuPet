@@ -63,6 +63,21 @@ namespace KfuPet.Services
             Save();
         }
 
+        /// <summary>
+        /// 更新已有模型配置，按标识定位。
+        /// </summary>
+        public void Update(string id, string provider, string baseUrl, string apiKey, string modelName)
+        {
+            var model = _models.FirstOrDefault(m => m.Id == id);
+            if (model == null) return;
+
+            model.Provider = provider;
+            model.BaseUrl = baseUrl;
+            model.ApiKey = apiKey;
+            model.ModelName = modelName;
+            Save();
+        }
+
         private void Load()
         {
             try

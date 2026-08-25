@@ -181,6 +181,11 @@ namespace KfuPet.Views
             // 等模板应用后再找删除按钮与开关并挂事件
             item.Loaded += (s, e) =>
             {
+                if (item.Template.FindName("EditModelButton", item) is Button editButton)
+                {
+                    editButton.Click += (s2, e2) => EditModelCard(item);
+                }
+
                 if (item.Template.FindName("DeleteModelButton", item) is Button deleteButton)
                 {
                     deleteButton.Click += (s2, e2) => RemoveModelCard(item);
@@ -265,6 +270,22 @@ namespace KfuPet.Views
                 translate.BeginAnimation(TranslateTransform.YProperty,
                     new DoubleAnimation(0, -8, TimeSpan.FromMilliseconds(200)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } });
             }
+        }
+
+        /// <summary>
+        /// 打开编辑对话框，预填该模型配置，确认后更新并刷新卡片显示。
+        /// </summary>
+        private void EditModelCard(ListBoxItem item)
+        {
+            if (item.Tag is not ModelConfig model) return;
+
+            var dialog = new AddModelDialog(model);
+            dialog.ModelConfirmed += (s, args) =>
+            {
+                ModelConfigService.Update(model.Id, args.Provider, args.BaseUrl, args.ApiKey, args.ModelName);
+                item.Content = args.ModelName;
+            };
+            dialog.Show();
         }
 
         /// <summary>
