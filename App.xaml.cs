@@ -31,9 +31,6 @@ namespace KfuPet
             // 根据系统主题加载配色令牌
             ApplySystemTheme();
 
-            // 初始化系统托盘图标
-            InitializeTrayIcon();
-
             // 主窗口预先创建但保持隐藏，等待 Splash 结束后再显示
             _mainWindow = new MainWindow();
 
@@ -42,6 +39,10 @@ namespace KfuPet
             splashHandler = (s, args) =>
             {
                 splashWindow.SplashCompleted -= splashHandler;
+
+                // 启动动画播放完成后显示系统托盘图标
+                InitializeTrayIcon();
+
                 _mainWindow.Show();
                 _mainWindow.PlayFadeInAnimation();
             };
