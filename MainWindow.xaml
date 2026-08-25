@@ -41,6 +41,9 @@
             <Border.Effect>
                 <DropShadowEffect BlurRadius="12" ShadowDepth="1" Opacity="0.2" Color="Black"/>
             </Border.Effect>
+            <Border.RenderTransform>
+                <TranslateTransform/>
+            </Border.RenderTransform>
             <TextBlock x:Name="ChatBubbleText"
                        FontFamily="{StaticResource FontFamilyBody}"
                        FontSize="{StaticResource FontSizeBody}"

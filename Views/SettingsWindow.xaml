@@ -901,34 +901,53 @@
                                        Style="{StaticResource HintTextStyle}"
                                        Margin="0,6,0,24"/>
 
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="启用开发者模式"
-                                           FontFamily="{StaticResource FontFamilyBody}"
-                                           FontSize="{StaticResource FontSizeBody}"
-                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                           VerticalAlignment="Center"/>
-                                <ToggleButton x:Name="DeveloperModeToggle"
-                                              Style="{StaticResource ToggleSwitchStyle}"
-                                              Margin="12,0,0,0"
-                                              Checked="DeveloperModeToggle_Changed"
-                                              Unchecked="DeveloperModeToggle_Changed"/>
-                            </StackPanel>
+                            <!-- 选项卡片：标签居左，开关统一居右 -->
+                            <Border Padding="14,10"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <Grid>
+                                    <TextBlock Text="启用开发者模式"
+                                               FontFamily="{StaticResource FontFamilyBody}"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <ToggleButton x:Name="DeveloperModeToggle"
+                                                  Style="{StaticResource ToggleSwitchStyle}"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center"
+                                                  Checked="DeveloperModeToggle_Changed"
+                                                  Unchecked="DeveloperModeToggle_Changed"/>
+                                </Grid>
+                            </Border>
 
-                            <StackPanel x:Name="DebugBonesPanel"
-                                        Orientation="Horizontal"
-                                        Margin="0,14,0,0"
-                                        Visibility="Collapsed">
-                                <TextBlock Text="显示骨骼调试线框"
-                                           FontFamily="{StaticResource FontFamilyBody}"
-                                           FontSize="{StaticResource FontSizeBody}"
-                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                           VerticalAlignment="Center"/>
-                                <ToggleButton x:Name="DebugBonesToggle"
-                                              Style="{StaticResource ToggleSwitchStyle}"
-                                              Margin="12,0,0,0"
-                                              Checked="DebugBonesToggle_Changed"
-                                              Unchecked="DebugBonesToggle_Changed"/>
-                            </StackPanel>
+                            <Border x:Name="DebugBonesPanel"
+                                    Margin="0,8,0,0"
+                                    Padding="14,10"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Opacity="0"
+                                    Visibility="Collapsed">
+                                <Border.RenderTransform>
+                                    <TranslateTransform/>
+                                </Border.RenderTransform>
+                                <Grid>
+                                    <TextBlock Text="显示骨骼调试线框"
+                                               FontFamily="{StaticResource FontFamilyBody}"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <ToggleButton x:Name="DebugBonesToggle"
+                                                  Style="{StaticResource ToggleSwitchStyle}"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center"
+                                                  Checked="DebugBonesToggle_Changed"
+                                                  Unchecked="DebugBonesToggle_Changed"/>
+                                </Grid>
+                            </Border>
 
                             <TextBlock x:Name="ToolStatusText"
                                        Style="{StaticResource HintTextStyle}"

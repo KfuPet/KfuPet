@@ -612,11 +612,22 @@ namespace KfuPet
 
                     ChatBubbleText.Text = batches[i];
                     ChatBubble.Visibility = Visibility.Visible;
+
+                    // 每批淡入 + 轻微上浮
+                    var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
                     ChatBubble.BeginAnimation(OpacityProperty,
-                        new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
+                        new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220))
                         {
-                            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                            EasingFunction = ease
                         });
+                    if (ChatBubble.RenderTransform is TranslateTransform translateIn)
+                    {
+                        translateIn.BeginAnimation(TranslateTransform.YProperty,
+                            new DoubleAnimation(6, 0, TimeSpan.FromMilliseconds(220))
+                            {
+                                EasingFunction = ease
+                            });
+                    }
 
                     // 每批停留时长随字数增加，保证可读
                     var dwellMs = Math.Clamp(1200 + batches[i].Length * 90, 1500, 6000);

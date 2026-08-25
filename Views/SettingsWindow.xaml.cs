@@ -330,15 +330,56 @@ namespace KfuPet.Views
 
         /// <summary>
         /// 开发者模式开启时显示“骨骼调试线框”开关，关闭时隐藏。
+        /// 显隐带淡入淡出 + 上下滑动缓动，避免生硬跳变。
         /// </summary>
         private void UpdateDebugBonesPanel()
         {
             var enabled = _mainWindow.DeveloperModeService.IsEnabled;
-            DebugBonesPanel.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+
+            if (enabled)
+            {
+                DebugBonesPanel.Visibility = Visibility.Visible;
+                PlayDebugBonesPanelAnimation(true);
+            }
+            else if (DebugBonesPanel.Visibility == Visibility.Visible)
+            {
+                PlayDebugBonesPanelAnimation(false, () =>
+                {
+                    DebugBonesPanel.Visibility = Visibility.Collapsed;
+                });
+            }
 
             _suppressDebugBonesEvents = true;
             DebugBonesToggle.IsChecked = _mainWindow.SkeletonService.ShowDebugSkeleton;
             _suppressDebugBonesEvents = false;
+        }
+
+        /// <summary>
+        /// 播放“骨骼调试线框”卡片的显隐动画：淡入淡出 + 轻微上下滑动。
+        /// </summary>
+        private void PlayDebugBonesPanelAnimation(bool showing, Action? completed = null)
+        {
+            var ease = new CubicEase { EasingMode = showing ? EasingMode.EaseOut : EasingMode.EaseIn };
+            var duration = TimeSpan.FromMilliseconds(220);
+
+            var fade = new DoubleAnimation(showing ? 0 : 1, showing ? 1 : 0, duration)
+            {
+                EasingFunction = ease
+            };
+            if (completed != null)
+            {
+                fade.Completed += (s, e) => completed();
+            }
+            DebugBonesPanel.BeginAnimation(OpacityProperty, fade);
+
+            if (DebugBonesPanel.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(showing ? -10 : 0, showing ? 0 : -10, duration)
+                    {
+                        EasingFunction = ease
+                    });
+            }
         }
 
         /// <summary>
