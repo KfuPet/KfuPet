@@ -1,7 +1,7 @@
 namespace KfuPet.Core.Memory
 {
     /// <summary>
-    /// 一条长期记忆：内容、重要性、时间与访问统计，以及用于语义检索的向量。
+    /// 一条长期记忆：内容、重要性、时间与访问统计。
     /// </summary>
     public class MemoryEntry
     {
@@ -22,8 +22,5 @@ namespace KfuPet.Core.Memory
 
         /// <summary>被检索到的次数。</summary>
         public int AccessCount { get; set; }
-
-        /// <summary>文本向量，可能为空（未配置 Embedding 模型或尚未生成）。</summary>
-        public float[]? Vector { get; set; }
     }
 }

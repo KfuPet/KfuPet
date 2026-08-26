@@ -1,18 +1,27 @@
 using KfuPet.Core.Memory;
-using KfuPet.Models;
 
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 长期记忆管理器：负责记忆的语义检索、写入与注入上下文的构建。
-    /// 检索优先使用向量相似度（需配置 Embedding 模型），未配置时回退为按重要性排序。
+    /// 长期记忆管理器：负责记忆的写入、关键词检索与注入上下文的构建。
     /// </summary>
     internal class MemoryManager
     {
         private readonly MemoryStore _store = new();
-        private readonly EmbeddingService _embeddingService = new();
         private readonly List<MemoryEntry> _entries;
         private readonly object _lock = new();
+
+        /// <summary>中文检索常见停用词，用于关键词提取时过滤虚词/疑问词。</summary>
+        private static readonly string[] StopWords =
+        {
+            "什么", "怎么", "怎样", "如何", "为什么", "哪个", "哪些", "多少", "是不是", "有没有",
+            "你", "我", "他", "她", "它", "你们", "我们", "他们", "咱们",
+            "的", "了", "吗", "呢", "啊", "吧", "哦", "呀", "啦",
+            "这", "那", "这个", "那个", "这些", "那些", "一个", "一些",
+            "是", "在", "有", "和", "与", "或者", "还是", "都", "就", "很", "不", "没", "也", "还",
+            "可以", "能", "要", "会", "想", "知道", "觉得", "喜欢", "记得", "忘记",
+            "告诉", "说", "请问", "帮我", "跟我", "聊聊", "一下"
+        };
 
         public MemoryManager()
         {
@@ -32,12 +41,12 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 检索与查询最相关的记忆文本，最多返回 <paramref name="topK"/> 条，
-        /// 并更新被命中记忆的访问统计。
+        /// 本地关键词检索：从查询提取关键词，返回内容包含这些关键词的记忆，零 API 开销。
         /// </summary>
-        public async Task<IReadOnlyList<string>> SearchAsync(ModelConfig model, string query, int topK)
+        public IReadOnlyList<string> KeywordSearch(string query, int topK)
         {
-            if (string.IsNullOrWhiteSpace(query))
+            var keywords = ExtractKeywords(query);
+            if (keywords.Count == 0)
             {
                 return Array.Empty<string>();
             }
@@ -48,41 +57,49 @@ namespace KfuPet.Services
                 snapshot = new List<MemoryEntry>(_entries);
             }
 
-            if (snapshot.Count == 0)
+            return snapshot
+                .Where(e => keywords.Any(k => e.Content.Contains(k, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(e => keywords.Count(k => e.Content.Contains(k, StringComparison.OrdinalIgnoreCase)))
+                .ThenByDescending(e => e.Importance)
+                .Take(topK)
+                .Select(e => e.Content)
+                .ToList();
+        }
+
+        /// <summary>从查询文本提取关键词：去标点、去停用词，按空白切分后取长度 ≥ 2 的片段。</summary>
+        private static List<string> ExtractKeywords(string text)
+        {
+            // 标点/空白 → 空格
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in text)
             {
-                return Array.Empty<string>();
+                sb.Append(char.IsLetterOrDigit(c) ? c : ' ');
             }
 
-            IReadOnlyList<MemoryEntry> ranked = await RankAsync(model, query, snapshot);
+            var normalized = sb.ToString();
 
-            var result = new List<string>();
-            lock (_lock)
+            // 停用词 → 空格（作为切分点）
+            foreach (var w in StopWords)
             {
-                foreach (var entry in ranked.Take(topK))
-                {
-                    entry.LastAccessedAt = DateTime.Now;
-                    entry.AccessCount++;
-                    result.Add(entry.Content);
-                }
-
-                if (ranked.Count > 0)
-                {
-                    _store.Save(_entries);
-                }
+                normalized = normalized.Replace(w, " ");
             }
 
-            return result;
+            return normalized
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Where(s => s.Length >= 2)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         /// <summary>
-        /// 写入一条新记忆：先为内容生成向量（若配置了 Embedding 模型），再落盘。
+        /// 写入一条新记忆：去重后落盘。
         /// </summary>
-        public async Task StoreAsync(ModelConfig model, string content, int importance)
+        public Task StoreAsync(string content, int importance)
         {
             content = content.Trim();
             if (string.IsNullOrEmpty(content))
             {
-                return;
+                return Task.CompletedTask;
             }
 
             // 去重：内容完全相同的已有记忆直接跳过，避免重复入库
@@ -90,28 +107,14 @@ namespace KfuPet.Services
             {
                 if (_entries.Any(e => string.Equals(e.Content.Trim(), content, StringComparison.OrdinalIgnoreCase)))
                 {
-                    return;
+                    return Task.CompletedTask;
                 }
-            }
-
-            float[]? vector = null;
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(model.EmbeddingModelId))
-                {
-                    vector = await _embeddingService.EmbedAsync(model, content);
-                }
-            }
-            catch
-            {
-                // 向量生成失败不阻断记忆写入，之后可回退关键词排序
             }
 
             var entry = new MemoryEntry
             {
                 Content = content,
-                Importance = Math.Clamp(importance, 0, 5),
-                Vector = vector
+                Importance = Math.Clamp(importance, 0, 5)
             };
 
             lock (_lock)
@@ -119,6 +122,8 @@ namespace KfuPet.Services
                 _entries.Add(entry);
                 _store.Save(_entries);
             }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>获取全部长期记忆的快照。</summary>
@@ -145,33 +150,10 @@ namespace KfuPet.Services
             }
         }
 
-        /// <summary>直接添加一条长期记忆（向量由调用方提供）并落盘。</summary>
-        public void AddEntry(string content, int importance, float[]? vector)
-        {
-            content = content.Trim();
-            if (string.IsNullOrEmpty(content))
-            {
-                return;
-            }
-
-            var entry = new MemoryEntry
-            {
-                Content = content,
-                Importance = Math.Clamp(importance, 0, 5),
-                Vector = vector
-            };
-
-            lock (_lock)
-            {
-                _entries.Add(entry);
-                _store.Save(_entries);
-            }
-        }
-
         /// <summary>
-        /// 去重：向量余弦相似度超过阈值的两条视为重复，保留重要度高者，返回被合并删除的数量。
+        /// 去重：内容完全相同（忽略首尾空白与大小写）的记忆只保留重要度最高的一条，返回被删除的数量。
         /// </summary>
-        public int Deduplicate(double threshold = 0.9)
+        public int Deduplicate()
         {
             var removed = 0;
             lock (_lock)
@@ -179,23 +161,19 @@ namespace KfuPet.Services
                 var result = new List<MemoryEntry>();
                 foreach (var entry in _entries)
                 {
-                    MemoryEntry? similar = null;
-                    if (entry.Vector != null)
-                    {
-                        similar = result.FirstOrDefault(e =>
-                            e.Vector != null && CosineSimilarity(e.Vector, entry.Vector) > threshold);
-                    }
+                    var existing = result.FirstOrDefault(e =>
+                        string.Equals(e.Content.Trim(), entry.Content.Trim(), StringComparison.OrdinalIgnoreCase));
 
-                    if (similar == null)
+                    if (existing == null)
                     {
                         result.Add(entry);
                         continue;
                     }
 
                     // 与已保留的某条重复：保留重要度更高者
-                    if (entry.Importance > similar.Importance)
+                    if (entry.Importance > existing.Importance)
                     {
-                        result.Remove(similar);
+                        result.Remove(existing);
                         result.Add(entry);
                     }
                     removed++;
@@ -221,62 +199,6 @@ namespace KfuPet.Services
             }
 
             return string.Join("\n", memories.Select(m => "- " + m));
-        }
-
-        /// <summary>
-        /// 对记忆排序：优先向量余弦相似度，其次按重要性 × 访问热度排序。
-        /// </summary>
-        private async Task<IReadOnlyList<MemoryEntry>> RankAsync(ModelConfig model, string query, IReadOnlyList<MemoryEntry> entries)
-        {
-            float[]? queryVector = null;
-            if (!string.IsNullOrWhiteSpace(model.EmbeddingModelId))
-            {
-                try
-                {
-                    queryVector = await _embeddingService.EmbedAsync(model, query);
-                }
-                catch
-                {
-                    queryVector = null;
-                }
-            }
-
-            if (queryVector != null)
-            {
-                return entries
-                    .Select(e => new { Entry = e, Score = e.Vector == null ? 0.0 : CosineSimilarity(queryVector, e.Vector) })
-                    .OrderByDescending(x => x.Score)
-                    .Select(x => x.Entry)
-                    .ToList();
-            }
-
-            // 无向量时按重要性 + 访问热度排序，保证仍能召回较重要的记忆
-            return entries
-                .OrderByDescending(e => e.Importance * 10 + Math.Min(e.AccessCount, 5))
-                .ToList();
-        }
-
-        private static double CosineSimilarity(float[] a, float[] b)
-        {
-            if (a.Length != b.Length)
-            {
-                return 0;
-            }
-
-            double dot = 0, normA = 0, normB = 0;
-            for (var i = 0; i < a.Length; i++)
-            {
-                dot += a[i] * b[i];
-                normA += a[i] * a[i];
-                normB += b[i] * b[i];
-            }
-
-            if (normA == 0 || normB == 0)
-            {
-                return 0;
-            }
-
-            return dot / (Math.Sqrt(normA) * Math.Sqrt(normB));
         }
     }
 }

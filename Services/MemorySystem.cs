@@ -14,7 +14,6 @@ namespace KfuPet.Services
         private const int ShortMemoryLimit = 20;
         private const int ArchiveMemoryLimit = 40;
         private const int LongMemoryLimit = 500;
-        private const double DeduplicateThreshold = 0.9;
 
         private readonly ShortTermMemoryStore _shortStore = new();
         private readonly ArchiveMemoryStore _archiveStore = new();
@@ -53,8 +52,7 @@ namespace KfuPet.Services
         {
             var systemPrompt = _promptService.BuildSystemPrompt();
 
-            var memories = await _memoryManager.SearchAsync(model, userMessage, 5);
-            _logService.Debug($"[记忆] 检索到 {memories.Count} 条相关长期记忆");
+            var memories = await RetrieveMemoriesAsync(model, userMessage);
             if (memories.Count > 0)
             {
                 systemPrompt += "\n\n关于主人的记忆（你已知晓）：\n" + MemoryManager.BuildContext(memories);
@@ -71,6 +69,59 @@ namespace KfuPet.Services
             }
 
             return systemPrompt;
+        }
+
+        /// <summary>
+        /// 检索长期记忆，按优先级降级：关键词匹配 → 模型判断相关性。
+        /// </summary>
+        private async Task<IReadOnlyList<string>> RetrieveMemoriesAsync(ModelConfig model, string userMessage)
+        {
+            // 1. 关键词匹配（本地，零成本）
+            var keywordHits = _memoryManager.KeywordSearch(userMessage, 5);
+            if (keywordHits.Count > 0)
+            {
+                _logService.Info($"[记忆] 关键词匹配命中 {keywordHits.Count} 条相关记忆");
+                return keywordHits;
+            }
+
+            // 2. 模型判断相关性（兜底，需要一次 API 调用）
+            var llmHits = await SearchByLlmAsync(model, userMessage, 5);
+            _logService.Info($"[记忆] 关键词未命中，改用模型判断相关性，命中 {llmHits.Count} 条");
+            return llmHits;
+        }
+
+        /// <summary>
+        /// 模型判断相关性：把长期记忆交给 AI，让它挑出与当前话题相关的记忆（关键词检索的兜底方案）。
+        /// </summary>
+        private async Task<IReadOnlyList<string>> SearchByLlmAsync(ModelConfig model, string userMessage, int topK)
+        {
+            var snapshot = _memoryManager.Snapshot();
+            if (snapshot.Count == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            const string prompt = """
+                下面是已记住的关于用户的信息。请判断哪些信息与用户当前话题相关，
+                把相关的信息原文摘出来（保持原样，不要改写）。
+                请只输出一个 JSON 字符串数组，不要包含其他任何文字或代码块标记，格式：["信息1", "信息2"]
+                没有相关的信息时输出空数组 []。
+                """;
+
+            var sb = new System.Text.StringBuilder();
+            for (var i = 0; i < snapshot.Count; i++)
+            {
+                sb.AppendLine($"{i + 1}. {snapshot[i].Content}");
+            }
+
+            var messages = new List<ChatMessage>
+            {
+                new() { Role = "system", Content = prompt },
+                new() { Role = "user", Content = $"当前用户话题：{userMessage}\n\n记忆列表：\n{sb}" }
+            };
+
+            var reply = await _chatService.SendRawAsync(model, messages);
+            return ParseStringArray(reply).Take(topK).ToList();
         }
 
         /// <summary>
@@ -197,7 +248,7 @@ namespace KfuPet.Services
                     : "[记忆] 实时通道：未发现需要立即记住的核心信息");
                 foreach (var item in coreItems)
                 {
-                    await _memoryManager.StoreAsync(model, item.Content, item.Importance);
+                    await _memoryManager.StoreAsync(item.Content, item.Importance);
                     _logService.Info($"[记忆] 实时入库核心信息：{item.Content}（重要性 {item.Importance}）");
                 }
             }
@@ -296,7 +347,7 @@ namespace KfuPet.Services
             // 3. 入选信息写入长期记忆
             foreach (var item in longTermItems)
             {
-                await _memoryManager.StoreAsync(model, item.Content, item.Importance);
+                await _memoryManager.StoreAsync(item.Content, item.Importance);
                 _logService.Info($"[记忆] 已写入长期记忆：{item.Content}（重要性 {item.Importance}）");
             }
 
@@ -351,7 +402,7 @@ namespace KfuPet.Services
         private async Task HandleLongMemoryOverflowAsync(ModelConfig model)
         {
             _logService.Debug("[记忆] 长期记忆达到上限，开始去重...");
-            _memoryManager.Deduplicate(DeduplicateThreshold);
+            _memoryManager.Deduplicate();
 
             if (_memoryManager.Count < LongMemoryLimit)
             {
@@ -369,7 +420,7 @@ namespace KfuPet.Services
             _memoryManager.RemoveByIds(oldest.Select(e => e.Id).ToList());
             if (!string.IsNullOrWhiteSpace(summary))
             {
-                await _memoryManager.StoreAsync(model, summary, 4);
+                await _memoryManager.StoreAsync(summary, 4);
             }
 
             _logService.Info($"[记忆] 长期记忆整理：去重并总结最旧 {oldest.Count} 条");
