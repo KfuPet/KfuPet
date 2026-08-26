@@ -10,7 +10,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\icon\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.0.7</Version>
+    <Version>0.0.8</Version>
     <Authors>Grey Bullet Technology Studio</Authors>
   </PropertyGroup>
 
