@@ -8,23 +8,13 @@ namespace KfuPet.Services
     internal class MemoryManager
     {
         private readonly MemoryStore _store = new();
+        private readonly StopWordsService _stopWordsService;
         private readonly List<MemoryEntry> _entries;
         private readonly object _lock = new();
 
-        /// <summary>中文检索常见停用词，用于关键词提取时过滤虚词/疑问词。</summary>
-        private static readonly string[] StopWords =
+        public MemoryManager(StopWordsService stopWordsService)
         {
-            "什么", "怎么", "怎样", "如何", "为什么", "哪个", "哪些", "多少", "是不是", "有没有",
-            "你", "我", "他", "她", "它", "你们", "我们", "他们", "咱们",
-            "的", "了", "吗", "呢", "啊", "吧", "哦", "呀", "啦",
-            "这", "那", "这个", "那个", "这些", "那些", "一个", "一些",
-            "是", "在", "有", "和", "与", "或者", "还是", "都", "就", "很", "不", "没", "也", "还",
-            "可以", "能", "要", "会", "想", "知道", "觉得", "喜欢", "记得", "忘记",
-            "告诉", "说", "请问", "帮我", "跟我", "聊聊", "一下"
-        };
-
-        public MemoryManager()
-        {
+            _stopWordsService = stopWordsService;
             _entries = _store.Load();
         }
 
@@ -67,7 +57,7 @@ namespace KfuPet.Services
         }
 
         /// <summary>从查询文本提取关键词：去标点、去停用词，按空白切分后取长度 ≥ 2 的片段。</summary>
-        private static List<string> ExtractKeywords(string text)
+        private List<string> ExtractKeywords(string text)
         {
             // 标点/空白 → 空格
             var sb = new System.Text.StringBuilder();
@@ -79,7 +69,7 @@ namespace KfuPet.Services
             var normalized = sb.ToString();
 
             // 停用词 → 空格（作为切分点）
-            foreach (var w in StopWords)
+            foreach (var w in _stopWordsService.Words)
             {
                 normalized = normalized.Replace(w, " ");
             }

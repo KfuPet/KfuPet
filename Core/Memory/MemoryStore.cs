@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace KfuPet.Core.Memory
 {
     /// <summary>
-    /// 长期记忆的持久化存储：记忆正文、元数据与向量统一写入 <c>LongMemory.json</c>（单一 JSON 文件）。
+    /// 长期记忆的持久化存储：记忆正文与元数据统一写入 <c>LongMemory.json</c>（单一 JSON 文件）。
     /// 记忆统一存放在 %AppData%\KfuPet\Memory。
     /// </summary>
     internal class MemoryStore
@@ -37,7 +37,7 @@ namespace KfuPet.Core.Memory
             }
         }
 
-        /// <summary>把全部长期记忆写回磁盘（含向量）。</summary>
+        /// <summary>把全部长期记忆写回磁盘。</summary>
         public void Save(IReadOnlyList<MemoryEntry> entries)
         {
             try

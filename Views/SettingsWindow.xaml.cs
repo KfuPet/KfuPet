@@ -36,6 +36,7 @@ namespace KfuPet.Views
             NavList.SelectedIndex = 0;
             LoadDeveloperState();
             LoadModels();
+            LoadStopWords();
             UpdateToolStatus();
 
             VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
@@ -100,18 +101,49 @@ namespace KfuPet.Views
             NavList.SelectedIndex = 0;
         }
 
+        /// <summary>
+        /// 把当前停用词加载到多行编辑框，每行一个词。
+        /// </summary>
+        private void LoadStopWords()
+        {
+            StopWordsBox.Text = string.Join(Environment.NewLine, _mainWindow.StopWordsService.Words);
+        }
+
+        /// <summary>
+        /// 保存停用词：按行拆分、去空白，写回本地配置，并显示“已保存”提示。
+        /// </summary>
+        private void SaveStopWordsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var words = StopWordsBox.Text
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(w => w.Trim())
+                .Where(w => w.Length > 0);
+
+            _mainWindow.StopWordsService.Save(words);
+
+            StopWordsStatusText.Text = "已保存";
+            var fade = new DoubleAnimationUsingKeyFrames();
+            fade.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            fade.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(200)), new CubicEase { EasingMode = EasingMode.EaseOut }));
+            fade.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1500))));
+            fade.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1750)), new CubicEase { EasingMode = EasingMode.EaseIn }));
+            StopWordsStatusText.BeginAnimation(OpacityProperty, fade);
+        }
+
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ModelConfigPanel == null || DeveloperPanel == null || AboutPanel == null) return;
+            if (ModelConfigPanel == null || MemoryPanel == null || DeveloperPanel == null || AboutPanel == null) return;
 
             ModelConfigPanel.Visibility = NavList.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
-            DeveloperPanel.Visibility = NavList.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
-            AboutPanel.Visibility = NavList.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+            MemoryPanel.Visibility = NavList.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+            DeveloperPanel.Visibility = NavList.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+            AboutPanel.Visibility = NavList.SelectedIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
 
             var currentPanel = NavList.SelectedIndex switch
             {
-                1 => DeveloperPanel,
-                2 => AboutPanel,
+                1 => MemoryPanel,
+                2 => DeveloperPanel,
+                3 => AboutPanel,
                 _ => ModelConfigPanel
             };
             PlayPageEnterAnimation(currentPanel);

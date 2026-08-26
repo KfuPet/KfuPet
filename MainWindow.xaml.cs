@@ -64,6 +64,8 @@ namespace KfuPet
 
         internal ModelConfigService ModelConfigService { get; } = new ModelConfigService();
 
+        internal StopWordsService StopWordsService { get; } = new StopWordsService();
+
         internal CommandDispatcher CommandDispatcher { get; } = new CommandDispatcher();
 
         private NamedPipeServer? _pipeServer;
@@ -96,7 +98,7 @@ namespace KfuPet
         {
             InitializeComponent();
             _chatService = new ChatService();
-            _memorySystem = new MemorySystem(_chatService, LogService);
+            _memorySystem = new MemorySystem(_chatService, LogService, StopWordsService);
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }

@@ -17,7 +17,7 @@ namespace KfuPet.Services
 
         private readonly ShortTermMemoryStore _shortStore = new();
         private readonly ArchiveMemoryStore _archiveStore = new();
-        private readonly MemoryManager _memoryManager = new();
+        private readonly MemoryManager _memoryManager;
         private readonly PromptService _promptService = new();
         private readonly ChatService _chatService;
         private readonly LogService _logService;
@@ -27,10 +27,11 @@ namespace KfuPet.Services
         private readonly object _archiveLock = new();
         private volatile bool _isAnalyzing;
 
-        public MemorySystem(ChatService chatService, LogService logService)
+        public MemorySystem(ChatService chatService, LogService logService, StopWordsService stopWordsService)
         {
             _chatService = chatService;
             _logService = logService;
+            _memoryManager = new MemoryManager(stopWordsService);
             _shortEntries = _shortStore.Load();
             _archiveEntries = _archiveStore.Load();
         }
