@@ -77,7 +77,7 @@ namespace KfuPet.Services
         /// <summary>
         /// 写入一条新记忆：先为内容生成向量（若配置了 Embedding 模型），再落盘。
         /// </summary>
-        public async Task StoreAsync(ModelConfig model, string content, double importance)
+        public async Task StoreAsync(ModelConfig model, string content, int importance)
         {
             content = content.Trim();
             if (string.IsNullOrEmpty(content))
@@ -101,7 +101,7 @@ namespace KfuPet.Services
             var entry = new MemoryEntry
             {
                 Content = content,
-                Importance = Math.Clamp(importance, 0, 1),
+                Importance = Math.Clamp(importance, 0, 5),
                 Vector = vector
             };
 
@@ -110,6 +110,97 @@ namespace KfuPet.Services
                 _entries.Add(entry);
                 _store.Save(_entries);
             }
+        }
+
+        /// <summary>获取全部长期记忆的快照。</summary>
+        public IReadOnlyList<MemoryEntry> Snapshot()
+        {
+            lock (_lock)
+            {
+                return new List<MemoryEntry>(_entries);
+            }
+        }
+
+        /// <summary>按 id 删除若干条长期记忆并落盘。</summary>
+        public void RemoveByIds(IReadOnlyCollection<string> ids)
+        {
+            if (ids == null || ids.Count == 0)
+            {
+                return;
+            }
+
+            lock (_lock)
+            {
+                _entries.RemoveAll(e => ids.Contains(e.Id));
+                _store.Save(_entries);
+            }
+        }
+
+        /// <summary>直接添加一条长期记忆（向量由调用方提供）并落盘。</summary>
+        public void AddEntry(string content, int importance, float[]? vector)
+        {
+            content = content.Trim();
+            if (string.IsNullOrEmpty(content))
+            {
+                return;
+            }
+
+            var entry = new MemoryEntry
+            {
+                Content = content,
+                Importance = Math.Clamp(importance, 0, 5),
+                Vector = vector
+            };
+
+            lock (_lock)
+            {
+                _entries.Add(entry);
+                _store.Save(_entries);
+            }
+        }
+
+        /// <summary>
+        /// 去重：向量余弦相似度超过阈值的两条视为重复，保留重要度高者，返回被合并删除的数量。
+        /// </summary>
+        public int Deduplicate(double threshold = 0.9)
+        {
+            var removed = 0;
+            lock (_lock)
+            {
+                var result = new List<MemoryEntry>();
+                foreach (var entry in _entries)
+                {
+                    MemoryEntry? similar = null;
+                    if (entry.Vector != null)
+                    {
+                        similar = result.FirstOrDefault(e =>
+                            e.Vector != null && CosineSimilarity(e.Vector, entry.Vector) > threshold);
+                    }
+
+                    if (similar == null)
+                    {
+                        result.Add(entry);
+                        continue;
+                    }
+
+                    // 与已保留的某条重复：保留重要度更高者
+                    if (entry.Importance > similar.Importance)
+                    {
+                        result.Remove(similar);
+                        result.Add(entry);
+                    }
+                    removed++;
+                }
+
+                if (removed > 0)
+                {
+                    _entries.Clear();
+                    _entries.AddRange(result);
+                    _store.Save(_entries);
+                }
+            }
+
+            return removed;
         }
 
         /// <summary>把记忆列表拼成注入 system prompt 的文本。</summary>

@@ -1,0 +1,392 @@
+using System.Text.Json;
+using KfuPet.Core.Memory;
+using KfuPet.Models;
+
+namespace KfuPet.Services
+{
+    /// <summary>
+    /// 记忆系统门面：统一管理短期 → 归档 → 长期三级记忆的流转。
+    /// 短期记忆保存最近对话，满 20 条溢出到归档；归档满 40 条后后台异步触发
+    /// AI 分析筛选，重要信息进长期记忆，其余总结后留在归档继续循环。
+    /// </summary>
+    internal class MemorySystem
+    {
+        private const int ShortMemoryLimit = 20;
+        private const int ArchiveMemoryLimit = 40;
+        private const int LongMemoryLimit = 500;
+        private const double DeduplicateThreshold = 0.9;
+
+        private readonly ShortTermMemoryStore _shortStore = new();
+        private readonly ArchiveMemoryStore _archiveStore = new();
+        private readonly MemoryManager _memoryManager = new();
+        private readonly PromptService _promptService = new();
+        private readonly ChatService _chatService;
+        private readonly LogService _logService;
+
+        private readonly List<ShortMemoryEntry> _shortEntries;
+        private readonly List<ArchiveEntry> _archiveEntries;
+        private readonly object _archiveLock = new();
+        private volatile bool _isAnalyzing;
+
+        public MemorySystem(ChatService chatService, LogService logService)
+        {
+            _chatService = chatService;
+            _logService = logService;
+            _shortEntries = _shortStore.Load();
+            _archiveEntries = _archiveStore.Load();
+        }
+
+        /// <summary>把短期记忆转成对话消息列表，供 AI 作为会话上下文使用。</summary>
+        public IReadOnlyList<ChatMessage> GetShortTermMessages()
+        {
+            var messages = new List<ChatMessage>();
+            foreach (var entry in _shortEntries)
+            {
+                messages.Add(new ChatMessage { Role = "user", Content = entry.User });
+                messages.Add(new ChatMessage { Role = "assistant", Content = entry.Assistant });
+            }
+            return messages;
+        }
+
+        /// <summary>构建系统提示词（全局 + 角色）并注入检索到的长期记忆。</summary>
+        public async Task<string> BuildContextAsync(ModelConfig model, string userMessage)
+        {
+            var systemPrompt = _promptService.BuildSystemPrompt();
+
+            var memories = await _memoryManager.SearchAsync(model, userMessage, 5);
+            if (memories.Count > 0)
+            {
+                systemPrompt += "\n\n关于主人的记忆（你已知晓）：\n" + MemoryManager.BuildContext(memories);
+            }
+
+            return systemPrompt;
+        }
+
+        /// <summary>
+        /// 记录一轮对话：写入短期记忆，溢出到归档，并在归档满时后台触发分析。
+        /// </summary>
+        public void AddTurn(ModelConfig model, string user, string assistant)
+        {
+            lock (_archiveLock)
+            {
+                _shortEntries.Add(new ShortMemoryEntry { User = user, Assistant = assistant });
+
+                // 短期溢出到归档（保留最近 20 条）
+                while (_shortEntries.Count > ShortMemoryLimit)
+                {
+                    var oldest = _shortEntries[0];
+                    _shortEntries.RemoveAt(0);
+                    _archiveEntries.Add(new ArchiveEntry
+                    {
+                        Type = "conversation",
+                        Time = oldest.Time,
+                        User = oldest.User,
+                        Assistant = oldest.Assistant
+                    });
+                }
+
+                _shortStore.Save(_shortEntries);
+                _archiveStore.Save(_archiveEntries);
+            }
+
+            // 归档满 40 条，后台异步分析
+            if (_archiveEntries.Count >= ArchiveMemoryLimit && !_isAnalyzing)
+            {
+                _isAnalyzing = true;
+                _ = Task.Run(() => RunArchiveAnalysisAsync(model));
+            }
+        }
+
+        /// <summary>归档分析的外层包装：吞掉异常并复位状态位。</summary>
+        private async Task RunArchiveAnalysisAsync(ModelConfig model)
+        {
+            try
+            {
+                await AnalyzeArchiveAsync(model);
+            }
+            catch (Exception ex)
+            {
+                _logService.Warning($"[记忆] 归档分析失败：{ex.Message}");
+            }
+            finally
+            {
+                _isAnalyzing = false;
+            }
+        }
+
+        /// <summary>
+        /// 归档分析：对归档内容提炼信息点并评分，重要者进长期，其余总结留归档。
+        /// </summary>
+        private async Task AnalyzeArchiveAsync(ModelConfig model)
+        {
+            List<ArchiveEntry> snapshot;
+            lock (_archiveLock)
+            {
+                snapshot = new List<ArchiveEntry>(_archiveEntries);
+            }
+
+            if (snapshot.Count == 0)
+            {
+                return;
+            }
+
+            _logService.Debug($"[记忆] 归档已满（{snapshot.Count} 条），开始分析筛选...");
+
+            var summaryEntries = snapshot.Where(e => e.IsSummary).ToList();
+            var conversationEntries = snapshot.Where(e => !e.IsSummary).ToList();
+
+            var longTermItems = new List<MemoryItem>();
+            var lowItems = new List<string>();
+
+            // 1. 总结条目：重新评分，≥3 进长期，<3 丢弃
+            foreach (var entry in summaryEntries)
+            {
+                var importance = await ScoreContentAsync(model, entry.Content);
+                if (importance >= 3)
+                {
+                    longTermItems.Add(new MemoryItem(entry.Content, importance));
+                }
+            }
+
+            // 2. 原始对话条目：提炼信息点并评分
+            if (conversationEntries.Count > 0)
+            {
+                var extracted = await ExtractFromConversationsAsync(model, conversationEntries);
+                foreach (var item in extracted)
+                {
+                    if (item.Importance >= 3)
+                    {
+                        longTermItems.Add(item);
+                    }
+                    else
+                    {
+                        lowItems.Add(item.Content);
+                    }
+                }
+            }
+
+            // 3. 入选信息写入长期记忆
+            foreach (var item in longTermItems)
+            {
+                await _memoryManager.StoreAsync(model, item.Content, item.Importance);
+                _logService.Info($"[记忆] 已写入长期记忆：{item.Content}（重要性 {item.Importance}）");
+            }
+
+            // 4. 未入选信息：总结成一条 / 暂留 / 清空
+            ArchiveEntry? remaining = null;
+            if (lowItems.Count >= 2)
+            {
+                var summary = await SummarizeAsync(model, lowItems);
+                if (!string.IsNullOrWhiteSpace(summary))
+                {
+                    remaining = new ArchiveEntry
+                    {
+                        Type = "summary",
+                        Content = summary,
+                        IsSummary = true
+                    };
+                }
+            }
+            else if (lowItems.Count == 1)
+            {
+                remaining = new ArchiveEntry
+                {
+                    Type = "summary",
+                    Content = lowItems[0],
+                    IsSummary = false
+                };
+            }
+
+            // 5. 归档重建
+            lock (_archiveLock)
+            {
+                _archiveEntries.Clear();
+                if (remaining != null)
+                {
+                    _archiveEntries.Add(remaining);
+                }
+                _archiveStore.Save(_archiveEntries);
+            }
+
+            _logService.Debug($"[记忆] 归档分析完成：入选 {longTermItems.Count} 条，总结/暂留 {lowItems.Count} 条");
+
+            // 6. 长期记忆满 500 时去重 + 压缩
+            if (_memoryManager.Count >= LongMemoryLimit)
+            {
+                await HandleLongMemoryOverflowAsync(model);
+            }
+        }
+
+        /// <summary>长期记忆超限处理：先去重，再对最旧 100 条总结成一条。</summary>
+        private async Task HandleLongMemoryOverflowAsync(ModelConfig model)
+        {
+            _logService.Debug("[记忆] 长期记忆达到上限，开始去重...");
+            _memoryManager.Deduplicate(DeduplicateThreshold);
+
+            if (_memoryManager.Count < LongMemoryLimit)
+            {
+                return;
+            }
+
+            var snapshot = _memoryManager.Snapshot();
+            var oldest = snapshot.OrderBy(e => e.CreatedAt).Take(100).ToList();
+            if (oldest.Count == 0)
+            {
+                return;
+            }
+
+            var summary = await SummarizeAsync(model, oldest.Select(e => e.Content).ToList());
+            _memoryManager.RemoveByIds(oldest.Select(e => e.Id).ToList());
+            if (!string.IsNullOrWhiteSpace(summary))
+            {
+                await _memoryManager.StoreAsync(model, summary, 4);
+            }
+
+            _logService.Info($"[记忆] 长期记忆整理：去重并总结最旧 {oldest.Count} 条");
+        }
+
+        /// <summary>从原始对话中提炼值得长期记住的信息点并评分。</summary>
+        private async Task<List<MemoryItem>> ExtractFromConversationsAsync(
+            ModelConfig model, IReadOnlyList<ArchiveEntry> entries)
+        {
+            const string prompt = """
+                你是记忆提取器。从以下对话中提取值得长期记住的、关于用户的信息
+                （如名字、喜好、习惯、经历、目标、重要关系等）。
+                只提取稳定且长期有用的信息，忽略临时、琐碎或纯寒暄的内容。
+
+                对每条提取的信息进行重要性评分（0~5 整数）：
+                0 临时信息，1 普通聊天，2 可能有用的信息，3 用户习惯，4 用户偏好/长期目标，5 核心用户信息。
+
+                请只输出一个 JSON 数组，不要包含其他任何文字或代码块标记，格式如下：
+                [{"content": "一句话概括的信息", "importance": 4}]
+                没有值得记住的信息时输出空数组 []。
+                """;
+
+            var sb = new System.Text.StringBuilder();
+            foreach (var entry in entries)
+            {
+                sb.AppendLine($"用户说：{entry.User}");
+                sb.AppendLine($"助手回复：{entry.Assistant}");
+                sb.AppendLine();
+            }
+
+            var messages = new List<ChatMessage>
+            {
+                new() { Role = "system", Content = prompt },
+                new() { Role = "user", Content = sb.ToString() }
+            };
+
+            var reply = await _chatService.SendRawAsync(model, messages);
+            return ParseItems(reply);
+        }
+
+        /// <summary>对单条信息重新评分（用于总结条目丢弃前的评估）。</summary>
+        private async Task<int> ScoreContentAsync(ModelConfig model, string content)
+        {
+            const string prompt = """
+                对下面这条信息进行重要性评分（0~5 整数）：
+                0 临时信息，1 普通聊天，2 可能有用的信息，3 用户习惯，4 用户偏好/长期目标，5 核心用户信息。
+
+                请只输出一个 JSON 对象，不要包含其他任何文字，格式：{"importance": 4}
+                """;
+
+            var messages = new List<ChatMessage>
+            {
+                new() { Role = "system", Content = prompt },
+                new() { Role = "user", Content = $"信息：{content}" }
+            };
+
+            var reply = await _chatService.SendRawAsync(model, messages);
+            return ParseScore(reply);
+        }
+
+        /// <summary>把多条零散信息总结成一句话。</summary>
+        private async Task<string> SummarizeAsync(ModelConfig model, IReadOnlyList<string> contents)
+        {
+            const string prompt = """
+                把下面多条零散信息总结成一句话，保留关键事实，不要遗漏重要点。
+                请只输出总结后的一句话，不要包含其他任何文字。
+                """;
+
+            var joined = string.Join("\n", contents.Select(c => "- " + c));
+
+            var messages = new List<ChatMessage>
+            {
+                new() { Role = "system", Content = prompt },
+                new() { Role = "user", Content = joined }
+            };
+
+            return (await _chatService.SendRawAsync(model, messages)).Trim();
+        }
+
+        /// <summary>解析信息点数组 JSON（失败时返回空列表）。</summary>
+        private static List<MemoryItem> ParseItems(string reply)
+        {
+            var text = StripCodeFence(reply);
+            try
+            {
+                using var doc = JsonDocument.Parse(text);
+                var result = new List<MemoryItem>();
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    var content = item.TryGetProperty("content", out var c) ? c.GetString()?.Trim() ?? string.Empty : string.Empty;
+                    var importance = item.TryGetProperty("importance", out var i) && i.TryGetInt32(out var v) ? v : 0;
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        result.Add(new MemoryItem(content, Math.Clamp(importance, 0, 5)));
+                    }
+                }
+                return result;
+            }
+            catch (JsonException)
+            {
+                return new List<MemoryItem>();
+            }
+        }
+
+        /// <summary>解析评分 JSON，失败时返回 0。</summary>
+        private static int ParseScore(string reply)
+        {
+            var text = StripCodeFence(reply);
+            try
+            {
+                using var doc = JsonDocument.Parse(text);
+                if (doc.RootElement.TryGetProperty("importance", out var i) && i.TryGetInt32(out var v))
+                {
+                    return Math.Clamp(v, 0, 5);
+                }
+            }
+            catch (JsonException)
+            {
+                // 解析失败返回 0
+            }
+
+            return 0;
+        }
+
+        /// <summary>剥离可能的 ```json ... ``` 代码块包裹。</summary>
+        private static string StripCodeFence(string text)
+        {
+            var t = text.Trim();
+            if (!t.StartsWith("```", StringComparison.Ordinal))
+            {
+                return t;
+            }
+
+            var newline = t.IndexOf('\n');
+            if (newline >= 0)
+            {
+                t = t.Substring(newline + 1).Trim();
+            }
+            var fence = t.LastIndexOf("```", StringComparison.Ordinal);
+            if (fence >= 0)
+            {
+                t = t.Substring(0, fence).Trim();
+            }
+            return t;
+        }
+
+        /// <summary>一条提炼出的信息点：内容 + 重要性评分。</summary>
+        private sealed record MemoryItem(string Content, int Importance);
+    }
+}

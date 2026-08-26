@@ -13,7 +13,6 @@ using System.Windows.Threading;
 using KfuPet.Models;
 using KfuPet.Services;
 using KfuPet.Services.Ipc;
-using KfuPet.Core.Memory;
 
 namespace KfuPet
 {
@@ -76,8 +75,7 @@ namespace KfuPet
 
         // ── AI 聊天 ──────────────────────────────────
         private readonly ChatService _chatService;
-        private readonly ShortTermMemoryStore _shortTermStore = new();
-        private readonly List<ChatMessage> _chatHistory;
+        private readonly MemorySystem _memorySystem;
         private bool _isSending;
         private bool _isHoveringPet;
         private bool _isHoveringInput;
@@ -97,8 +95,8 @@ namespace KfuPet
         public MainWindow()
         {
             InitializeComponent();
-            _chatService = new ChatService(LogService);
-            _chatHistory = _shortTermStore.Load();
+            _chatService = new ChatService();
+            _memorySystem = new MemorySystem(_chatService, LogService);
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
@@ -548,17 +546,13 @@ namespace KfuPet
             ShowBubbleBatches(new List<string> { "唔……" });
             try
             {
-                var reply = await _chatService.SendAsync(model, _chatHistory, text);
+                var systemPrompt = await _memorySystem.BuildContextAsync(model, text);
+                var history = _memorySystem.GetShortTermMessages();
+                var reply = await _chatService.SendAsync(model, systemPrompt, history, text);
                 ShowBubbleBatches(SplitIntoBatches(reply));
 
-                // 更新短期记忆（会话上下文），并限制长度
-                _chatHistory.Add(new ChatMessage { Role = "user", Content = text });
-                _chatHistory.Add(new ChatMessage { Role = "assistant", Content = reply });
-                TrimChatHistory();
-                _shortTermStore.Save(_chatHistory);
-
-                // 后台提取并写入长期记忆，不阻塞回复显示
-                _ = _chatService.ExtractAndStoreAsync(model, text, reply);
+                // 记录一轮对话到记忆系统（短期 + 溢出归档 + 后台分析）
+                _memorySystem.AddTurn(model, text, reply);
             }
             catch (Exception ex)
             {
@@ -567,18 +561,6 @@ namespace KfuPet
             finally
             {
                 _isSending = false;
-            }
-        }
-
-        /// <summary>
-        /// 限制短期记忆长度，只保留最近 20 条消息（约 10 轮），避免上下文过长。
-        /// </summary>
-        private void TrimChatHistory()
-        {
-            const int maxMessages = 20;
-            if (_chatHistory.Count > maxMessages)
-            {
-                _chatHistory.RemoveRange(0, _chatHistory.Count - maxMessages);
             }
         }
 

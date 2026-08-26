@@ -3,42 +3,41 @@ using System.Text.Json;
 namespace KfuPet.Core.Memory
 {
     /// <summary>
-    /// 短期记忆的持久化存储：以 JSON 形式保存最近会话的对话历史，
-    /// 与归档、长期记忆分开存放，重启后仍可恢复会话上下文。
+    /// 归档记忆的持久化存储：短期与长期之间的缓冲，以 JSON 形式保存。
     /// </summary>
-    internal class ShortTermMemoryStore
+    internal class ArchiveMemoryStore
     {
         private readonly string _directory;
         private readonly string _filePath;
 
-        public ShortTermMemoryStore()
+        public ArchiveMemoryStore()
         {
             _directory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet", "Memory");
-            _filePath = Path.Combine(_directory, "ShortMemory.json");
+            _filePath = Path.Combine(_directory, "ArchiveMemory.json");
         }
 
-        /// <summary>从磁盘加载短期记忆，文件不存在或损坏时返回空列表。</summary>
-        public List<ShortMemoryEntry> Load()
+        /// <summary>从磁盘加载归档记忆，文件不存在或损坏时返回空列表。</summary>
+        public List<ArchiveEntry> Load()
         {
             try
             {
                 if (!File.Exists(_filePath))
                 {
-                    return new List<ShortMemoryEntry>();
+                    return new List<ArchiveEntry>();
                 }
 
                 var json = File.ReadAllText(_filePath);
-                return JsonSerializer.Deserialize<List<ShortMemoryEntry>>(json) ?? new List<ShortMemoryEntry>();
+                return JsonSerializer.Deserialize<List<ArchiveEntry>>(json) ?? new List<ArchiveEntry>();
             }
             catch
             {
-                return new List<ShortMemoryEntry>();
+                return new List<ArchiveEntry>();
             }
         }
 
-        /// <summary>把短期记忆写回磁盘。</summary>
-        public void Save(IReadOnlyList<ShortMemoryEntry> entries)
+        /// <summary>把归档记忆写回磁盘。</summary>
+        public void Save(IReadOnlyList<ArchiveEntry> entries)
         {
             try
             {
