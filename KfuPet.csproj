@@ -22,7 +22,12 @@
     <Resource Include="Assets\icon\Startlogo.png" />
     <Resource Include="Assets\icon\app.ico" />
     <Resource Include="Assets\icon\tray.ico" />
-    <Resource Include="Characters\白摇摇\logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Characters\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
