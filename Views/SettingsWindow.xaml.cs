@@ -151,6 +151,11 @@ namespace KfuPet.Views
                 _ => ModelConfigPanel
             };
             PlayPageEnterAnimation(currentPanel);
+
+            if (NavList.SelectedIndex == 1)
+            {
+                PlayMemoryPageEntrance();
+            }
         }
 
         /// <summary>
@@ -167,6 +172,99 @@ namespace KfuPet.Views
                 translate.BeginAnimation(TranslateTransform.YProperty,
                     new DoubleAnimation(10, 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
             }
+        }
+
+        /// <summary>从元素的 RenderTransform 中取出 TranslateTransform（兼容单变换与 TransformGroup）。</summary>
+        private static TranslateTransform? FindTranslateTransform(FrameworkElement element)
+        {
+            return element.RenderTransform switch
+            {
+                TranslateTransform single => single,
+                TransformGroup group => group.Children.OfType<TranslateTransform>().FirstOrDefault(),
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// 记忆页入场：卡片依次错峰淡入上滑，统计数字滚动、进度条缓动填充。
+        /// </summary>
+        private void PlayMemoryPageEntrance()
+        {
+            var memory = _mainWindow.MemorySystem;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var cards = new FrameworkElement[]
+            {
+                ShortMemoryCard, ArchiveMemoryCard, LongMemoryCard, StopWordsCard
+            };
+
+            // 卡片错峰入场（每张比上一张晚 60ms）
+            for (var i = 0; i < cards.Length; i++)
+            {
+                var begin = TimeSpan.FromMilliseconds(60 * i);
+                var duration = TimeSpan.FromMilliseconds(260);
+
+                cards[i].BeginAnimation(OpacityProperty,
+                    new DoubleAnimation(0, 1, duration) { BeginTime = begin, EasingFunction = ease });
+
+                var translate = FindTranslateTransform(cards[i]);
+                if (translate != null)
+                {
+                    translate.BeginAnimation(TranslateTransform.YProperty,
+                        new DoubleAnimation(14, 0, duration) { BeginTime = begin, EasingFunction = ease });
+                }
+            }
+
+            // 数字滚动 + 进度条填充，错开节奏更有层次
+            PlayCountUpAnimation(ShortCountText, memory.ShortCount, TimeSpan.FromMilliseconds(120));
+            PlayCountUpAnimation(ArchiveCountText, memory.ArchiveCount, TimeSpan.FromMilliseconds(180));
+            PlayCountUpAnimation(LongCountText, memory.LongCount, TimeSpan.FromMilliseconds(240));
+
+            PlayProgressAnimation(ShortProgressFill, memory.ShortCount, MemorySystem.ShortCapacity, TimeSpan.FromMilliseconds(150));
+            PlayProgressAnimation(ArchiveProgressFill, memory.ArchiveCount, MemorySystem.ArchiveCapacity, TimeSpan.FromMilliseconds(210));
+            PlayProgressAnimation(LongProgressFill, memory.LongCount, MemorySystem.LongCapacity, TimeSpan.FromMilliseconds(270));
+
+            ShortLimitText.Text = $"/ {MemorySystem.ShortCapacity}";
+            ArchiveLimitText.Text = $"/ {MemorySystem.ArchiveCapacity}";
+            LongLimitText.Text = $"/ {MemorySystem.LongCapacity}";
+        }
+
+        /// <summary>统计数字从 0 滚动到目标值（TextBlock 没有可动画的数字属性，用定时器驱动插值）。</summary>
+        private static void PlayCountUpAnimation(TextBlock text, int target, TimeSpan beginTime)
+        {
+            var start = DateTime.UtcNow + beginTime;
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+            timer.Tick += (s, e) =>
+            {
+                var elapsed = DateTime.UtcNow - start;
+                if (elapsed < TimeSpan.Zero)
+                {
+                    return;
+                }
+
+                var t = Math.Min(1.0, elapsed.TotalMilliseconds / 500.0);
+                // Cubic EaseOut
+                var eased = 1 - Math.Pow(1 - t, 3);
+                text.Text = ((int)Math.Round(target * eased)).ToString();
+
+                if (t >= 1.0)
+                {
+                    timer.Stop();
+                }
+            };
+            timer.Start();
+        }
+
+        /// <summary>进度条从 0 缓动填充到当前占比。</summary>
+        private static void PlayProgressAnimation(ScaleTransform fill, int count, int capacity, TimeSpan beginTime)
+        {
+            var ratio = capacity > 0 ? Math.Clamp((double)count / capacity, 0, 1) : 0;
+            fill.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(0, ratio, TimeSpan.FromMilliseconds(600))
+                {
+                    BeginTime = beginTime,
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                });
         }
 
         /// <summary>
@@ -408,7 +506,8 @@ namespace KfuPet.Views
             }
             DebugBonesPanel.BeginAnimation(OpacityProperty, fade);
 
-            if (DebugBonesPanel.RenderTransform is TranslateTransform translate)
+            var translate = FindTranslateTransform(DebugBonesPanel);
+            if (translate != null)
             {
                 translate.BeginAnimation(TranslateTransform.YProperty,
                     new DoubleAnimation(showing ? -10 : 0, showing ? 0 : -10, duration)

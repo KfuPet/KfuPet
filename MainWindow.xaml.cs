@@ -78,6 +78,9 @@ namespace KfuPet
         // ── AI 聊天 ──────────────────────────────────
         private readonly ChatService _chatService;
         private readonly MemorySystem _memorySystem;
+
+        /// <summary>记忆系统门面，供设置界面读取三级记忆状态。</summary>
+        internal MemorySystem MemorySystem => _memorySystem;
         private bool _isSending;
         private bool _isHoveringPet;
         private bool _isHoveringInput;

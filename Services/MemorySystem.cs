@@ -36,6 +36,42 @@ namespace KfuPet.Services
             _archiveEntries = _archiveStore.Load();
         }
 
+        /// <summary>短期记忆当前条数（上限 <see cref="ShortMemoryLimit"/>）。</summary>
+        public int ShortCount
+        {
+            get
+            {
+                lock (_archiveLock)
+                {
+                    return _shortEntries.Count;
+                }
+            }
+        }
+
+        /// <summary>归档记忆当前条数（达到 <see cref="ArchiveMemoryLimit"/> 触发分析）。</summary>
+        public int ArchiveCount
+        {
+            get
+            {
+                lock (_archiveLock)
+                {
+                    return _archiveEntries.Count;
+                }
+            }
+        }
+
+        /// <summary>长期记忆当前条数（上限 <see cref="LongMemoryLimit"/>）。</summary>
+        public int LongCount => _memoryManager.Count;
+
+        /// <summary>短期记忆容量上限。</summary>
+        public static int ShortCapacity => ShortMemoryLimit;
+
+        /// <summary>归档记忆容量上限。</summary>
+        public static int ArchiveCapacity => ArchiveMemoryLimit;
+
+        /// <summary>长期记忆容量上限。</summary>
+        public static int LongCapacity => LongMemoryLimit;
+
         /// <summary>把短期记忆转成对话消息列表，供 AI 作为会话上下文使用。</summary>
         public IReadOnlyList<ChatMessage> GetShortTermMessages()
         {
