@@ -195,7 +195,7 @@ namespace KfuPet.Views
 
             var cards = new FrameworkElement[]
             {
-                ShortMemoryCard, ArchiveMemoryCard, LongMemoryCard, StopWordsCard
+                ShortMemoryCard, ArchiveMemoryCard, LongMemoryCard, ChatHistoryCard, StopWordsCard
             };
 
             // 卡片错峰入场（每张比上一张晚 60ms）
@@ -227,6 +227,24 @@ namespace KfuPet.Views
             ShortLimitText.Text = $"/ {MemorySystem.ShortCapacity}";
             ArchiveLimitText.Text = $"/ {MemorySystem.ArchiveCapacity}";
             LongLimitText.Text = $"/ {MemorySystem.LongCapacity}";
+
+            RefreshChatHistoryPreview();
+        }
+
+        /// <summary>把当前聊天记录数量显示在卡片预览里。</summary>
+        private void RefreshChatHistoryPreview()
+        {
+            var count = _mainWindow.MemorySystem.GetChatHistory().Count;
+            ChatHistoryPreviewText.Text = count > 0
+                ? $"一共保存了 {count} 条对话，点“查看”可以回顾我们聊过的内容。"
+                : "还没有聊天记录，去和我聊几句吧。";
+        }
+
+        /// <summary>点击“查看”打开聊天记录窗口。</summary>
+        private void ViewChatHistoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new ChatHistoryWindow(_mainWindow.MemorySystem.GetChatHistory());
+            window.Show();
         }
 
         /// <summary>统计数字从 0 滚动到目标值（TextBlock 没有可动画的数字属性，用定时器驱动插值）。</summary>

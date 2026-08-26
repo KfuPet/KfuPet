@@ -72,6 +72,32 @@ namespace KfuPet.Services
         /// <summary>长期记忆容量上限。</summary>
         public static int LongCapacity => LongMemoryLimit;
 
+        /// <summary>
+        /// 获取聊天记录快照：归档中的原始对话 + 短期记忆，按时间升序排列，供设置页展示。
+        /// </summary>
+        public IReadOnlyList<ShortMemoryEntry> GetChatHistory()
+        {
+            lock (_archiveLock)
+            {
+                var result = new List<ShortMemoryEntry>();
+                foreach (var entry in _archiveEntries)
+                {
+                    // 总结条目不是对话，不放进聊天记录
+                    if (!entry.IsSummary)
+                    {
+                        result.Add(new ShortMemoryEntry
+                        {
+                            Time = entry.Time,
+                            User = entry.User,
+                            Assistant = entry.Assistant
+                        });
+                    }
+                }
+                result.AddRange(_shortEntries);
+                return result.OrderBy(e => e.Time).ToList();
+            }
+        }
+
         /// <summary>把短期记忆转成对话消息列表，供 AI 作为会话上下文使用。</summary>
         public IReadOnlyList<ChatMessage> GetShortTermMessages()
         {
