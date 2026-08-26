@@ -140,6 +140,7 @@ publish/
 [Pp]ublish[Aa]rtifacts/
 *.publishproj
 *.publishproj.user
+*.pubxml
 **/*.pubxml.user
 
 # -------------------- Blend / XAML 设计器 --------------------
