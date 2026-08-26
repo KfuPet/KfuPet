@@ -89,6 +89,9 @@ namespace KfuPet.Services
                 _archiveStore.Save(_archiveEntries);
             }
 
+            // 实时通道：核心信息（生日、姓名、重要偏好等）立即入库，不等归档批处理
+            _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant));
+
             // 归档满 40 条，后台异步分析
             if (_archiveEntries.Count >= ArchiveMemoryLimit && !_isAnalyzing)
             {
@@ -112,6 +115,52 @@ namespace KfuPet.Services
             {
                 _isAnalyzing = false;
             }
+        }
+
+        /// <summary>实时提取的外层包装：吞掉异常，不影响主流程。</summary>
+        private async Task RunRealtimeExtractAsync(ModelConfig model, string user, string assistant)
+        {
+            try
+            {
+                var items = await ExtractCoreInfoAsync(model, user, assistant);
+                foreach (var item in items.Where(i => i.Importance >= 4))
+                {
+                    await _memoryManager.StoreAsync(model, item.Content, item.Importance);
+                    _logService.Info($"[记忆] 实时入库核心信息：{item.Content}（重要性 {item.Importance}）");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logService.Warning($"[记忆] 实时提取失败：{ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 实时通道：判断本轮对话是否包含需要立即记住的核心信息（生日、姓名、重要偏好等），
+        /// 仅提取重要性 ≥ 4 的信息，绕过归档批处理的等待。
+        /// </summary>
+        private async Task<List<MemoryItem>> ExtractCoreInfoAsync(ModelConfig model, string user, string assistant)
+        {
+            const string prompt = """
+                你是记忆提取器。判断下面这轮对话中是否包含关于用户的、需要立即记住的核心信息，
+                例如：生日、姓名、性别、年龄、住址、联系方式、重要偏好、长期目标、重要关系、重要事件等。
+
+                只提取重要性 ≥ 4 的核心信息（4 用户偏好/长期目标，5 核心用户信息），
+                忽略普通聊天、临时信息、寒暄和琐碎内容。
+
+                请只输出一个 JSON 数组，不要包含其他任何文字或代码块标记，格式如下：
+                [{"content": "一句话概括的信息", "importance": 4}]
+                没有需要立即记住的核心信息时输出空数组 []。
+                """;
+
+            var messages = new List<ChatMessage>
+            {
+                new() { Role = "system", Content = prompt },
+                new() { Role = "user", Content = $"用户说：{user}\n助手回复：{assistant}" }
+            };
+
+            var reply = await _chatService.SendRawAsync(model, messages);
+            return ParseItems(reply);
         }
 
         /// <summary>

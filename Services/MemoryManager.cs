@@ -85,6 +85,15 @@ namespace KfuPet.Services
                 return;
             }
 
+            // 去重：内容完全相同的已有记忆直接跳过，避免重复入库
+            lock (_lock)
+            {
+                if (_entries.Any(e => string.Equals(e.Content.Trim(), content, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return;
+                }
+            }
+
             float[]? vector = null;
             try
             {
