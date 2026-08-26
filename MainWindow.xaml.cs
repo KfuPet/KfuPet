@@ -13,6 +13,7 @@ using System.Windows.Threading;
 using KfuPet.Models;
 using KfuPet.Services;
 using KfuPet.Services.Ipc;
+using KfuPet.Core.Memory;
 
 namespace KfuPet
 {
@@ -75,7 +76,8 @@ namespace KfuPet
 
         // ── AI 聊天 ──────────────────────────────────
         private readonly ChatService _chatService;
-        private readonly List<ChatMessage> _chatHistory = new();
+        private readonly ShortTermMemoryStore _shortTermStore = new();
+        private readonly List<ChatMessage> _chatHistory;
         private bool _isSending;
         private bool _isHoveringPet;
         private bool _isHoveringInput;
@@ -96,6 +98,7 @@ namespace KfuPet
         {
             InitializeComponent();
             _chatService = new ChatService(LogService);
+            _chatHistory = _shortTermStore.Load();
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
@@ -552,6 +555,7 @@ namespace KfuPet
                 _chatHistory.Add(new ChatMessage { Role = "user", Content = text });
                 _chatHistory.Add(new ChatMessage { Role = "assistant", Content = reply });
                 TrimChatHistory();
+                _shortTermStore.Save(_chatHistory);
 
                 // 后台提取并写入长期记忆，不阻塞回复显示
                 _ = _chatService.ExtractAndStoreAsync(model, text, reply);
