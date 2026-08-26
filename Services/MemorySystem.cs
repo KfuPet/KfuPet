@@ -98,6 +98,15 @@ namespace KfuPet.Services
             }
         }
 
+        /// <summary>获取全部长期记忆快照（重要性高的在前），供设置页展示。</summary>
+        public IReadOnlyList<MemoryEntry> GetLongTermMemories()
+        {
+            return _memoryManager.Snapshot()
+                .OrderByDescending(e => e.Importance)
+                .ThenByDescending(e => e.CreatedAt)
+                .ToList();
+        }
+
         /// <summary>把短期记忆转成对话消息列表，供 AI 作为会话上下文使用。</summary>
         public IReadOnlyList<ChatMessage> GetShortTermMessages()
         {

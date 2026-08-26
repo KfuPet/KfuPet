@@ -1,0 +1,310 @@
+<Window x:Class="KfuPet.Views.LongTermMemoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="长期记忆"
+        Width="560"
+        Height="640"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        Background="{x:Null}">
+
+    <Window.Resources>
+        <!-- 细滚动条：overlay 悬浮在内容上方，不挤压布局 -->
+        <Style x:Key="ScrollBarPageButtonStyle" TargetType="RepeatButton">
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ScrollBarThumbStyle" TargetType="Thumb">
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbBorder"
+                                Background="{DynamicResource AppBorderBrush}"
+                                CornerRadius="3"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbBorder"
+                                        Property="Background"
+                                        Value="{DynamicResource AppAccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="6"/>
+            <Setter Property="MinWidth" Value="6"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand"
+                                                  Style="{StaticResource ScrollBarPageButtonStyle}"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollBarThumbStyle}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand"
+                                                  Style="{StaticResource ScrollBarPageButtonStyle}"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                 To="1" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                 To="0" Duration="0:0:0.3"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="OverlayScrollViewerStyle" TargetType="ScrollViewer">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                                    Content="{TemplateBinding Content}"
+                                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                    CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                    CanHorizontallyScroll="False"
+                                                    CanVerticallyScroll="False"/>
+                            <ScrollBar x:Name="PART_VerticalScrollBar"
+                                       Value="{TemplateBinding VerticalOffset}"
+                                       Maximum="{TemplateBinding ScrollableHeight}"
+                                       ViewportSize="{TemplateBinding ViewportHeight}"
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                       Orientation="Vertical"
+                                       HorizontalAlignment="Right"
+                                       Width="6"
+                                       Margin="0,4,2,4"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="DialogRoot"
+            Margin="16"
+            Background="{DynamicResource AppBackgroundBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="12"
+            Opacity="0"
+            RenderTransformOrigin="0.5,0.5">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.35" Color="Black"/>
+        </Border.Effect>
+        <Border.RenderTransform>
+            <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
+        </Border.RenderTransform>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 标题栏 -->
+            <Border Grid.Row="0"
+                    Background="Transparent"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="16,0,0,0">
+                        <TextBlock Text="&#xE8F1;"
+                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                   FontSize="{StaticResource FontSizeIcon}"
+                                   Foreground="{DynamicResource AppAccentBrush}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="长期记忆"
+                                   Margin="10,0,0,0"
+                                   FontFamily="{StaticResource FontFamilyBody}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   FontWeight="{StaticResource FontWeightSemiBold}"
+                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CountText"
+                                   Margin="10,0,0,0"
+                                   FontFamily="{StaticResource FontFamilyBody}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button x:Name="CloseButton"
+                            Width="46" Height="44"
+                            HorizontalAlignment="Right"
+                            Background="Transparent"
+                            Cursor="Hand"
+                            FocusVisualStyle="{x:Null}"
+                            Click="CloseButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}">
+                                    <Grid>
+                                        <Border x:Name="HoverBg" Background="#E81123" CornerRadius="0,10,0,0" Opacity="0"/>
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Trigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="HoverBg"
+                                                                     Storyboard.TargetProperty="Opacity"
+                                                                     To="1" Duration="0:0:0.1"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.EnterActions>
+                                        <Trigger.ExitActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="HoverBg"
+                                                                     Storyboard.TargetProperty="Opacity"
+                                                                     To="0" Duration="0:0:0.15"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.ExitActions>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <TextBlock Text="&#xE8BB;"
+                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                   FontSize="{StaticResource FontSizeIconTiny}"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- 记忆列表 -->
+            <Grid Grid.Row="1">
+                <ScrollViewer x:Name="MemoryScroll"
+                              Style="{StaticResource OverlayScrollViewerStyle}"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="MemoryList"
+                                  Margin="20,16,14,16"
+                                  Background="Transparent">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- 一条长期记忆：重要性徽章 + 正文 + 时间，逐项淡入上滑 -->
+                                <Border Opacity="0">
+                                    <Border Margin="0,0,0,10"
+                                            Padding="14,11"
+                                            Background="{DynamicResource AppSurfaceBrush}"
+                                            BorderBrush="{DynamicResource AppBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="10">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <!-- 重要性徽章：底色用边框色，星星用强调色 -->
+                                                <Border Padding="6,2"
+                                                        CornerRadius="6"
+                                                        Background="{DynamicResource AppBorderBrush}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE734;"
+                                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                                   FontSize="{StaticResource FontSizeIconTiny}"
+                                                                   Foreground="{DynamicResource AppAccentBrush}"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding Importance}"
+                                                                   Margin="4,0,0,0"
+                                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <TextBlock Text="{Binding CreatedAt, StringFormat=yyyy年M月d日}"
+                                                           Margin="8,0,0,0"
+                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           Foreground="{DynamicResource AppTextDisabledBrush}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Content}"
+                                                       Margin="0,6,0,0"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- 空状态 -->
+                <StackPanel x:Name="EmptyState"
+                            Visibility="Collapsed"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                    <TextBlock Text="&#xE8F1;"
+                               HorizontalAlignment="Center"
+                               FontFamily="{StaticResource FontFamilyIcon}"
+                               FontSize="40"
+                               Foreground="{DynamicResource AppTextDisabledBrush}"/>
+                    <TextBlock Text="还没有长期记忆"
+                               Margin="0,12,0,4"
+                               HorizontalAlignment="Center"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                    <TextBlock Text="多和我聊聊，我会把重要的事牢牢记下来。"
+                               HorizontalAlignment="Center"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource AppTextDisabledBrush}"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

@@ -195,7 +195,7 @@ namespace KfuPet.Views
 
             var cards = new FrameworkElement[]
             {
-                ShortMemoryCard, ArchiveMemoryCard, LongMemoryCard, ChatHistoryCard, StopWordsCard
+                ShortMemoryCard, ArchiveMemoryCard, LongMemoryCard, ChatHistoryCard, LongTermMemoryCard, StopWordsCard
             };
 
             // 卡片错峰入场（每张比上一张晚 60ms）
@@ -229,6 +229,7 @@ namespace KfuPet.Views
             LongLimitText.Text = $"/ {MemorySystem.LongCapacity}";
 
             RefreshChatHistoryPreview();
+            RefreshLongTermMemoryPreview();
         }
 
         /// <summary>把当前聊天记录数量显示在卡片预览里。</summary>
@@ -240,10 +241,26 @@ namespace KfuPet.Views
                 : "还没有聊天记录，去和我聊几句吧。";
         }
 
+        /// <summary>把当前长期记忆数量显示在卡片预览里。</summary>
+        private void RefreshLongTermMemoryPreview()
+        {
+            var count = _mainWindow.MemorySystem.LongCount;
+            LongTermMemoryPreviewText.Text = count > 0
+                ? $"我已经牢牢记住了 {count} 件关于你的事，点“查看”可以看到全部。"
+                : "还没有长期记忆，多和我聊聊，我会慢慢记住关于你的事。";
+        }
+
         /// <summary>点击“查看”打开聊天记录窗口。</summary>
         private void ViewChatHistoryButton_Click(object sender, RoutedEventArgs e)
         {
             var window = new ChatHistoryWindow(_mainWindow.MemorySystem.GetChatHistory());
+            window.Show();
+        }
+
+        /// <summary>点击“查看”打开长期记忆窗口。</summary>
+        private void ViewLongTermMemoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new LongTermMemoryWindow(_mainWindow.MemorySystem.GetLongTermMemories());
             window.Show();
         }
 
