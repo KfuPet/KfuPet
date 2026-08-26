@@ -59,8 +59,65 @@ namespace KfuPet.Services
             {
                 systemPrompt += "\n\n关于主人的记忆（你已知晓）：\n" + MemoryManager.BuildContext(memories);
             }
+            else
+            {
+                // 长期记忆未命中时，兜底检索归档记忆，避免归档内容白白浪费
+                var archiveHits = await SearchArchiveAsync(model, userMessage);
+                _logService.Debug($"[记忆] 长期记忆未命中，归档兜底检索到 {archiveHits.Count} 条相关记录");
+                if (archiveHits.Count > 0)
+                {
+                    systemPrompt += "\n\n最近对话中提到的相关信息（供参考）：\n" + MemoryManager.BuildContext(archiveHits);
+                }
+            }
 
             return systemPrompt;
+        }
+
+        /// <summary>
+        /// 归档兜底检索：长期记忆未命中时，从归档的原始对话/总结中找与当前话题相关的记录。
+        /// </summary>
+        private async Task<List<string>> SearchArchiveAsync(ModelConfig model, string userMessage)
+        {
+            List<ArchiveEntry> snapshot;
+            lock (_archiveLock)
+            {
+                snapshot = new List<ArchiveEntry>(_archiveEntries);
+            }
+
+            if (snapshot.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            const string prompt = """
+                下面是用户最近的一些对话记录。请判断哪些记录与用户当前话题相关，
+                把相关的记录原文摘出来（可适度精简）。如果都不相关，输出空数组。
+                请只输出一个 JSON 字符串数组，不要包含其他任何文字或代码块标记，格式：["记录1", "记录2"]
+                """;
+
+            var sb = new System.Text.StringBuilder();
+            var index = 1;
+            foreach (var entry in snapshot)
+            {
+                if (entry.IsSummary)
+                {
+                    sb.AppendLine($"{index}. {entry.Content}");
+                }
+                else
+                {
+                    sb.AppendLine($"{index}. 用户：{entry.User}；助手：{entry.Assistant}");
+                }
+                index++;
+            }
+
+            var messages = new List<ChatMessage>
+            {
+                new() { Role = "system", Content = prompt },
+                new() { Role = "user", Content = $"当前用户消息：{userMessage}\n\n归档记录：\n{sb}" }
+            };
+
+            var reply = await _chatService.SendRawAsync(model, messages);
+            return ParseStringArray(reply);
         }
 
         /// <summary>
@@ -435,6 +492,30 @@ namespace KfuPet.Services
             }
 
             return 0;
+        }
+
+        /// <summary>解析 JSON 字符串数组（失败时返回空列表）。</summary>
+        private static List<string> ParseStringArray(string reply)
+        {
+            var text = StripCodeFence(reply);
+            try
+            {
+                using var doc = JsonDocument.Parse(text);
+                var result = new List<string>();
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    var s = item.GetString()?.Trim();
+                    if (!string.IsNullOrEmpty(s))
+                    {
+                        result.Add(s);
+                    }
+                }
+                return result;
+            }
+            catch (JsonException)
+            {
+                return new List<string>();
+            }
         }
 
         /// <summary>剥离可能的 ```json ... ``` 代码块包裹。</summary>
