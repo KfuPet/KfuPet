@@ -54,6 +54,7 @@ namespace KfuPet.Services
             var systemPrompt = _promptService.BuildSystemPrompt();
 
             var memories = await _memoryManager.SearchAsync(model, userMessage, 5);
+            _logService.Debug($"[记忆] 检索到 {memories.Count} 条相关长期记忆");
             if (memories.Count > 0)
             {
                 systemPrompt += "\n\n关于主人的记忆（你已知晓）：\n" + MemoryManager.BuildContext(memories);
@@ -67,6 +68,9 @@ namespace KfuPet.Services
         /// </summary>
         public void AddTurn(ModelConfig model, string user, string assistant)
         {
+            var overflowCount = 0;
+            var shortCount = 0;
+            var archiveCount = 0;
             lock (_archiveLock)
             {
                 _shortEntries.Add(new ShortMemoryEntry { User = user, Assistant = assistant });
@@ -83,11 +87,17 @@ namespace KfuPet.Services
                         User = oldest.User,
                         Assistant = oldest.Assistant
                     });
+                    overflowCount++;
                 }
 
+                shortCount = _shortEntries.Count;
+                archiveCount = _archiveEntries.Count;
                 _shortStore.Save(_shortEntries);
                 _archiveStore.Save(_archiveEntries);
             }
+
+            _logService.Debug($"[记忆] 记录一轮对话：短期 {shortCount}/{ShortMemoryLimit}" +
+                              (overflowCount > 0 ? $"，溢出 {overflowCount} 条到归档（归档 {archiveCount}/{ArchiveMemoryLimit}）" : string.Empty));
 
             // 实时通道：核心信息（生日、姓名、重要偏好等）立即入库，不等归档批处理
             _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant));
@@ -122,8 +132,13 @@ namespace KfuPet.Services
         {
             try
             {
+                _logService.Debug("[记忆] 实时通道：开始提取核心信息...");
                 var items = await ExtractCoreInfoAsync(model, user, assistant);
-                foreach (var item in items.Where(i => i.Importance >= 4))
+                var coreItems = items.Where(i => i.Importance >= 4).ToList();
+                _logService.Debug(coreItems.Count > 0
+                    ? $"[记忆] 实时通道：提取到 {coreItems.Count} 条核心信息"
+                    : "[记忆] 实时通道：未发现需要立即记住的核心信息");
+                foreach (var item in coreItems)
                 {
                     await _memoryManager.StoreAsync(model, item.Content, item.Importance);
                     _logService.Info($"[记忆] 实时入库核心信息：{item.Content}（重要性 {item.Importance}）");
@@ -188,19 +203,26 @@ namespace KfuPet.Services
             var lowItems = new List<string>();
 
             // 1. 总结条目：重新评分，≥3 进长期，<3 丢弃
+            var summaryPromoted = 0;
             foreach (var entry in summaryEntries)
             {
                 var importance = await ScoreContentAsync(model, entry.Content);
                 if (importance >= 3)
                 {
                     longTermItems.Add(new MemoryItem(entry.Content, importance));
+                    summaryPromoted++;
                 }
+            }
+            if (summaryEntries.Count > 0)
+            {
+                _logService.Debug($"[记忆] 总结条目重新评分：{summaryPromoted}/{summaryEntries.Count} 条入选长期");
             }
 
             // 2. 原始对话条目：提炼信息点并评分
             if (conversationEntries.Count > 0)
             {
                 var extracted = await ExtractFromConversationsAsync(model, conversationEntries);
+                _logService.Debug($"[记忆] 从 {conversationEntries.Count} 条原始对话提炼出 {extracted.Count} 个信息点");
                 foreach (var item in extracted)
                 {
                     if (item.Importance >= 3)
@@ -234,6 +256,7 @@ namespace KfuPet.Services
                         Content = summary,
                         IsSummary = true
                     };
+                    _logService.Debug($"[记忆] {lowItems.Count} 条未入选信息总结成一条留归档");
                 }
             }
             else if (lowItems.Count == 1)
@@ -244,6 +267,7 @@ namespace KfuPet.Services
                     Content = lowItems[0],
                     IsSummary = false
                 };
+                _logService.Debug("[记忆] 1 条未入选信息暂留归档");
             }
 
             // 5. 归档重建
