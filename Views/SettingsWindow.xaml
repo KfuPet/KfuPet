@@ -906,62 +906,72 @@
 
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="记忆" Style="{StaticResource SectionTitleStyle}"/>
-                            <TextBlock Text="这里可以调整我回忆时用来过滤虚词的关键词。每行一个词，保存后立即生效。"
+                            <TextBlock Text="这里可以调整我的记忆相关设置。"
                                        Style="{StaticResource HintTextStyle}"
                                        Margin="0,6,0,24"/>
 
-                            <Border Padding="16,14"
+                            <!-- 停用词设置卡片：预览 + 编辑按钮 -->
+                            <Border Padding="14,12"
                                     Background="{DynamicResource AppSurfaceBrush}"
                                     BorderBrush="{DynamicResource AppBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="10">
-                                <StackPanel>
-                                    <TextBlock Text="关键词检索停用词" Style="{StaticResource FieldLabelStyle}"/>
-                                    <TextBox x:Name="StopWordsBox"
-                                             Style="{StaticResource FieldInputStyle}"
-                                             AcceptsReturn="True"
-                                             TextWrapping="Wrap"
-                                             VerticalScrollBarVisibility="Auto"
-                                             MinHeight="200"
-                                             VerticalContentAlignment="Top"/>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
-                                        <TextBlock x:Name="StopWordsStatusText"
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,12,0">
+                                        <TextBlock Text="关键词检索停用词"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                        <TextBlock x:Name="StopWordsPreviewText"
+                                                   Margin="0,4,0,0"
                                                    Style="{StaticResource HintTextStyle}"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,12,0"
-                                                   Opacity="0"/>
-                                        <Button x:Name="SaveStopWordsButton"
-                                                Padding="16,8"
-                                                Background="{DynamicResource AppAccentBrush}"
-                                                Foreground="{DynamicResource AppAccentForegroundBrush}"
-                                                Cursor="Hand"
-                                                FocusVisualStyle="{x:Null}"
-                                                Click="SaveStopWordsButton_Click">
-                                            <Button.Template>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="SaveBg"
-                                                            Background="{TemplateBinding Background}"
-                                                            CornerRadius="8"
-                                                            Padding="{TemplateBinding Padding}">
-                                                        <TextBlock Text="保存"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button x:Name="EditStopWordsButton"
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Padding="14,7"
+                                            Background="{DynamicResource AppSurfaceBrush}"
+                                            Cursor="Hand"
+                                            FocusVisualStyle="{x:Null}"
+                                            Click="EditStopWordsButton_Click">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="BtnBg"
+                                                        Background="{TemplateBinding Background}"
+                                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="8"
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE70F;"
+                                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="0,0,6,0"/>
+                                                        <TextBlock Text="编辑"
                                                                    FontFamily="{StaticResource FontFamilyBody}"
                                                                    FontSize="{StaticResource FontSizeBody}"
-                                                                   FontWeight="{StaticResource FontWeightSemiBold}"
-                                                                   Foreground="{TemplateBinding Foreground}"
+                                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
                                                                    VerticalAlignment="Center"/>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="SaveBg"
-                                                                    Property="Background"
-                                                                    Value="{DynamicResource AppAccentHoverBrush}"/>
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
-                                        </Button>
-                                    </StackPanel>
-                                </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="BtnBg"
+                                                                Property="BorderBrush"
+                                                                Value="{DynamicResource AppAccentBrush}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </Grid>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>

@@ -36,7 +36,7 @@ namespace KfuPet.Views
             NavList.SelectedIndex = 0;
             LoadDeveloperState();
             LoadModels();
-            LoadStopWords();
+            RefreshStopWordsPreview();
             UpdateToolStatus();
 
             VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
@@ -102,32 +102,36 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 把当前停用词加载到多行编辑框，每行一个词。
+        /// 把当前停用词以中文逗号拼接显示在卡片预览里。
         /// </summary>
-        private void LoadStopWords()
+        private void RefreshStopWordsPreview()
         {
-            StopWordsBox.Text = string.Join(Environment.NewLine, _mainWindow.StopWordsService.Words);
+            StopWordsPreviewText.Text = string.Join("，", _mainWindow.StopWordsService.Words);
         }
 
         /// <summary>
-        /// 保存停用词：按行拆分、去空白，写回本地配置，并显示“已保存”提示。
+        /// 点击“编辑”打开停用词编辑对话框，确认后保存并刷新预览。
         /// </summary>
-        private void SaveStopWordsButton_Click(object sender, RoutedEventArgs e)
+        private void EditStopWordsButton_Click(object sender, RoutedEventArgs e)
         {
-            var words = StopWordsBox.Text
-                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            var dialog = new EditStopWordsDialog();
+            dialog.LoadWords(_mainWindow.StopWordsService.Words);
+            dialog.StopWordsConfirmed += text =>
+            {
+                _mainWindow.StopWordsService.Save(ParseStopWords(text));
+                RefreshStopWordsPreview();
+            };
+            dialog.Show();
+        }
+
+        /// <summary>把编辑框文本按中英文逗号或换行拆分、去空白、去空项。</summary>
+        private static IReadOnlyList<string> ParseStopWords(string text)
+        {
+            return text
+                .Split(new[] { '，', ',', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(w => w.Trim())
-                .Where(w => w.Length > 0);
-
-            _mainWindow.StopWordsService.Save(words);
-
-            StopWordsStatusText.Text = "已保存";
-            var fade = new DoubleAnimationUsingKeyFrames();
-            fade.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            fade.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(200)), new CubicEase { EasingMode = EasingMode.EaseOut }));
-            fade.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1500))));
-            fade.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(1750)), new CubicEase { EasingMode = EasingMode.EaseIn }));
-            StopWordsStatusText.BeginAnimation(OpacityProperty, fade);
+                .Where(w => w.Length > 0)
+                .ToList();
         }
 
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
