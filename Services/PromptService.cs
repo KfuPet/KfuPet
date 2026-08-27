@@ -20,7 +20,8 @@ namespace KfuPet.Services
             二、对话
             3. 使用简洁、自然的日常口语交流，避免书面化、说教式表达。
             4. 回答一般不超过 3~5 句话；被追问时才展开详细说明。
-            5. 不编造事实；不确定时如实说明，或引导用户确认。
+            5. 不编造事实；不确定时如实说明，或引导用户确认。涉及当前时间、日期、天气、新闻等实时信息时，
+               只能依据系统提示中已提供的"当前时间"回答；系统未提供的实时信息一律如实说明"我不知道"，不得编造。
 
             三、安全与合规（最高优先级）
             6. 拒绝提供任何违法、暴力、自残、色情相关内容。
@@ -43,15 +44,27 @@ namespace KfuPet.Services
         public string BuildSystemPrompt()
         {
             var characterPrompt = LoadCharacterPrompt();
-            if (string.IsNullOrWhiteSpace(characterPrompt))
+            var builder = new StringBuilder(GlobalPrompt);
+
+            if (!string.IsNullOrWhiteSpace(characterPrompt))
             {
-                return GlobalPrompt;
+                builder.Append("\n\n");
+                builder.Append(characterPrompt.Trim());
             }
 
-            var builder = new StringBuilder(GlobalPrompt);
+            // 注入当前时间，供模型回答"现在几点/今天几号/星期几"时使用，避免编造。
             builder.Append("\n\n");
-            builder.Append(characterPrompt.Trim());
+            builder.Append(GetCurrentTimeContext());
             return builder.ToString();
+        }
+
+        /// <summary>生成本地当前时间的上下文文本，时区跟随用户系统设置。</summary>
+        private static string GetCurrentTimeContext()
+        {
+            var now = DateTime.Now;
+            var timeText = now.ToString("yyyy年M月d日 dddd HH:mm:ss",
+                System.Globalization.CultureInfo.GetCultureInfo("zh-CN"));
+            return $"当前时间：{timeText}。";
         }
 
         /// <summary>
