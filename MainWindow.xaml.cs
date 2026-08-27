@@ -13,6 +13,7 @@ using System.Windows.Threading;
 using KfuPet.Models;
 using KfuPet.Services;
 using KfuPet.Services.Ipc;
+using KfuPet.Services.Tools;
 
 namespace KfuPet
 {
@@ -78,6 +79,7 @@ namespace KfuPet
         // ── AI 聊天 ──────────────────────────────────
         private readonly ChatService _chatService;
         private readonly MemorySystem _memorySystem;
+        private readonly ToolRegistry _toolRegistry;
 
         /// <summary>记忆系统门面，供设置界面读取三级记忆状态。</summary>
         internal MemorySystem MemorySystem => _memorySystem;
@@ -102,6 +104,8 @@ namespace KfuPet
             InitializeComponent();
             _chatService = new ChatService();
             _memorySystem = new MemorySystem(_chatService, LogService, StopWordsService);
+            _toolRegistry = new ToolRegistry();
+            _toolRegistry.Register(new WebSearchTool());
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
@@ -553,7 +557,9 @@ namespace KfuPet
             {
                 var systemPrompt = await _memorySystem.BuildContextAsync(model, text);
                 var history = _memorySystem.GetShortTermMessages();
-                var reply = await _chatService.SendAsync(model, systemPrompt, history, text);
+                var reply = await _chatService.SendWithToolsAsync(
+                    model, systemPrompt, history, text,
+                    _toolRegistry.GetDefinitions(), _toolRegistry.ExecuteAsync);
                 ShowBubbleBatches(SplitIntoBatches(reply));
 
                 // 记录一轮对话到记忆系统（短期 + 溢出归档 + 后台分析）

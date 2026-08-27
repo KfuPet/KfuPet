@@ -9,7 +9,7 @@ namespace KfuPet.Services
     /// </summary>
     internal class PromptService
     {
-        // 全局提示词：行为底线，不随角色变化。内容修改需同步 docs/global-prompt.md。
+        // 全局提示词：行为底线，不随角色变化。
         private const string GlobalPrompt = """
             你是 KfuPet 桌面宠物的 AI 助手。请严格遵守以下规则：
 
