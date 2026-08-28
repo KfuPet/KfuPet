@@ -264,6 +264,34 @@ namespace KfuPet.Views
             window.Show();
         }
 
+        /// <summary>
+        /// 点击“删除记忆”：弹出勾选对话框，确认后按选择清空对应记忆并刷新统计卡片。
+        /// </summary>
+        private void DeleteMemoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new DeleteMemoryDialog();
+            dialog.DeleteConfirmed += kinds =>
+            {
+                var memory = _mainWindow.MemorySystem;
+                if (kinds.HasFlag(DeleteMemoryDialog.MemoryKinds.ShortTerm))
+                {
+                    memory.ClearShortTerm();
+                }
+                if (kinds.HasFlag(DeleteMemoryDialog.MemoryKinds.Archive))
+                {
+                    memory.ClearArchive();
+                }
+                if (kinds.HasFlag(DeleteMemoryDialog.MemoryKinds.LongTerm))
+                {
+                    memory.ClearLongTerm();
+                }
+
+                // 重新播放入场动画，让清零后的数字与进度条重新滚动
+                PlayMemoryPageEntrance();
+            };
+            dialog.ShowDialog();
+        }
+
         /// <summary>统计数字从 0 滚动到目标值（TextBlock 没有可动画的数字属性，用定时器驱动插值）。</summary>
         private static void PlayCountUpAnimation(TextBlock text, int target, TimeSpan beginTime)
         {

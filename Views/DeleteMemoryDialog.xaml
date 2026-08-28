@@ -1,0 +1,440 @@
+<Window x:Class="KfuPet.Views.DeleteMemoryDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="删除记忆"
+        Width="480"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        Background="{x:Null}">
+
+    <Window.Resources>
+        <!-- 危险操作按钮：红底白字，悬停提亮、按压缩放回弹、禁用时半透明 -->
+        <Style x:Key="DangerButtonStyle" TargetType="Button">
+            <Setter Property="MinWidth" Value="88"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="BtnScale"/>
+                            </Grid.RenderTransform>
+                            <Border x:Name="Bd"
+                                    Background="#E81123"
+                                    CornerRadius="8"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <!-- 禁用遮罩：铺满整个按钮，让红色整体变灰 -->
+                            <Border x:Name="DisabledOverlay"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    CornerRadius="8"
+                                    Opacity="0"
+                                    IsHitTestVisible="False"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="Bd"
+                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                            To="#F32F41" Duration="0:0:0.12"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="Bd"
+                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                            To="#E81123" Duration="0:0:0.18"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="0.95" Duration="0:0:0.08"/>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="0.95" Duration="0:0:0.08"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1" Duration="0:0:0.25">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1" Duration="0:0:0.25">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="DisabledOverlay" Property="Opacity" Value="0.55"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 普通按钮：透明底描边 -->
+        <Style x:Key="DialogButtonStyle" TargetType="Button">
+            <Setter Property="MinWidth" Value="88"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 记忆类型勾选项：整行可点，右侧对勾缩放弹入 -->
+        <Style x:Key="MemoryCheckStyle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Bd"
+                                Background="{DynamicResource AppSurfaceBrush}"
+                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="14,11">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter VerticalAlignment="Center"/>
+                                <Border x:Name="CheckBadge"
+                                        Grid.Column="1"
+                                        Width="22" Height="22"
+                                        CornerRadius="11"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource AppBorderBrush}"
+                                        RenderTransformOrigin="0.5,0.5">
+                                    <Border.RenderTransform>
+                                        <ScaleTransform x:Name="BadgeScale"/>
+                                    </Border.RenderTransform>
+                                    <Grid>
+                                        <Border x:Name="CheckFill"
+                                                CornerRadius="11"
+                                                Background="{DynamicResource AppAccentBrush}"
+                                                Opacity="0"/>
+                                        <TextBlock x:Name="CheckMark"
+                                                   Text="&#xE73E;"
+                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                   Foreground="White"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Opacity="0"/>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource AppTextDisabledBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource AppAccentBrush}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CheckFill"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckMark"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetName="BadgeScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1.2" Duration="0:0:0.12">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BadgeScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1" BeginTime="0:0:0.12" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.8"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BadgeScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1.2" Duration="0:0:0.12">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BadgeScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1" BeginTime="0:0:0.12" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.8"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CheckFill"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckMark"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="0:0:0.1"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="DialogRoot"
+            Margin="16"
+            Background="{DynamicResource AppBackgroundBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="12"
+            Opacity="0"
+            RenderTransformOrigin="0.5,0.5">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.35" Color="Black"/>
+        </Border.Effect>
+        <Border.RenderTransform>
+            <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
+        </Border.RenderTransform>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 标题栏（本次操作窗口右上角不放关闭按钮） -->
+            <Border Grid.Row="0"
+                    Background="Transparent"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <StackPanel Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="16,0,0,0">
+                    <TextBlock Text="&#xE74D;"
+                               FontFamily="{StaticResource FontFamilyIcon}"
+                               FontSize="{StaticResource FontSizeIcon}"
+                               Foreground="#E81123"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="删除记忆"
+                               Margin="10,0,0,0"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               FontWeight="{StaticResource FontWeightSemiBold}"
+                               Foreground="{DynamicResource AppTextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 内容区：选择页与警告页在同一窗口内切换 -->
+            <Grid Grid.Row="1" Margin="20,20,20,0">
+                <!-- 选择页：勾选要删除的记忆类型 -->
+                <StackPanel x:Name="SelectPage">
+                    <TextBlock Text="想让我忘掉哪些内容？勾选后点“继续”。"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource AppTextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+                    <StackPanel Margin="0,14,0,0">
+                        <CheckBox x:Name="ShortCheck"
+                                  Style="{StaticResource MemoryCheckStyle}"
+                                  Margin="0,0,0,8"
+                                  Checked="AnyCheck_Changed"
+                                  Unchecked="AnyCheck_Changed">
+                            <StackPanel>
+                                <TextBlock Text="短期记忆"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                <TextBlock Text="最近对话的即时上下文"
+                                           Margin="0,2,0,0"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                            </StackPanel>
+                        </CheckBox>
+                        <CheckBox x:Name="ArchiveCheck"
+                                  Style="{StaticResource MemoryCheckStyle}"
+                                  Margin="0,0,0,8"
+                                  Checked="AnyCheck_Changed"
+                                  Unchecked="AnyCheck_Changed">
+                            <StackPanel>
+                                <TextBlock Text="归档记忆"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                <TextBlock Text="等待筛选的过往对话与总结"
+                                           Margin="0,2,0,0"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                            </StackPanel>
+                        </CheckBox>
+                        <CheckBox x:Name="LongCheck"
+                                  Style="{StaticResource MemoryCheckStyle}"
+                                  Checked="AnyCheck_Changed"
+                                  Unchecked="AnyCheck_Changed">
+                            <StackPanel>
+                                <TextBlock Text="长期记忆"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                <TextBlock Text="我牢牢记住的关于你的事"
+                                           Margin="0,2,0,0"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                            </StackPanel>
+                        </CheckBox>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 警告页：最终确认（初始隐藏） -->
+                <StackPanel x:Name="WarningPage"
+                            Visibility="Collapsed"
+                            Opacity="0">
+                    <StackPanel.RenderTransform>
+                        <TranslateTransform/>
+                    </StackPanel.RenderTransform>
+                    <Border Width="52" Height="52"
+                            CornerRadius="26"
+                            HorizontalAlignment="Center"
+                            Background="{DynamicResource AppSurfaceBrush}">
+                        <TextBlock Text="&#xE7BA;"
+                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                   FontSize="{StaticResource FontSizeIconLarge}"
+                                   Foreground="#E81123"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="删除后就找不回来了"
+                               Margin="0,14,0,6"
+                               HorizontalAlignment="Center"
+                               FontFamily="{StaticResource FontFamilyDisplay}"
+                               FontSize="{StaticResource FontSizeSubtitle}"
+                               FontWeight="{StaticResource FontWeightSemiBold}"
+                               Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                    <TextBlock x:Name="WarningSummaryText"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource AppTextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- 按钮栏 -->
+            <Border Grid.Row="2"
+                    Margin="0,20,0,0"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,11,11"
+                    Padding="20,12">
+                <Grid>
+                    <!-- 选择页按钮 -->
+                    <StackPanel x:Name="SelectButtons"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+                        <Button Style="{StaticResource DialogButtonStyle}"
+                                Margin="0,0,8,0"
+                                Background="Transparent"
+                                Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                Content="取消"
+                                Click="CancelButton_Click"/>
+                        <Button x:Name="ContinueButton"
+                                Style="{StaticResource DangerButtonStyle}"
+                                Foreground="White"
+                                Content="继续"
+                                IsEnabled="False"
+                                Click="ContinueButton_Click"/>
+                    </StackPanel>
+                    <!-- 警告页按钮 -->
+                    <StackPanel x:Name="WarningButtons"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Visibility="Collapsed">
+                        <Button Style="{StaticResource DialogButtonStyle}"
+                                Margin="0,0,8,0"
+                                Background="Transparent"
+                                Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                Content="取消"
+                                Click="CancelButton_Click"/>
+                        <Button x:Name="ConfirmDeleteButton"
+                                Style="{StaticResource DangerButtonStyle}"
+                                Foreground="White"
+                                IsEnabled="False"
+                                Click="ConfirmDeleteButton_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

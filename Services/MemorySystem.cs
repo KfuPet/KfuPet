@@ -107,6 +107,32 @@ namespace KfuPet.Services
                 .ToList();
         }
 
+        /// <summary>清空短期记忆并落盘。</summary>
+        public void ClearShortTerm()
+        {
+            lock (_archiveLock)
+            {
+                _shortEntries.Clear();
+                _shortStore.Save(_shortEntries);
+            }
+        }
+
+        /// <summary>清空归档记忆并落盘。</summary>
+        public void ClearArchive()
+        {
+            lock (_archiveLock)
+            {
+                _archiveEntries.Clear();
+                _archiveStore.Save(_archiveEntries);
+            }
+        }
+
+        /// <summary>清空全部长期记忆并落盘。</summary>
+        public void ClearLongTerm()
+        {
+            _memoryManager.Clear();
+        }
+
         /// <summary>把短期记忆转成对话消息列表，供 AI 作为会话上下文使用。</summary>
         public IReadOnlyList<ChatMessage> GetShortTermMessages()
         {

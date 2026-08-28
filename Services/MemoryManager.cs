@@ -140,6 +140,16 @@ namespace KfuPet.Services
             }
         }
 
+        /// <summary>清空全部长期记忆并落盘。</summary>
+        public void Clear()
+        {
+            lock (_lock)
+            {
+                _entries.Clear();
+                _store.Save(_entries);
+            }
+        }
+
         /// <summary>
         /// 去重：内容完全相同（忽略首尾空白与大小写）的记忆只保留重要度最高的一条，返回被删除的数量。
         /// </summary>
