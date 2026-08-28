@@ -50,6 +50,7 @@ namespace KfuPet.Views
                 }
             };
             Closed += SettingsWindow_Closed;
+            Activated += SettingsWindow_Activated;
         }
 
         private void SettingsWindow_Closed(object? sender, EventArgs e)
@@ -57,6 +58,18 @@ namespace KfuPet.Views
             _mainWindow.DeveloperModeService.EnabledChanged -= OnDeveloperModeChanged;
             _mainWindow.ToolRunningChanged -= OnToolRunningChanged;
             _mainWindow.SkeletonService.DebugSkeletonChanged -= OnDebugSkeletonChanged;
+        }
+
+        /// <summary>
+        /// 窗口重新获得焦点时，若停在记忆页则从磁盘重载并刷新统计，
+        /// 覆盖「删除后把备份文件复制回来」这类应用无法感知的外部文件变动。
+        /// </summary>
+        private void SettingsWindow_Activated(object? sender, EventArgs e)
+        {
+            if (NavList.SelectedIndex == 1)
+            {
+                RefreshMemoryStatistics();
+            }
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -191,6 +204,10 @@ namespace KfuPet.Views
         private void PlayMemoryPageEntrance()
         {
             var memory = _mainWindow.MemorySystem;
+
+            // 先重载磁盘数据，避免删除后又把备份文件复制回来时，统计数字仍显示旧缓存
+            memory.Reload();
+
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
             var cards = new FrameworkElement[]
@@ -248,6 +265,35 @@ namespace KfuPet.Views
             LongTermMemoryPreviewText.Text = count > 0
                 ? $"我已经牢牢记住了 {count} 件关于你的事，点“查看”可以看到全部。"
                 : "还没有长期记忆，多和我聊聊，我会慢慢记住关于你的事。";
+        }
+
+        /// <summary>从磁盘重载并直接刷新记忆页的统计数字、进度条与预览（不重播动画）。</summary>
+        private void RefreshMemoryStatistics()
+        {
+            var memory = _mainWindow.MemorySystem;
+            memory.Reload();
+
+            ShortCountText.Text = memory.ShortCount.ToString();
+            ArchiveCountText.Text = memory.ArchiveCount.ToString();
+            LongCountText.Text = memory.LongCount.ToString();
+
+            SetProgressFill(ShortProgressFill, memory.ShortCount, MemorySystem.ShortCapacity);
+            SetProgressFill(ArchiveProgressFill, memory.ArchiveCount, MemorySystem.ArchiveCapacity);
+            SetProgressFill(LongProgressFill, memory.LongCount, MemorySystem.LongCapacity);
+
+            ShortLimitText.Text = $"/ {MemorySystem.ShortCapacity}";
+            ArchiveLimitText.Text = $"/ {MemorySystem.ArchiveCapacity}";
+            LongLimitText.Text = $"/ {MemorySystem.LongCapacity}";
+
+            RefreshChatHistoryPreview();
+            RefreshLongTermMemoryPreview();
+        }
+
+        /// <summary>清除进行中的动画后，把进度条直接设置为当前占比。</summary>
+        private static void SetProgressFill(ScaleTransform fill, int count, int capacity)
+        {
+            fill.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            fill.ScaleX = capacity > 0 ? Math.Clamp((double)count / capacity, 0, 1) : 0;
         }
 
         /// <summary>点击“查看”打开聊天记录窗口。</summary>

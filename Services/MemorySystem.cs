@@ -36,6 +36,21 @@ namespace KfuPet.Services
             _archiveEntries = _archiveStore.Load();
         }
 
+        /// <summary>从磁盘重新加载三级记忆，覆盖当前内存中的缓存。</summary>
+        public void Reload()
+        {
+            _memoryManager.Reload();
+
+            lock (_archiveLock)
+            {
+                _shortEntries.Clear();
+                _shortEntries.AddRange(_shortStore.Load());
+
+                _archiveEntries.Clear();
+                _archiveEntries.AddRange(_archiveStore.Load());
+            }
+        }
+
         /// <summary>短期记忆当前条数（上限 <see cref="ShortMemoryLimit"/>）。</summary>
         public int ShortCount
         {

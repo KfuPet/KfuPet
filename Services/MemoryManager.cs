@@ -116,6 +116,16 @@ namespace KfuPet.Services
             return Task.CompletedTask;
         }
 
+        /// <summary>从磁盘重新加载长期记忆，覆盖当前内存中的缓存。</summary>
+        public void Reload()
+        {
+            lock (_lock)
+            {
+                _entries.Clear();
+                _entries.AddRange(_store.Load());
+            }
+        }
+
         /// <summary>获取全部长期记忆的快照。</summary>
         public IReadOnlyList<MemoryEntry> Snapshot()
         {
