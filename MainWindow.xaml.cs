@@ -53,8 +53,6 @@ namespace KfuPet
 
         internal SkeletonService SkeletonService { get; } = new SkeletonService();
 
-        internal MemoryService MemoryService { get; } = new MemoryService();
-
         internal EmotionService EmotionService { get; } = new EmotionService();
 
         internal VisionService VisionService { get; } = new VisionService();
@@ -121,7 +119,6 @@ namespace KfuPet
             InitializeSkeleton(dpiScale);
 
             CommandDispatcher.RegisterService(SkeletonService);
-            CommandDispatcher.RegisterService(MemoryService);
             CommandDispatcher.RegisterService(EmotionService);
             CommandDispatcher.RegisterService(VisionService);
 
