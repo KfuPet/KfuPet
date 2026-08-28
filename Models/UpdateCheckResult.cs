@@ -19,5 +19,8 @@ namespace KfuPet.Models
 
         /// <summary>更新说明。</summary>
         public string ReleaseNotes { get; set; } = string.Empty;
+
+        /// <summary>发布时间（UTC），未知时为 null。</summary>
+        public DateTimeOffset? PublishedAt { get; set; }
     }
 }

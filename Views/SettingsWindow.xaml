@@ -2162,10 +2162,11 @@
                                     BorderThickness="1"
                                     CornerRadius="10"
                                     RenderTransformOrigin="0.5,0.5">
-                                <StackPanel RenderTransformOrigin="0.5,0.5">
-                                    <StackPanel.RenderTransform>
-                                        <ScaleTransform x:Name="AboutInfoCardScale"/>
-                                    </StackPanel.RenderTransform>
+                                <!-- 缩放施加在整张卡片上（含边框），否则悬停放大时横贯卡片的分隔线会被推出边框 -->
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="AboutInfoCardScale"/>
+                                </Border.RenderTransform>
+                                <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <Image Source="pack://application:,,,/Assets/icon/Startlogo.png"
                                                Width="56" Height="56"/>
@@ -2229,6 +2230,110 @@
                                             </ControlTemplate>
                                         </Button.Template>
                                     </Button>
+
+                                    <!-- 分隔线：负边距抵消卡片 Padding，使线条横贯卡片 -->
+                                    <Border Height="1"
+                                            Margin="-18,16,-18,0"
+                                            Background="{DynamicResource AppBorderBrush}"/>
+
+                                    <!-- 关于新版本：默认折叠，点击头部展开显示更新内容 -->
+                                    <Border x:Name="AboutNewVersionHeader"
+                                            Margin="-6,6,-6,0"
+                                            Padding="6,8"
+                                            CornerRadius="8"
+                                            Cursor="Hand"
+                                            Background="Transparent"
+                                            RenderTransformOrigin="0.5,0.5"
+                                            MouseEnter="AboutNewVersionHeader_MouseEnter"
+                                            MouseLeave="AboutNewVersionHeader_MouseLeave"
+                                            MouseLeftButtonDown="AboutNewVersionHeader_MouseDown"
+                                            MouseLeftButtonUp="AboutNewVersionHeader_Click">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform x:Name="AboutNewVersionHeaderScale"/>
+                                        </Border.RenderTransform>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <!-- 悬停高亮层：负边距覆盖到外层 Padding 区域，淡入淡出 -->
+                                            <Border x:Name="AboutNewVersionHoverOverlay"
+                                                    Grid.ColumnSpan="4"
+                                                    Margin="-6,-8"
+                                                    CornerRadius="8"
+                                                    Background="{DynamicResource AppBorderBrush}"
+                                                    Opacity="0"/>
+                                            <TextBlock Text="关于新版本"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                            <!-- 最新版本徽章：与上方版本徽章同款 -->
+                                            <Border x:Name="LatestVersionBadgeBorder"
+                                                    Grid.Column="1"
+                                                    Margin="10,0,0,0"
+                                                    Padding="8,3"
+                                                    VerticalAlignment="Center"
+                                                    Background="{DynamicResource AppBorderBrush}"
+                                                    CornerRadius="6"
+                                                    RenderTransformOrigin="0.5,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform x:Name="LatestVersionBadgeScale"/>
+                                                </Border.RenderTransform>
+                                                <TextBlock x:Name="LatestVersionBadge"
+                                                           Text="···"
+                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            </Border>
+                                            <TextBlock x:Name="LatestReleaseDateText"
+                                                       Grid.Column="2"
+                                                       Margin="12,0,0,0"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.RenderTransform>
+                                                    <TranslateTransform x:Name="LatestReleaseDateSlide"/>
+                                                </TextBlock.RenderTransform>
+                                            </TextBlock>
+                                            <TextBlock x:Name="AboutNewVersionChevron"
+                                                       Grid.Column="3"
+                                                       Text="&#xE76B;"
+                                                       FontFamily="{StaticResource FontFamilyIcon}"
+                                                       FontSize="{StaticResource FontSizeIconSmall}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center"
+                                                       RenderTransformOrigin="0.5,0.5">
+                                                <TextBlock.RenderTransform>
+                                                    <RotateTransform x:Name="AboutNewVersionChevronRotate"/>
+                                                </TextBlock.RenderTransform>
+                                            </TextBlock>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 展开区域：GitHub 拉取的更新内容 -->
+                                    <Border x:Name="AboutNewVersionContent"
+                                            Visibility="Collapsed"
+                                            Opacity="0"
+                                            Margin="0,2,0,4"
+                                            Padding="12,10"
+                                            Background="{DynamicResource AppBorderBrush}"
+                                            CornerRadius="8">
+                                        <Border.RenderTransform>
+                                            <TranslateTransform x:Name="AboutNewVersionContentSlide"/>
+                                        </Border.RenderTransform>
+                                        <ScrollViewer MaxHeight="220"
+                                                      VerticalScrollBarVisibility="Auto">
+                                            <TextBlock x:Name="LatestReleaseNotesText"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </ScrollViewer>
+                                    </Border>
                                 </StackPanel>
                                 <Border.Triggers>
                                     <EventTrigger RoutedEvent="UIElement.MouseEnter">
@@ -2282,10 +2387,10 @@
                                     BorderThickness="1"
                                     CornerRadius="10"
                                     RenderTransformOrigin="0.5,0.5">
-                                <StackPanel RenderTransformOrigin="0.5,0.5">
-                                    <StackPanel.RenderTransform>
-                                        <ScaleTransform x:Name="AboutIntroCardScale"/>
-                                    </StackPanel.RenderTransform>
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="AboutIntroCardScale"/>
+                                </Border.RenderTransform>
+                                <StackPanel>
                                     <TextBlock Text="项目介绍"
                                                HorizontalAlignment="Center"
                                                FontFamily="{StaticResource FontFamilyDisplay}"

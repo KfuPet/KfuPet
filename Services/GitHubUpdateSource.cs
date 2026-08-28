@@ -45,11 +45,20 @@ namespace KfuPet.Services
                 ? bodyElement.GetString() ?? string.Empty
                 : string.Empty;
 
+            DateTimeOffset? publishedAt = null;
+            if (root.TryGetProperty("published_at", out var publishedAtElement) &&
+                publishedAtElement.ValueKind == JsonValueKind.String &&
+                DateTimeOffset.TryParse(publishedAtElement.GetString(), out var parsedPublishedAt))
+            {
+                publishedAt = parsedPublishedAt;
+            }
+
             return new ReleaseInfo
             {
                 Version = tagElement.GetString() ?? string.Empty,
                 ReleasePageUrl = releasePageUrl,
-                ReleaseNotes = releaseNotes
+                ReleaseNotes = releaseNotes,
+                PublishedAt = publishedAt
             };
         }
     }
