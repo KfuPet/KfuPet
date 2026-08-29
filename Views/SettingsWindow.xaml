@@ -247,7 +247,7 @@
                                 CornerRadius="12">
                             <Grid>
                                 <Border x:Name="TrackOn"
-                                        Background="{DynamicResource AppAccentBrush}"
+                                        Background="{DynamicResource AppSuccessBrush}"
                                         CornerRadius="12"
                                         Opacity="0"/>
                                 <Ellipse x:Name="Thumb"
@@ -824,8 +824,8 @@
                                 <Button x:Name="AddModelButton"
                                         Grid.Column="1"
                                         Padding="14,8"
-                                        Background="{DynamicResource AppAccentBrush}"
-                                        Foreground="{DynamicResource AppAccentForegroundBrush}"
+                                        Background="{DynamicResource AppSuccessBrush}"
+                                        Foreground="{DynamicResource AppSuccessForegroundBrush}"
                                         Cursor="Hand"
                                         FocusVisualStyle="{x:Null}"
                                         Click="AddModelButton_Click">
@@ -852,7 +852,7 @@
                                                 <Trigger Property="IsMouseOver" Value="True">
                                                     <Setter TargetName="AddBg"
                                                             Property="Background"
-                                                            Value="{DynamicResource AppAccentHoverBrush}"/>
+                                                            Value="{DynamicResource AppSuccessHoverBrush}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>

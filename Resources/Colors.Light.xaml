@@ -14,8 +14,23 @@
     <!-- 边框 -->
     <SolidColorBrush x:Key="AppBorderBrush" Color="#FFE5E5EA"/>
 
-    <!-- 品牌强调色 -->
-    <SolidColorBrush x:Key="AppAccentBrush" Color="#FF7C5CFF"/>
-    <SolidColorBrush x:Key="AppAccentHoverBrush" Color="#FF9678FF"/>
+    <!-- 品牌强调色（中性灰） -->
+    <SolidColorBrush x:Key="AppAccentBrush" Color="#FF4A4A55"/>
+    <SolidColorBrush x:Key="AppAccentHoverBrush" Color="#FF33333D"/>
     <SolidColorBrush x:Key="AppAccentForegroundBrush" Color="#FFFFFFFF"/>
+
+    <!-- 成功/开启（开关） -->
+    <SolidColorBrush x:Key="AppSuccessBrush" Color="#FF34C759"/>
+
+    <!-- 功能色：信息（发送按钮） -->
+    <SolidColorBrush x:Key="AppInfoBrush" Color="#FF2F6BFF"/>
+    <SolidColorBrush x:Key="AppInfoHoverBrush" Color="#FF1E56D9"/>
+    <SolidColorBrush x:Key="AppInfoForegroundBrush" Color="#FFFFFFFF"/>
+
+    <!-- 功能色：成功（添加按钮 / 我的消息） -->
+    <SolidColorBrush x:Key="AppSuccessHoverBrush" Color="#FF2DB84F"/>
+    <SolidColorBrush x:Key="AppSuccessForegroundBrush" Color="#FF1A1A1E"/>
+
+    <!-- 功能色：记忆等级（浅红） -->
+    <SolidColorBrush x:Key="AppPinkBrush" Color="#FFE06B6B"/>
 </ResourceDictionary>

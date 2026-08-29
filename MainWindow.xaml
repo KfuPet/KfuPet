@@ -101,8 +101,8 @@
                         Grid.Column="1"
                         Padding="12,6"
                         Margin="4,0,0,0"
-                        Background="{DynamicResource AppAccentBrush}"
-                        Foreground="{DynamicResource AppAccentForegroundBrush}"
+                        Background="{DynamicResource AppInfoBrush}"
+                        Foreground="{DynamicResource AppInfoForegroundBrush}"
                         Cursor="Hand"
                         FocusVisualStyle="{x:Null}"
                         Click="ChatSendButton_Click">
@@ -121,7 +121,7 @@
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="SendBg"
                                             Property="Background"
-                                            Value="{DynamicResource AppAccentHoverBrush}"/>
+                                            Value="{DynamicResource AppInfoHoverBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

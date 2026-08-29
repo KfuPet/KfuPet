@@ -248,11 +248,11 @@
                                                 Margin="60,0,0,6"
                                                 Padding="12,9"
                                                 CornerRadius="12,12,4,12"
-                                                Background="{DynamicResource AppAccentBrush}">
+                                                Background="{DynamicResource AppSuccessBrush}">
                                             <TextBlock Text="{Binding User}"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
-                                                       Foreground="{DynamicResource AppAccentForegroundBrush}"
+                                                       Foreground="{DynamicResource AppSuccessForegroundBrush}"
                                                        TextWrapping="Wrap"/>
                                         </Border>
                                         <!-- 助手气泡：左侧，表面色 -->

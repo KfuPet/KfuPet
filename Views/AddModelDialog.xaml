@@ -306,9 +306,9 @@
                             Click="CancelButton_Click"/>
                     <Button x:Name="ConfirmButton"
                             Style="{StaticResource DialogButtonStyle}"
-                            Background="{DynamicResource AppAccentBrush}"
-                            Foreground="{DynamicResource AppAccentForegroundBrush}"
-                            BorderBrush="{DynamicResource AppAccentBrush}"
+                            Background="{DynamicResource AppSuccessBrush}"
+                            Foreground="{DynamicResource AppSuccessForegroundBrush}"
+                            BorderBrush="{DynamicResource AppSuccessBrush}"
                             Click="ConfirmButton_Click">
                         <Grid>
                             <TextBlock x:Name="ConfirmText"
