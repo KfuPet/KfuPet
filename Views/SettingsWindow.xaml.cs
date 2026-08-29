@@ -498,14 +498,26 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 从列表移除模型卡片，带淡出动画。
+        /// 删除模型：先弹确认对话框（确认按钮倒计时 3 秒后才可点），确认后再移除卡片。
         /// </summary>
         private void RemoveModelCard(ListBoxItem item)
         {
-            if (item.Tag is ModelConfig model)
+            if (item.Tag is not ModelConfig model)
             {
-                ModelConfigService.Remove(model.Id);
+                return;
             }
+
+            var dialog = new DeleteModelDialog(model.ModelName);
+            dialog.DeleteConfirmed += () => RemoveModelCardConfirmed(item, model);
+            dialog.ShowDialog();
+        }
+
+        /// <summary>
+        /// 确认删除后执行：移除模型配置，卡片淡出后从列表移除。
+        /// </summary>
+        private void RemoveModelCardConfirmed(ListBoxItem item, ModelConfig model)
+        {
+            ModelConfigService.Remove(model.Id);
 
             var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(200))
             {
