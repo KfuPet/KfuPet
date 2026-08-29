@@ -27,6 +27,7 @@ namespace KfuPet.Views
         private bool _isNewVersionExpanded;
         private bool _hasLoadedNewVersionInfo;
         private bool _isLoadingNewVersionInfo;
+        private bool _suppressAppearanceEvents;
         private AddModelDialog? _addModelDialog;
 
         private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
@@ -41,6 +42,13 @@ namespace KfuPet.Views
             LoadModels();
             RefreshStopWordsPreview();
             UpdateToolStatus();
+
+            // 外观下拉菜单：按当前主题偏好选中对应项（0 系统 / 1 浅色 / 2 深色）
+            _suppressAppearanceEvents = true;
+            AppearanceComboBox.SelectedIndex = Application.Current is App app
+                ? app.ThemePreference switch { true => 2, false => 1, null => 0 }
+                : 0;
+            _suppressAppearanceEvents = false;
 
             VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
 
@@ -69,7 +77,7 @@ namespace KfuPet.Views
         /// </summary>
         private void SettingsWindow_Activated(object? sender, EventArgs e)
         {
-            if (NavList.SelectedIndex == 1)
+            if (NavList.SelectedIndex == 2)
             {
                 RefreshMemoryStatistics();
             }
@@ -114,7 +122,7 @@ namespace KfuPet.Views
         /// </summary>
         public void ShowModelConfigPage()
         {
-            NavList.SelectedIndex = 0;
+            NavList.SelectedIndex = 1;
         }
 
         /// <summary>
@@ -152,28 +160,30 @@ namespace KfuPet.Views
 
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ModelConfigPanel == null || MemoryPanel == null || DeveloperPanel == null || AboutPanel == null) return;
+            if (GeneralPanel == null || ModelConfigPanel == null || MemoryPanel == null || DeveloperPanel == null || AboutPanel == null) return;
 
-            ModelConfigPanel.Visibility = NavList.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
-            MemoryPanel.Visibility = NavList.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
-            DeveloperPanel.Visibility = NavList.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
-            AboutPanel.Visibility = NavList.SelectedIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
+            GeneralPanel.Visibility = NavList.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
+            ModelConfigPanel.Visibility = NavList.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+            MemoryPanel.Visibility = NavList.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+            DeveloperPanel.Visibility = NavList.SelectedIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
+            AboutPanel.Visibility = NavList.SelectedIndex == 4 ? Visibility.Visible : Visibility.Collapsed;
 
             var currentPanel = NavList.SelectedIndex switch
             {
-                1 => MemoryPanel,
-                2 => DeveloperPanel,
-                3 => AboutPanel,
-                _ => ModelConfigPanel
+                1 => ModelConfigPanel,
+                2 => MemoryPanel,
+                3 => DeveloperPanel,
+                4 => AboutPanel,
+                _ => GeneralPanel
             };
             PlayPageEnterAnimation(currentPanel);
 
-            if (NavList.SelectedIndex == 1)
+            if (NavList.SelectedIndex == 2)
             {
                 PlayMemoryPageEntrance();
             }
 
-            if (NavList.SelectedIndex == 3)
+            if (NavList.SelectedIndex == 4)
             {
                 _ = LoadNewVersionInfoAsync();
             }
@@ -204,6 +214,57 @@ namespace KfuPet.Views
                 TransformGroup group => group.Children.OfType<TranslateTransform>().FirstOrDefault(),
                 _ => null
             };
+        }
+
+        /// <summary>
+        /// 外观下拉菜单选择变化：0 系统（跟随系统）/ 1 浅色 / 2 深色，带遮罩过渡动画。
+        /// </summary>
+        private void AppearanceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressAppearanceEvents)
+            {
+                return;
+            }
+
+            bool? preference = AppearanceComboBox.SelectedIndex switch
+            {
+                1 => false,
+                2 => true,
+                _ => null
+            };
+            PlayThemeTransition(preference);
+        }
+
+        /// <summary>
+        /// 主题切换过渡：先用当前背景色遮罩盖住卡片，在遮罩下完成换色，再淡出露出新配色。
+        /// 不能降低根卡片不透明度做过渡——本窗口背景透明，降低会直接透出桌面。
+        /// </summary>
+        private void PlayThemeTransition(bool? preference)
+        {
+            // 取出当前（旧主题）背景色并复制成静态画刷，避免资源替换后遮罩跟着变色
+            if (FindResource("AppBackgroundBrush") is SolidColorBrush oldBrush)
+            {
+                ThemeTransitionOverlay.Background = new SolidColorBrush(oldBrush.Color);
+            }
+
+            var fadeIn = new DoubleAnimation(1, TimeSpan.FromMilliseconds(120))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            fadeIn.Completed += (s, _) =>
+            {
+                if (Application.Current is App app)
+                {
+                    app.SetThemePreference(preference);
+                }
+
+                ThemeTransitionOverlay.BeginAnimation(OpacityProperty,
+                    new DoubleAnimation(0, TimeSpan.FromMilliseconds(220))
+                    {
+                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                    });
+            };
+            ThemeTransitionOverlay.BeginAnimation(OpacityProperty, fadeIn);
         }
 
         /// <summary>

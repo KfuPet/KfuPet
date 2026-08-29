@@ -761,6 +761,15 @@
 
                         <ListBoxItem>
                             <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE713;"
+                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="通用" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE753;"
                                            FontFamily="{StaticResource FontFamilyIcon}"
                                            FontSize="{StaticResource FontSizeIcon}" Width="26"
@@ -800,6 +809,254 @@
 
                 <!-- 右侧内容区 -->
                 <Grid Grid.Column="1" Margin="28,20,28,24">
+                    <!-- 通用页 -->
+                    <ScrollViewer x:Name="GeneralPanel"
+                                  Style="{StaticResource OverlayScrollViewerStyle}"
+                                  Visibility="Collapsed"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer.Resources>
+                            <!-- 下拉菜单项：图标（Tag 携带字形）+ 文字 + 选中对勾，悬停底色高亮 -->
+                            <Style x:Key="AppearanceComboItemStyle" TargetType="ComboBoxItem">
+                                <Setter Property="Padding" Value="10,7"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ComboBoxItem">
+                                            <Border x:Name="Bd"
+                                                    Background="Transparent"
+                                                    CornerRadius="6"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{TemplateBinding Tag}"
+                                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                                               FontSize="{StaticResource FontSizeIconSmall}"
+                                                               Margin="0,0,8,0"
+                                                               VerticalAlignment="Center"/>
+                                                    <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
+                                                    <TextBlock x:Name="CheckMark"
+                                                               Grid.Column="2"
+                                                               Text="&#xE73E;"
+                                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                                               FontSize="{StaticResource FontSizeIconTiny}"
+                                                               Margin="12,0,0,0"
+                                                               VerticalAlignment="Center"
+                                                               Opacity="0"/>
+                                                </Grid>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppBorderBrush}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Trigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="CheckMark"
+                                                                                 Storyboard.TargetProperty="Opacity"
+                                                                                 To="1" Duration="0:0:0.12"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.EnterActions>
+                                                    <Trigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="CheckMark"
+                                                                                 Storyboard.TargetProperty="Opacity"
+                                                                                 To="0" Duration="0:0:0.1"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.ExitActions>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+
+                            <!-- 外观下拉菜单：圆角按钮 + 弹出层淡入下滑，箭头随展开旋转 -->
+                            <Style x:Key="AppearanceComboStyle" TargetType="ComboBox">
+                                <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
+                                <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                <Setter Property="ItemContainerStyle" Value="{StaticResource AppearanceComboItemStyle}"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ComboBox">
+                                            <Grid>
+                                                <ToggleButton IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                                              ClickMode="Press"
+                                                              Focusable="False">
+                                                    <ToggleButton.Template>
+                                                        <ControlTemplate TargetType="ToggleButton">
+                                                            <Border x:Name="Bd"
+                                                                    Background="{DynamicResource AppSurfaceBrush}"
+                                                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="8"
+                                                                    Padding="12,7">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <!-- 当前选中项图标（字形存在各选项的 Tag 里） -->
+                                                                    <TextBlock Text="{Binding SelectedItem.Tag, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                                                               FontSize="{StaticResource FontSizeIconSmall}"
+                                                                               Margin="0,0,7,0"
+                                                                               VerticalAlignment="Center"/>
+                                                                    <ContentPresenter Grid.Column="1"
+                                                                                      Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                                      Margin="0,0,20,0"
+                                                                                      VerticalAlignment="Center"/>
+                                                                    <TextBlock x:Name="Chevron"
+                                                                               Grid.Column="2"
+                                                                               Text="&#xE70D;"
+                                                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                                                               FontSize="{StaticResource FontSizeIconTiny}"
+                                                                               Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                                               VerticalAlignment="Center"
+                                                                               RenderTransformOrigin="0.5,0.5">
+                                                                        <TextBlock.RenderTransform>
+                                                                            <RotateTransform/>
+                                                                        </TextBlock.RenderTransform>
+                                                                    </TextBlock>
+                                                                </Grid>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AppTextDisabledBrush}"/>
+                                                                </Trigger>
+                                                                <Trigger Property="IsChecked" Value="True">
+                                                                    <Trigger.EnterActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation Storyboard.TargetName="Chevron"
+                                                                                                 Storyboard.TargetProperty="RenderTransform.Angle"
+                                                                                                 To="180" Duration="0:0:0.2">
+                                                                                    <DoubleAnimation.EasingFunction>
+                                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                                    </DoubleAnimation.EasingFunction>
+                                                                                </DoubleAnimation>
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </Trigger.EnterActions>
+                                                                    <Trigger.ExitActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation Storyboard.TargetName="Chevron"
+                                                                                                 Storyboard.TargetProperty="RenderTransform.Angle"
+                                                                                                 To="0" Duration="0:0:0.2">
+                                                                                    <DoubleAnimation.EasingFunction>
+                                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                                    </DoubleAnimation.EasingFunction>
+                                                                                </DoubleAnimation>
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </Trigger.ExitActions>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </ToggleButton.Template>
+                                                </ToggleButton>
+                                                <Popup IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                                       Placement="Bottom"
+                                                       VerticalOffset="0"
+                                                       AllowsTransparency="True"
+                                                       PopupAnimation="None">
+                                                    <Border x:Name="PopupCard"
+                                                            MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                                            Background="{DynamicResource AppBackgroundBrush}"
+                                                            BorderBrush="{DynamicResource AppBorderBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="8"
+                                                            Opacity="0">
+                                                        <Border.RenderTransform>
+                                                            <TranslateTransform Y="-6"/>
+                                                        </Border.RenderTransform>
+                                                        <StackPanel IsItemsHost="True" Margin="4"/>
+                                                    </Border>
+                                                </Popup>
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsDropDownOpen" Value="True">
+                                                    <Trigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="PopupCard"
+                                                                                 Storyboard.TargetProperty="Opacity"
+                                                                                 From="0" To="1" Duration="0:0:0.15"/>
+                                                                <DoubleAnimation Storyboard.TargetName="PopupCard"
+                                                                                 Storyboard.TargetProperty="RenderTransform.Y"
+                                                                                 From="-6" To="0" Duration="0:0:0.2">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.EnterActions>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ScrollViewer.Resources>
+                        <ScrollViewer.RenderTransform>
+                            <TranslateTransform/>
+                        </ScrollViewer.RenderTransform>
+
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="通用" Style="{StaticResource SectionTitleStyle}"/>
+                            <TextBlock Text="软件的日常设置都收在这里。"
+                                       Style="{StaticResource HintTextStyle}"
+                                       Margin="0,6,0,24"/>
+
+                            <!-- 外观卡片：标签居左，浅色/深色分段选择器居右 -->
+                            <Border Padding="14,10"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <Grid>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="外观"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                        <TextBlock Text="切换浅色或深色配色，也可跟随系统"
+                                                   Margin="0,2,0,0"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                    </StackPanel>
+
+                                    <!-- 外观下拉菜单：系统 / 浅色 / 深色 -->
+                                    <ComboBox x:Name="AppearanceComboBox"
+                                              Style="{StaticResource AppearanceComboStyle}"
+                                              HorizontalAlignment="Right"
+                                              VerticalAlignment="Center"
+                                              SelectionChanged="AppearanceComboBox_SelectionChanged">
+                                        <ComboBoxItem Content="系统" Tag="&#xE770;"/>
+                                        <ComboBoxItem Content="浅色" Tag="&#xE706;"/>
+                                        <ComboBoxItem Content="深色" Tag="&#xE708;"/>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
                     <!-- 模型页（内容超出时可滚动，滚动条悬浮不挤压布局） -->
                     <ScrollViewer x:Name="ModelConfigPanel"
                                   Style="{StaticResource OverlayScrollViewerStyle}"
@@ -1956,6 +2213,13 @@
                     </ScrollViewer>
                 </Grid>
             </Grid>
+
+            <!-- 主题切换遮罩：先以旧背景色盖住卡片，换色后淡出，避免透明窗口闪透明 -->
+            <Border x:Name="ThemeTransitionOverlay"
+                    Grid.RowSpan="2"
+                    CornerRadius="11"
+                    Opacity="0"
+                    IsHitTestVisible="False"/>
         </Grid>
     </Border>
 </Window>

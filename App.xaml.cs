@@ -15,6 +15,7 @@ namespace KfuPet
         private TrayMenuWindow? _trayMenu;
         private Mutex? _mutex;
         private bool _isDarkTheme;
+        private readonly Services.ThemeService _themeService = new();
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -30,9 +31,16 @@ namespace KfuPet
 
             base.OnStartup(e);
 
-            // 根据系统主题加载配色令牌，并跟随系统深浅色实时切换
+            // 加载配色令牌：用户手动选过外观则以偏好为准，否则跟随系统深浅色并实时切换
             SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
-            ApplySystemTheme();
+            if (_themeService.PreferredDark.HasValue)
+            {
+                ApplyTheme(_themeService.PreferredDark.Value);
+            }
+            else
+            {
+                ApplySystemTheme();
+            }
 
             // 主窗口预先创建但保持隐藏，等待 Splash 结束后再显示
             _mainWindow = new MainWindow();
@@ -118,12 +126,39 @@ namespace KfuPet
             _settingsWindow.Activate();
         }
 
+        /// <summary>当前主题偏好：true 深色，false 浅色，null 跟随系统。</summary>
+        public bool? ThemePreference => _themeService.PreferredDark;
+
+        /// <summary>
+        /// 设置主题偏好并保存：true/false 手动指定深色/浅色，null 恢复跟随系统主题。
+        /// </summary>
+        public void SetThemePreference(bool? isDark)
+        {
+            if (isDark.HasValue)
+            {
+                ApplyTheme(isDark.Value);
+            }
+            else
+            {
+                ApplySystemTheme();
+            }
+
+            _themeService.SavePreference(isDark);
+        }
+
         /// <summary>
         /// 根据系统深色/浅色模式加载对应的配色令牌资源。
         /// </summary>
         private void ApplySystemTheme()
         {
-            var isDark = IsSystemDarkMode();
+            ApplyTheme(IsSystemDarkMode());
+        }
+
+        /// <summary>
+        /// 切换浅色/深色配色令牌，手动切换与跟随系统共用。
+        /// </summary>
+        private void ApplyTheme(bool isDark)
+        {
             if (isDark == _isDarkTheme)
             {
                 return;
@@ -151,6 +186,12 @@ namespace KfuPet
         /// </summary>
         private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
         {
+            // 用户手动选过外观后不再跟随系统
+            if (_themeService.PreferredDark.HasValue)
+            {
+                return;
+            }
+
             Dispatcher.InvokeAsync(ApplySystemTheme);
         }
 
