@@ -1,4 +1,5 @@
 using System.Windows;
+using Microsoft.Win32;
 using KfuPet.Views;
 
 namespace KfuPet
@@ -13,6 +14,7 @@ namespace KfuPet
         private SettingsWindow? _settingsWindow;
         private TrayMenuWindow? _trayMenu;
         private Mutex? _mutex;
+        private bool _isDarkTheme;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -28,7 +30,8 @@ namespace KfuPet
 
             base.OnStartup(e);
 
-            // 根据系统主题加载配色令牌
+            // 根据系统主题加载配色令牌，并跟随系统深浅色实时切换
+            SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
             ApplySystemTheme();
 
             // 主窗口预先创建但保持隐藏，等待 Splash 结束后再显示
@@ -120,24 +123,35 @@ namespace KfuPet
         /// </summary>
         private void ApplySystemTheme()
         {
-            if (!IsSystemDarkMode())
+            var isDark = IsSystemDarkMode();
+            if (isDark == _isDarkTheme)
             {
                 return;
             }
 
+            var target = isDark ? "Resources/Colors.Dark.xaml" : "Resources/Colors.Light.xaml";
             var dictionaries = Resources.MergedDictionaries;
             for (var i = 0; i < dictionaries.Count; i++)
             {
                 var source = dictionaries[i].Source?.OriginalString;
-                if (source != null && source.Contains("Colors.Light.xaml"))
+                if (source != null && (source.Contains("Colors.Light.xaml") || source.Contains("Colors.Dark.xaml")))
                 {
                     dictionaries[i] = new ResourceDictionary
                     {
-                        Source = new Uri("Resources/Colors.Dark.xaml", UriKind.Relative)
+                        Source = new Uri(target, UriKind.Relative)
                     };
+                    _isDarkTheme = isDark;
                     break;
                 }
             }
+        }
+
+        /// <summary>
+        /// 系统外观偏好变化（含深色/浅色切换）时，重新应用主题令牌。
+        /// </summary>
+        private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+        {
+            Dispatcher.InvokeAsync(ApplySystemTheme);
         }
 
         /// <summary>
@@ -159,6 +173,7 @@ namespace KfuPet
 
         protected override void OnExit(ExitEventArgs e)
         {
+            SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
             _notifyIcon?.Dispose();
             _mutex?.Dispose();
             Services.SkeletonService.CleanupCache();
