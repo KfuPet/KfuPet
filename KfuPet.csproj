@@ -22,6 +22,8 @@
     <Resource Include="Assets\icon\Startlogo.png" />
     <Resource Include="Assets\icon\app.ico" />
     <Resource Include="Assets\icon\tray.ico" />
+    <Resource Include="Assets\Providers\deepseek.ico" />
+    <Resource Include="Assets\Providers\kimi.ico" />
   </ItemGroup>
 
   <ItemGroup>

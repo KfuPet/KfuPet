@@ -28,7 +28,7 @@ namespace KfuPet.Views
         private bool _hasLoadedNewVersionInfo;
         private bool _isLoadingNewVersionInfo;
         private bool _suppressAppearanceEvents;
-        private AddModelDialog? _addModelDialog;
+        private AddModelProviderDialog? _addModelProviderDialog;
 
         private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
 
@@ -446,25 +446,25 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 添加模型按钮点击：以非模态方式打开配置窗口，确认后把新模型插入列表。
-        /// 已存在添加窗口时不再新建，而是把它带到前台并短暂置顶提醒。
+        /// 添加模型按钮点击：以非模态方式打开添加窗口（先选服务商，再在表单页填写配置），
+        /// 确认后把新模型插入列表。已存在窗口时不再新建，而是把它带到前台提醒。
         /// </summary>
         private void AddModelButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_addModelDialog != null)
+            if (_addModelProviderDialog != null)
             {
-                _addModelDialog.FlashToFront();
+                _addModelProviderDialog.FlashToFront();
                 return;
             }
 
-            _addModelDialog = new AddModelDialog();
-            _addModelDialog.ModelConfirmed += (s, args) =>
+            _addModelProviderDialog = new AddModelProviderDialog();
+            _addModelProviderDialog.ModelConfirmed += (s, args) =>
             {
                 var model = ModelConfigService.Add(args.BaseUrl, args.ApiKey, args.ModelName, args.ModelId);
                 AddModelCard(model);
             };
-            _addModelDialog.Closed += (s, args) => _addModelDialog = null;
-            _addModelDialog.Show();
+            _addModelProviderDialog.Closed += (s, args) => _addModelProviderDialog = null;
+            _addModelProviderDialog.Show();
         }
 
         /// <summary>
