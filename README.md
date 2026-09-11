@@ -21,7 +21,7 @@
 
 ## 📥 开始使用
 
-| 平台 | 下载地址 |
+| 平台 | 开始安装 |
 | --- | --- |
 | Windows | [点击下载](https://github.com/Lrht-llw/KfuPet/releases/latest) |
 | Android | [点击下载](https://github.com/KfuPet/KfuPet-for-Android/releases/latest) |
