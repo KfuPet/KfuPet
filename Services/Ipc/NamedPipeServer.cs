@@ -34,6 +34,7 @@ namespace KfuPet.Services.Ipc
                 if (_isClientConnected != value)
                 {
                     _isClientConnected = value;
+                    Log.Info(value ? "[IPC] 工具端已连接" : "[IPC] 工具端已断开");
                     ClientStateChanged?.Invoke(this, EventArgs.Empty);
                 }
             }

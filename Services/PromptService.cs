@@ -82,13 +82,16 @@ namespace KfuPet.Services
                     var promptFile = Path.Combine(packageDir, "prompt.md");
                     if (File.Exists(promptFile))
                     {
-                        return File.ReadAllText(promptFile);
+                        var text = File.ReadAllText(promptFile);
+                        Log.Debug($"[提示词] 已载入角色提示词：{Path.GetFileName(packageDir)}（{text.Length} 字）");
+                        return text;
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // 读取失败时退回纯全局提示词
+                Log.Warning($"[提示词] 角色提示词读取失败，改用纯全局提示词：{ex.Message}");
             }
 
             return null;

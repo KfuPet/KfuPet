@@ -38,6 +38,7 @@ namespace KfuPet.Services
             };
             _models.Add(model);
             Save();
+            Log.Info($"[配置] 新增模型：{modelName}（{modelId}）" + (model.IsActive ? "，已设为当前使用" : string.Empty));
             return model;
         }
 
@@ -49,6 +50,7 @@ namespace KfuPet.Services
 
             _models.Remove(model);
             Save();
+            Log.Info($"[配置] 删除模型：{model.ModelName}（{model.ModelId}）");
         }
 
         /// <summary>
@@ -61,6 +63,11 @@ namespace KfuPet.Services
                 model.IsActive = id != null && model.Id == id;
             }
             Save();
+
+            var active = _models.FirstOrDefault(m => m.IsActive);
+            Log.Info(active == null
+                ? "[配置] 已取消当前使用模型"
+                : $"[配置] 当前使用模型已切换为：{active.ModelName}（{active.ModelId}）");
         }
 
         /// <summary>
@@ -76,13 +83,18 @@ namespace KfuPet.Services
             model.ModelName = modelName;
             model.ModelId = modelId;
             Save();
+            Log.Info($"[配置] 更新模型：{modelName}（{modelId}）");
         }
 
         private void Load()
         {
             try
             {
-                if (!File.Exists(ConfigFilePath)) return;
+                if (!File.Exists(ConfigFilePath))
+                {
+                    Log.Debug("[配置] 未找到模型配置文件，按空列表启动");
+                    return;
+                }
 
                 var json = File.ReadAllText(ConfigFilePath);
                 var models = JsonSerializer.Deserialize<List<ModelConfig>>(json);
@@ -90,10 +102,12 @@ namespace KfuPet.Services
                 {
                     _models.AddRange(models);
                 }
+                Log.Info($"[配置] 模型配置已加载：{_models.Count} 条");
             }
-            catch
+            catch (Exception ex)
             {
                 // 配置缺失或损坏时保持空列表，避免影响启动
+                Log.Warning($"[配置] 模型配置读取失败，按空列表启动：{ex.Message}");
             }
         }
 
@@ -105,9 +119,10 @@ namespace KfuPet.Services
                 var json = JsonSerializer.Serialize(_models, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }
-            catch
+            catch (Exception ex)
             {
                 // 写入失败不阻断界面操作
+                Log.Error($"[配置] 模型配置写入失败：{ex.Message}");
             }
         }
     }

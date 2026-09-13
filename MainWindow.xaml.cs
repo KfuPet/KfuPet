@@ -57,7 +57,8 @@ namespace KfuPet
 
         internal VisionService VisionService { get; } = new VisionService();
 
-        internal LogService LogService { get; } = new LogService();
+        /// <summary>全局日志服务（与应用其他部分共用同一实例）。</summary>
+        internal LogService LogService => Log.Instance;
 
         internal DeveloperModeService DeveloperModeService { get; } = new DeveloperModeService();
 
@@ -117,6 +118,7 @@ namespace KfuPet
             Height = 768 / dpiScale;
             CenterWindow();
             InitializeSkeleton(dpiScale);
+            Log.Debug($"[窗口] 主窗口加载完成：{Width:F0}×{Height:F0}，DPI 缩放 {dpiScale:F2}");
 
             CommandDispatcher.RegisterService(SkeletonService);
             CommandDispatcher.RegisterService(EmotionService);
@@ -134,6 +136,7 @@ namespace KfuPet
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            Log.Info("[窗口] 主窗口正在关闭，停止命名管道");
             _bubbleCts?.Cancel();
             _toolMonitorTimer?.Stop();
             _pipeServer?.Stop();
@@ -157,13 +160,13 @@ namespace KfuPet
             {
                 _pipeServer?.Start();
                 _logPipeServer?.Start();
-                LogService.Info("开发者模式已开启");
+                Log.Info("[开发者模式] 已开启，命名管道开始监听");
             }
             else
             {
                 _pipeServer?.Stop();
                 _logPipeServer?.Stop();
-                LogService.Info("开发者模式已关闭");
+                Log.Info("[开发者模式] 已关闭，命名管道已停止");
             }
         }
 
@@ -182,7 +185,7 @@ namespace KfuPet
                 if (running != _wasToolRunning)
                 {
                     _wasToolRunning = running;
-                    LogService.Info($"开发者工具{(running ? "已启动" : "已退出")}");
+                    Log.Info($"[IPC] 开发者工具{(running ? "已启动" : "已退出")}");
                     ToolRunningChanged?.Invoke(this, EventArgs.Empty);
                 }
             };
@@ -297,6 +300,7 @@ namespace KfuPet
             SkeletonService.BindSkeleton(_skeleton);
             SkeletonService.SkeletonChanged += OnSkeletonServiceChanged;
             SkeletonService.DebugSkeletonChanged += OnDebugSkeletonChanged;
+            Log.Info($"[骨骼] 骨骼树初始化完成，共 {_skeleton.Bones.Count} 根骨骼");
         }
 
         private void OnSkeletonServiceChanged(object? sender, EventArgs e)
@@ -543,6 +547,7 @@ namespace KfuPet
             var model = ModelConfigService.Models.FirstOrDefault(m => m.IsActive);
             if (model == null)
             {
+                Log.Warning("[对话] 尚未配置可用模型，已提示用户先添加模型");
                 ShowBubbleBatches(new List<string> { "主人还没有配置模型哦，去设置里添加一个再来找我吧～" });
                 return;
             }
@@ -550,6 +555,7 @@ namespace KfuPet
             _isSending = true;
             ChatInputBox.Clear();
             ShowBubbleBatches(new List<string> { "唔……" });
+            Log.Info($"[对话] 用户发送消息 {text.Length} 字，使用模型 {model.ModelId}（{model.ModelName}）");
             try
             {
                 var systemPrompt = await _memorySystem.BuildContextAsync(model, text);
@@ -558,12 +564,14 @@ namespace KfuPet
                     model, systemPrompt, history, text,
                     _toolRegistry.GetDefinitions(), _toolRegistry.ExecuteAsync);
                 ShowBubbleBatches(SplitIntoBatches(reply));
+                Log.Debug($"[对话] 回复已显示：{reply.Length} 字");
 
                 // 记录一轮对话到记忆系统（短期 + 溢出归档 + 后台分析）
                 _memorySystem.AddTurn(model, text, reply);
             }
             catch (Exception ex)
             {
+                Log.Error($"[对话] 请求失败：{ex.Message}");
                 ShowBubbleBatches(new List<string> { $"连接失败了……{ex.Message}" });
             }
             finally

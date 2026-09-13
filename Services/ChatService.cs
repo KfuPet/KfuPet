@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -70,6 +71,9 @@ namespace KfuPet.Services
             messages.AddRange(history);
             messages.Add(new ChatMessage { Role = "user", Content = userMessage });
 
+            Log.Debug($"[对话] 发起请求：模型 {model.ModelId}，历史 {history.Count} 条，" +
+                      $"工具 {tools.Count} 个，输入 {userMessage.Length} 字");
+
             try
             {
                 return await RunToolLoopAsync(model, messages, tools, executeToolAsync);
@@ -77,6 +81,7 @@ namespace KfuPet.Services
             catch (InvalidOperationException ex) when (IsToolUnsupportedError(ex.Message))
             {
                 // 模型不支持工具调用（或工具相关参数错误）时，降级为普通对话。
+                Log.Warning($"[对话] 工具调用不可用，降级为普通对话：{ex.Message}");
                 return await SendRawAsync(model, messages);
             }
         }
@@ -98,8 +103,12 @@ namespace KfuPet.Services
                     {
                         throw new InvalidOperationException("响应格式无法识别");
                     }
+                    Log.Debug($"[对话] 第 {round + 1} 轮拿到最终回复：{response.Content.Length} 字");
                     return response.Content.Trim();
                 }
+
+                Log.Info($"[对话] 第 {round + 1} 轮请求调用 {response.ToolCalls.Count} 个工具：" +
+                         string.Join("、", response.ToolCalls.Select(c => c.Name)));
 
                 // 记录 assistant 的工具调用请求
                 messages.Add(new ChatMessage
@@ -116,9 +125,11 @@ namespace KfuPet.Services
                     try
                     {
                         result = await executeToolAsync(call.Name, call.Arguments);
+                        Log.Debug($"[对话] 工具 {call.Name} 执行完成，返回 {result.Length} 字");
                     }
                     catch (Exception ex)
                     {
+                        Log.Warning($"[对话] 工具 {call.Name} 执行失败：{ex.Message}");
                         result = "工具执行失败：" + ex.Message;
                     }
 
@@ -131,6 +142,7 @@ namespace KfuPet.Services
                 }
             }
 
+            Log.Warning($"[对话] 工具调用超过 {MaxToolRounds} 轮，已中止");
             throw new InvalidOperationException("工具调用轮次过多，已中止");
         }
 
@@ -230,6 +242,7 @@ namespace KfuPet.Services
         private async Task<string> PostAsync(ModelConfig model, JsonObject payload)
         {
             var endpoint = model.BaseUrl.Trim().TrimEnd('/') + "/chat/completions";
+            var stopwatch = Stopwatch.StartNew();
 
             using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
             if (!string.IsNullOrWhiteSpace(model.ApiKey))
@@ -240,12 +253,17 @@ namespace KfuPet.Services
 
             using var response = await HttpClient.SendAsync(request);
             var body = await response.Content.ReadAsStringAsync();
+            stopwatch.Stop();
+
             if (!response.IsSuccessStatusCode)
             {
-                throw new InvalidOperationException(
-                    $"服务器返回 {(int)response.StatusCode} {response.ReasonPhrase}：{ExtractErrorMessage(body)}");
+                var reason = $"服务器返回 {(int)response.StatusCode} {response.ReasonPhrase}：{ExtractErrorMessage(body)}";
+                Log.Error($"[对话] 请求失败（{stopwatch.ElapsedMilliseconds} ms）：{reason}");
+                throw new InvalidOperationException(reason);
             }
 
+            Log.Debug($"[对话] 请求成功：HTTP {(int)response.StatusCode}，" +
+                      $"耗时 {stopwatch.ElapsedMilliseconds} ms，响应 {body.Length} 字符");
             return body;
         }
 

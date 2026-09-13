@@ -26,6 +26,9 @@ namespace KfuPet.Services
         {
             PreferredDark = isDark;
             Save();
+
+            var text = isDark switch { true => "深色", false => "浅色", null => "跟随系统" };
+            Log.Info($"[外观] 主题偏好已保存：{text}");
         }
 
         private void Load()
@@ -53,9 +56,10 @@ namespace KfuPet.Services
                     PreferredDark = false;
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // 配置损坏时视为未设置，跟随系统主题
+                Log.Warning($"[外观] 主题偏好读取失败，改为跟随系统主题：{ex.Message}");
             }
         }
 
@@ -67,9 +71,10 @@ namespace KfuPet.Services
                 var json = JsonSerializer.Serialize(new { Theme = PreferredDark switch { true => "Dark", false => "Light", null => "System" } });
                 File.WriteAllText(ConfigFilePath, json);
             }
-            catch
+            catch (Exception ex)
             {
                 // 保存失败不阻塞使用，下次启动会回退到跟随系统
+                Log.Error($"[外观] 主题偏好保存失败：{ex.Message}");
             }
         }
     }

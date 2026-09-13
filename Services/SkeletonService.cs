@@ -257,6 +257,7 @@ namespace KfuPet.Services
                 bone.IsActive = bone.DefaultIsActive;
             }
             UpdateAndNotify();
+            Log.Info("[骨骼] 已重置全部骨骼到默认状态");
         }
 
         /// <summary>
@@ -289,7 +290,12 @@ namespace KfuPet.Services
             double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0)
         {
             var bone = _skeleton?.FindBone(boneId);
-            if (bone == null || bone.ParentId == null) return null; // root 不挂图
+            if (bone == null || bone.ParentId == null)
+            {
+                // root 不挂图
+                Log.Warning($"[骨骼] 挂载图片失败：找不到可挂载的骨骼 {boneId}");
+                return null;
+            }
 
             var attachment = new Attachment
             {
@@ -306,6 +312,7 @@ namespace KfuPet.Services
 
             bone.AddAttachment(attachment);
             UpdateAndNotify();
+            Log.Info($"[骨骼] 已挂载图片：{name} → 骨骼 {boneId}（{resourcePath}）");
             return attachment;
         }
 
@@ -317,7 +324,11 @@ namespace KfuPet.Services
             if (_skeleton == null) return false;
 
             var attachment = _skeleton.FindAttachment(attachmentId);
-            if (attachment == null) return false;
+            if (attachment == null)
+            {
+                Log.Warning($"[骨骼] 移除附件失败：找不到附件 {attachmentId}");
+                return false;
+            }
 
             var resourcePath = attachment.GetCurrentResourcePath();
 
@@ -325,6 +336,7 @@ namespace KfuPet.Services
             {
                 TryCleanupResource(resourcePath);
                 UpdateAndNotify();
+                Log.Info($"[骨骼] 已移除附件：{attachmentId}");
                 return true;
             }
             return false;
@@ -474,6 +486,7 @@ namespace KfuPet.Services
         {
             if (ShowDebugSkeleton == show) return;
             ShowDebugSkeleton = show;
+            Log.Info($"[骨骼] 调试线框已{(show ? "开启" : "关闭")}");
             DebugSkeletonChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -493,11 +506,15 @@ namespace KfuPet.Services
             try
             {
                 if (System.IO.Directory.Exists(ResourceCacheDir))
+                {
                     System.IO.Directory.Delete(ResourceCacheDir, true);
+                }
+                Log.Debug("[骨骼] 资源缓存目录已清理");
             }
-            catch
+            catch (Exception ex)
             {
                 // 忽略清理失败（文件被占用等）
+                Log.Warning($"[骨骼] 资源缓存清理失败：{ex.Message}");
             }
         }
 
@@ -543,11 +560,13 @@ namespace KfuPet.Services
                 var fileName = $"{Guid.NewGuid():N}{extension}";
                 var filePath = System.IO.Path.Combine(targetDir, fileName);
                 System.IO.File.WriteAllBytes(filePath, bytes);
+                Log.Info($"[骨骼] 已上传图片资源：{filePath}（{bytes.Length} 字节）");
 
                 return filePath;
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Error($"[骨骼] 图片资源上传失败：{ex.Message}");
                 return null;
             }
         }

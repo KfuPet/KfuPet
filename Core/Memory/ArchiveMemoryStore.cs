@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KfuPet.Services;
 
 namespace KfuPet.Core.Memory
 {
@@ -28,10 +29,13 @@ namespace KfuPet.Core.Memory
                 }
 
                 var json = File.ReadAllText(_filePath);
-                return JsonSerializer.Deserialize<List<ArchiveEntry>>(json) ?? new List<ArchiveEntry>();
+                var entries = JsonSerializer.Deserialize<List<ArchiveEntry>>(json) ?? new List<ArchiveEntry>();
+                Log.Debug($"[记忆] 归档记忆已加载：{entries.Count} 条");
+                return entries;
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Warning($"[记忆] 归档记忆读取失败，按空列表处理：{ex.Message}");
                 return new List<ArchiveEntry>();
             }
         }
@@ -49,9 +53,10 @@ namespace KfuPet.Core.Memory
                 });
                 File.WriteAllText(_filePath, json);
             }
-            catch
+            catch (Exception ex)
             {
                 // 写入失败不阻断对话
+                Log.Error($"[记忆] 归档记忆写入失败：{ex.Message}");
             }
         }
     }

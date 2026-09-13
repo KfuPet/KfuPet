@@ -37,10 +37,12 @@ namespace KfuPet.Services
                     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 });
                 File.WriteAllText(ConfigFilePath, json);
+                Log.Info($"[配置] 停用词已保存：{_words.Count} 条");
             }
-            catch
+            catch (Exception ex)
             {
                 // 写入失败不影响界面操作
+                Log.Error($"[配置] 停用词保存失败：{ex.Message}");
             }
         }
 
@@ -62,9 +64,10 @@ namespace KfuPet.Services
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // 配置缺失、损坏或为空时使用默认停用词
+                Log.Warning($"[配置] 停用词读取失败，改用内置默认停用词：{ex.Message}");
             }
 
             return new List<string>(DefaultWords);

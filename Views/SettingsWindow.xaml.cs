@@ -62,10 +62,12 @@ namespace KfuPet.Views
             };
             Closed += SettingsWindow_Closed;
             Activated += SettingsWindow_Activated;
+            Log.Info("[窗口] 设置窗口已打开");
         }
 
         private void SettingsWindow_Closed(object? sender, EventArgs e)
         {
+            Log.Debug("[窗口] 设置窗口已关闭");
             _mainWindow.DeveloperModeService.EnabledChanged -= OnDeveloperModeChanged;
             _mainWindow.ToolRunningChanged -= OnToolRunningChanged;
             _mainWindow.SkeletonService.DebugSkeletonChanged -= OnDebugSkeletonChanged;

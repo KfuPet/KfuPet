@@ -1,5 +1,7 @@
+using System.Reflection;
 using System.Windows;
 using Microsoft.Win32;
+using KfuPet.Services;
 using KfuPet.Views;
 
 namespace KfuPet
@@ -19,10 +21,14 @@ namespace KfuPet
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            var version = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
+            Log.Info($"[启动] KfuPet v{version} 启动");
+
             // 检测多开：只允许运行一个实例
             _mutex = new Mutex(true, "KfuPet_SingleInstance", out bool createdNew);
             if (!createdNew)
             {
+                Log.Warning("[启动] 检测到已有实例在运行，本次启动已退出");
                 MessageBox.Show("我已经在桌面上啦，不用再叫醒我一次～", "KfuPet", MessageBoxButton.OK, MessageBoxImage.Information);
                 _mutex = null;
                 Shutdown();
@@ -56,6 +62,7 @@ namespace KfuPet
 
                 _mainWindow.Show();
                 _mainWindow.PlayFadeInAnimation();
+                Log.Info("[启动] 启动画面已结束，主窗口已显示");
             };
             splashWindow.SplashCompleted += splashHandler;
             splashWindow.Show();
@@ -83,6 +90,8 @@ namespace KfuPet
                     ShowTrayMenu();
                 }
             };
+
+            Log.Debug("[托盘] 托盘图标已就绪");
         }
 
         /// <summary>
@@ -96,6 +105,7 @@ namespace KfuPet
                 _trayMenu.SettingsClicked += (s, e) => OpenSettingsWindow();
                 _trayMenu.ExitClicked += (s, e) =>
                 {
+                    Log.Info("[托盘] 用户选择退出程序");
                     _notifyIcon?.Dispose();
                     Shutdown();
                 };
@@ -118,6 +128,7 @@ namespace KfuPet
 
             if (_settingsWindow == null)
             {
+                Log.Info("[窗口] 打开设置窗口");
                 _settingsWindow = new SettingsWindow(_mainWindow);
                 _settingsWindow.Closed += (s, e) => _settingsWindow = null;
             }
@@ -176,6 +187,7 @@ namespace KfuPet
                         Source = new Uri(target, UriKind.Relative)
                     };
                     _isDarkTheme = isDark;
+                    Log.Info($"[外观] 已切换到{(isDark ? "深色" : "浅色")}主题");
                     break;
                 }
             }
@@ -214,6 +226,7 @@ namespace KfuPet
 
         protected override void OnExit(ExitEventArgs e)
         {
+            Log.Info("[退出] KfuPet 正在退出，开始清理资源");
             SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
             _notifyIcon?.Dispose();
             _mutex?.Dispose();
