@@ -38,10 +38,29 @@ namespace KfuPet.Ipc.Client
             _connectTimeoutMs = connectTimeoutMs;
         }
 
+        /// <summary>
+        /// 连接服务端并开始接收日志。重复调用会先释放上一次连接。
+        /// </summary>
         public async Task ConnectAsync(CancellationToken ct = default)
         {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(LogPipeClient));
+            }
+
             var stream = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-            await stream.ConnectAsync(_connectTimeoutMs, ct);
+            try
+            {
+                await stream.ConnectAsync(_connectTimeoutMs, ct);
+            }
+            catch
+            {
+                stream.Dispose();
+                throw;
+            }
+
+            // 重连前释放旧连接并复位断开标记，避免句柄泄漏、以及断开事件只上报一次
+            ReleaseConnection();
 
             _stream = stream;
             _reader = new StreamReader(stream);
@@ -51,41 +70,73 @@ namespace KfuPet.Ipc.Client
 
         private async Task ReadLoop()
         {
-            var token = _cts!.Token;
+            var cts = _cts;
+            var reader = _reader;
+            if (cts == null || reader == null)
+            {
+                return;
+            }
+
+            var token = cts.Token;
 
             try
             {
                 while (!token.IsCancellationRequested)
                 {
-                    var line = await _reader!.ReadLineAsync(token);
+                    var line = await reader.ReadLineAsync(token);
                     if (line == null)
                     {
+                        // 服务端关闭了管道
                         RaiseDisconnected();
                         break;
                     }
 
-                    if (string.IsNullOrWhiteSpace(line)) continue;
-
-                    try
+                    if (!string.IsNullOrWhiteSpace(line))
                     {
-                        var message = JsonSerializer.Deserialize<LogMessage>(line);
-                        if (message != null)
-                        {
-                            LogReceived?.Invoke(this, message);
-                        }
-                    }
-                    catch (JsonException)
-                    {
-                        // 忽略无法解析的行
+                        Dispatch(line);
                     }
                 }
             }
             catch (OperationCanceledException)
             {
+                // 主动断开，不视为异常
             }
-            catch (IOException)
+            catch (Exception)
             {
+                // 连接中断或读取失败：统一按断开处理，
+                // 不让异常逃逸出读取任务（该任务无人 await，异常会被静默丢弃）
                 RaiseDisconnected();
+            }
+        }
+
+        /// <summary>
+        /// 解析并派发一条日志：无法解析的行不会被转发，
+        /// 订阅者抛出的异常也不会中断后续日志接收。
+        /// </summary>
+        private void Dispatch(string line)
+        {
+            LogMessage? message;
+            try
+            {
+                message = JsonSerializer.Deserialize<LogMessage>(line);
+            }
+            catch (JsonException)
+            {
+                return;
+            }
+
+            if (message == null)
+            {
+                return;
+            }
+
+            try
+            {
+                LogReceived?.Invoke(this, message);
+            }
+            catch
+            {
+                // 订阅者异常不影响后续日志接收
             }
         }
 
@@ -97,15 +148,18 @@ namespace KfuPet.Ipc.Client
             }
         }
 
-        public void Dispose()
+        /// <summary>释放当前连接并复位断开标记，供重连与 Dispose 复用。</summary>
+        private void ReleaseConnection()
         {
-            if (_disposed) return;
-            _disposed = true;
+            var cts = _cts;
+            var readTask = _readTask;
+            _cts = null;
+            _readTask = null;
 
-            _cts?.Cancel();
+            cts?.Cancel();
             try
             {
-                _readTask?.Wait(TimeSpan.FromSeconds(2));
+                readTask?.Wait(TimeSpan.FromSeconds(2));
             }
             catch
             {
@@ -113,8 +167,20 @@ namespace KfuPet.Ipc.Client
             }
 
             _reader?.Dispose();
+            _reader = null;
             _stream?.Dispose();
-            _cts?.Dispose();
+            _stream = null;
+            cts?.Dispose();
+
+            Interlocked.Exchange(ref _disconnectedRaised, 0);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            ReleaseConnection();
         }
     }
 
