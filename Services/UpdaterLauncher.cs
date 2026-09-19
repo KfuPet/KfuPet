@@ -12,6 +12,9 @@ namespace KfuPet.Services
         /// <summary>注册表安装记录位置，与 KfuPetUpdate 的约定一致。</summary>
         private const string InstallKeyPath = @"Software\KfuPet";
 
+        /// <summary>安装记录里存放安装目录的值名。</summary>
+        private const string InstallPathValueName = "InstallPath";
+
         /// <summary>安装目录内常驻更新程序的文件名，由安装程序放置。</summary>
         private const string UpdaterFileName = "KfuPetUpdate.exe";
 
@@ -62,13 +65,27 @@ namespace KfuPet.Services
             }
         }
 
-        /// <summary>从注册表读取安装目录；未安装或读取失败时返回空。</summary>
+        /// <summary>
+        /// 从注册表读取安装目录；未安装或读取失败时返回空。
+        /// 查找顺序与 KfuPetUpdate 一致：先机器级（HKLM，新安装程序写在这里），
+        /// 读不到再回退用户级（HKCU，早期版本写下的位置）。
+        /// 两处都固定用 64 位注册表视图，对应更新程序的 WOW64_64KEY：
+        /// 否则进程位数不同时会被系统重定向到 Wow6432Node，读不到同一条记录。
+        /// </summary>
         private static string ReadInstallPath()
+        {
+            string path = ReadInstallPath(RegistryHive.LocalMachine);
+            return path.Length > 0 ? path : ReadInstallPath(RegistryHive.CurrentUser);
+        }
+
+        /// <summary>从指定根键读取安装目录；不存在或读取失败时返回空。</summary>
+        private static string ReadInstallPath(RegistryHive hive)
         {
             try
             {
-                using RegistryKey? key = Registry.CurrentUser.OpenSubKey(InstallKeyPath);
-                return key?.GetValue("InstallPath") as string ?? string.Empty;
+                using RegistryKey baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
+                using RegistryKey? key = baseKey.OpenSubKey(InstallKeyPath);
+                return key?.GetValue(InstallPathValueName) as string ?? string.Empty;
             }
             catch
             {
