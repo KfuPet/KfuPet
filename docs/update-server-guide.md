@@ -18,7 +18,6 @@
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `version` | string | 是 | 最新版本号，如 `0.0.8` 或 `v0.0.8` |
-| `releasePageUrl` | string | 是 | 发布页地址 |
 | `releaseNotes` | string | 否 | 更新说明 |
 
 响应示例：
@@ -26,13 +25,13 @@
 ```json
 {
   "version": "0.0.8",
-  "releasePageUrl": "https://example.com/kfupet/releases",
   "releaseNotes": "- 修复已知问题\n- 新增功能"
 }
 ```
 
-> 说明：客户端解析时要求字段名与 `ReleaseInfo` 的 C# 属性名一致（`Version` / `ReleasePageUrl` / `ReleaseNotes`），
-> 因此 JSON 用 `version` / `releasePageUrl` / `releaseNotes`，后续如需不同命名可在反序列化时配置 `JsonSerializerOptions.PropertyNameCaseInsensitive` 或 `JsonPropertyName`。
+> 说明：客户端解析时要求字段名与 `ReleaseInfo` 的 C# 属性名一致（`Version` / `ReleaseNotes`），
+> 因此 JSON 用 `version` / `releaseNotes`，后续如需不同命名可在反序列化时配置 `JsonSerializerOptions.PropertyNameCaseInsensitive` 或 `JsonPropertyName`。
+> 升级由 KfuPetUpdate 负责，KfuPet 只判断有没有新版本，因此接口不再需要发布页地址。
 
 ## 客户端实现步骤（替换空壳）
 
@@ -61,5 +60,5 @@ public async Task<ReleaseInfo?> GetLatestReleaseAsync()
 ## 注意事项
 
 - 超时：给 `HttpClient` 设置合理 `Timeout`（如 10 秒），避免界面长时间卡在「检查更新」。
-- 版本号格式：服务器返回的 `version` 应与 csproj 的 `<Version>`（当前 `0.0.7`）保持可比，`UpdateService.TryParseVersion` 已兼容 `v` 前缀。
+- 版本号格式：服务器返回的 `version` 应与 csproj 的 `<Version>`（当前 `0.0.1`）保持可比，`UpdateService.TryParseVersion` 已兼容 `v` 前缀。
 - 容错顺序已固定为 GitHub 优先，如需调整顺序，改 `UpdateService._sources` 数组即可。

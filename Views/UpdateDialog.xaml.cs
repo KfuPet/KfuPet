@@ -58,20 +58,6 @@ namespace KfuPet.Views
                 StatusDetailText.Text = $"当前版本 v{currentVersion}";
                 ConfirmButton.Content = "确定";
             }
-
-            LoadingBar.Visibility = Visibility.Collapsed;
-        }
-
-        /// <summary>
-        /// 显示"检查中"状态。
-        /// </summary>
-        public void SetCheckingState()
-        {
-            StatusIcon.Text = "\uE72C";
-            StatusTitleText.Text = "正在检查更新...";
-            StatusDetailText.Text = "请稍候";
-            LoadingBar.Visibility = Visibility.Visible;
-            ConfirmButton.IsEnabled = false;
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

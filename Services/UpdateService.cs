@@ -49,7 +49,6 @@ namespace KfuPet.Services
                 {
                     CurrentVersion = _currentVersion,
                     LatestVersion = latestVersion,
-                    ReleasePageUrl = release.ReleasePageUrl,
                     ReleaseNotes = release.ReleaseNotes,
                     PublishedAt = release.PublishedAt,
                     IsUpdateAvailable = latestVersion > _currentVersion

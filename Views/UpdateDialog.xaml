@@ -182,15 +182,6 @@
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
-
-                <!-- 加载动画 -->
-                <ProgressBar x:Name="LoadingBar"
-                             Height="3"
-                             Margin="0,0,0,16"
-                             Background="Transparent"
-                             Foreground="{DynamicResource AppAccentBrush}"
-                             IsIndeterminate="True"
-                             BorderThickness="0"/>
             </StackPanel>
 
             <!-- 按钮栏 -->

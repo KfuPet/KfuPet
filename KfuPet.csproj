@@ -10,7 +10,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\icon\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.0.1</Version>
+    <Version>0.1.1</Version>
     <Authors>Grey Bullet Technology Studio</Authors>
     <!-- 界面只有中文，裁剪其他语言的卫星资源程序集，减小发布体积 -->
     <SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>

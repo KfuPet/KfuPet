@@ -37,10 +37,6 @@ namespace KfuPet.Services
                 return null;
             }
 
-            string releasePageUrl = root.TryGetProperty("html_url", out var htmlUrlElement)
-                ? htmlUrlElement.GetString() ?? string.Empty
-                : string.Empty;
-
             string releaseNotes = root.TryGetProperty("body", out var bodyElement)
                 ? bodyElement.GetString() ?? string.Empty
                 : string.Empty;
@@ -56,7 +52,6 @@ namespace KfuPet.Services
             return new ReleaseInfo
             {
                 Version = tagElement.GetString() ?? string.Empty,
-                ReleasePageUrl = releasePageUrl,
                 ReleaseNotes = releaseNotes,
                 PublishedAt = publishedAt
             };

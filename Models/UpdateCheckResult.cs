@@ -14,9 +14,6 @@ namespace KfuPet.Models
         /// <summary>是否存在比当前更新的版本。</summary>
         public bool IsUpdateAvailable { get; set; }
 
-        /// <summary>发布页地址。</summary>
-        public string ReleasePageUrl { get; set; } = string.Empty;
-
         /// <summary>更新说明。</summary>
         public string ReleaseNotes { get; set; } = string.Empty;
 
