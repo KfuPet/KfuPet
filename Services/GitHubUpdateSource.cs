@@ -8,7 +8,7 @@ namespace KfuPet.Services
     /// </summary>
     internal class GitHubUpdateSource : IUpdateSource
     {
-        private const string Owner = "Lrht-llw";
+        private const string Owner = "KfuPet";
         private const string Repo = "KfuPet";
         private const string ApiUrl = $"https://api.github.com/repos/{Owner}/{Repo}/releases/latest";
 
