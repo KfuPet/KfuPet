@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
@@ -765,7 +764,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 检查更新：已是最新时提示，有新版本时先询问用户，确认后用默认浏览器打开发布页面。
+        /// 检查更新：已是最新时提示，有新版本时先询问用户，确认后拉起更新程序并退出桌宠。
         /// </summary>
         private async Task CheckForUpdatesAsync()
         {
@@ -795,7 +794,19 @@ namespace KfuPet.Views
                 Owner = this
             };
 
-            dialog.DownloadConfirmed += (s, e) => OpenReleasePage(result.ReleasePageUrl);
+            dialog.UpdateConfirmed += (s, e) =>
+            {
+                if (!UpdaterLauncher.TryLaunchUpdate(out string error))
+                {
+                    // 拉起失败（未安装、缺更新程序、用户取消 UAC）→ 留在桌宠里提示，不要退出。
+                    MessageBox.Show(error, "KfuPet", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // 拉起成功才退出：更新程序在等这个进程结束，退不掉它就换不了文件。
+                // 走正常关闭（而不是 Environment.Exit），让 App.OnExit 里的保存与托盘释放照常执行。
+                Application.Current.Shutdown();
+            };
             dialog.ShowDialog();
         }
 
@@ -964,31 +975,6 @@ namespace KfuPet.Views
                 new DoubleAnimation(0.8, 1, popDuration) { EasingFunction = popEasing });
             LatestVersionBadgeScale.BeginAnimation(ScaleTransform.ScaleYProperty,
                 new DoubleAnimation(0.8, 1, popDuration) { EasingFunction = popEasing });
-        }
-
-        /// <summary>
-        /// 用系统默认浏览器打开发布页面。
-        /// </summary>
-        private static void OpenReleasePage(string url)
-        {
-            if (string.IsNullOrWhiteSpace(url))
-            {
-                return;
-            }
-
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = url,
-                    UseShellExecute = true
-                });
-            }
-            catch
-            {
-                MessageBox.Show($"打开下载页面失败，请手动访问：\n{url}",
-                    "KfuPet", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
         }
     }
 }

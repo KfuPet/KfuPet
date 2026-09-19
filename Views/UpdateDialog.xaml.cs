@@ -7,12 +7,12 @@ using System.Windows.Media.Animation;
 namespace KfuPet.Views
 {
     /// <summary>
-    /// 检查更新结果弹窗，展示当前/最新版本、更新日志，并提供前往下载按钮。
+    /// 检查更新结果弹窗，展示当前/最新版本、更新日志，并提供立即更新按钮。
     /// </summary>
     public partial class UpdateDialog : Window
     {
-        /// <summary>用户确认前往下载时触发。</summary>
-        public event EventHandler? DownloadConfirmed;
+        /// <summary>用户确认立即更新时触发。</summary>
+        public event EventHandler? UpdateConfirmed;
 
         private readonly bool _hasUpdate;
 
@@ -41,7 +41,7 @@ namespace KfuPet.Views
                 StatusIcon.Foreground = (Brush)FindResource("AppAccentBrush");
                 StatusTitleText.Text = $"发现新版本 v{latestVersion}";
                 StatusDetailText.Text = $"当前版本 v{currentVersion}";
-                ConfirmButton.Content = "前往下载";
+                ConfirmButton.Content = "立即更新";
                 CancelButton.Visibility = Visibility.Visible;
 
                 if (!string.IsNullOrWhiteSpace(releaseNotes))
@@ -96,13 +96,16 @@ namespace KfuPet.Views
 
         private void ConfirmButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_hasUpdate)
-            {
-                DownloadConfirmed?.Invoke(this, EventArgs.Empty);
-            }
-
+            // 先关掉弹窗再通知调用方：确认更新的处理程序会拉起更新程序并退出桌宠，
+            // 若窗口已随应用退出而关闭，事后再设 DialogResult 会抛异常。
+            // 设置 DialogResult 本身就会关闭本窗口。
+            var hasUpdate = _hasUpdate;
             DialogResult = true;
-            Close();
+
+            if (hasUpdate)
+            {
+                UpdateConfirmed?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         private void PlayEntranceAnimation()
