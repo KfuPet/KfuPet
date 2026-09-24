@@ -175,11 +175,8 @@
                                    FontWeight="{StaticResource FontWeightSemiBold}"
                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
                                    Margin="0,0,0,6"/>
-                        <TextBlock x:Name="ReleaseNotesText"
-                                   FontFamily="{StaticResource FontFamilyBody}"
-                                   FontSize="{StaticResource FontSizeCaption}"
-                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                   TextWrapping="Wrap"/>
+                        <!-- 更新说明是 Markdown 文本，由 MarkdownRenderer 渲染成富文本块 -->
+                        <StackPanel x:Name="ReleaseNotesPanelContent"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

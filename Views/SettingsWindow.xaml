@@ -2174,11 +2174,8 @@
                                         </Border.RenderTransform>
                                         <ScrollViewer MaxHeight="220"
                                                       VerticalScrollBarVisibility="Auto">
-                                            <TextBlock x:Name="LatestReleaseNotesText"
-                                                       FontFamily="{StaticResource FontFamilyBody}"
-                                                       FontSize="{StaticResource FontSizeCaption}"
-                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                                       TextWrapping="Wrap"/>
+                                            <!-- 更新说明是 Markdown 文本，由 MarkdownRenderer 渲染成富文本块 -->
+                                            <StackPanel x:Name="LatestReleaseNotesPanel"/>
                                         </ScrollViewer>
                                     </Border>
                                 </StackPanel>

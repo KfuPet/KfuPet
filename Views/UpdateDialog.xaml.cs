@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using KfuPet.Helpers;
 
 namespace KfuPet.Views
 {
@@ -46,7 +47,7 @@ namespace KfuPet.Views
 
                 if (!string.IsNullOrWhiteSpace(releaseNotes))
                 {
-                    ReleaseNotesText.Text = releaseNotes;
+                    MarkdownRenderer.Render(releaseNotes, ReleaseNotesPanelContent);
                     ReleaseNotesPanel.Visibility = Visibility.Visible;
                 }
             }

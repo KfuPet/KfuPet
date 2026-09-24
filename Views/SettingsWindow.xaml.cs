@@ -7,6 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using KfuPet.Helpers;
 using KfuPet.Models;
 using KfuPet.Services;
 
@@ -958,7 +959,7 @@ namespace KfuPet.Views
 
             LatestVersionBadge.Text = badgeText;
             LatestReleaseDateText.Text = dateText;
-            LatestReleaseNotesText.Text = notesText;
+            MarkdownRenderer.Render(notesText, LatestReleaseNotesPanel);
 
             var fadeInDuration = TimeSpan.FromMilliseconds(220);
             var fadeInEasing = new CubicEase { EasingMode = EasingMode.EaseOut };
