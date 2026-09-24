@@ -13,7 +13,7 @@
 
 ## 📖 项目简介
 
-**KfuPet** 是一款基于 **WPF (.NET 8.0)** 开发的桌面宠物应用，当前处于原型阶段。
+**KfuPet** 是一款基于 **WPF (.NET 8.0)** 开发的桌面宠物应用，当前处于测试阶段。
 
 > 本项目采用**双许可模式**：**AGPL-3.0**（含附加条款）或**付费商业许可**，详情请见 [开源许可](#-开源许可)。
 
@@ -26,10 +26,6 @@
 | Windows | [点击下载](https://github.com/Lrht-llw/KfuPet/releases/latest) |
 | Android | [点击下载](https://github.com/KfuPet/KfuPet-for-Android/releases/latest) |
 | 开发者工具 | [点击下载](https://github.com/KfuPet/KfuPet-Tool/releases/latest) |
-
-## 💻 更新记录
-
-### v0.0.5 版本待发布
 
 ## 🧑‍💻 参与贡献
 
