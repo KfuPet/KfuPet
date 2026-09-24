@@ -24,9 +24,9 @@ namespace KfuPet.Views
         private bool _suppressModelToggleEvents;
         private bool _suppressDebugBonesEvents;
         private bool _isCheckingUpdate;
-        private bool _isNewVersionExpanded;
-        private bool _hasLoadedNewVersionInfo;
-        private bool _isLoadingNewVersionInfo;
+        private bool _isCurrentVersionExpanded;
+        private bool _hasLoadedCurrentVersionInfo;
+        private bool _isLoadingCurrentVersionInfo;
         private bool _suppressAppearanceEvents;
         private AddModelProviderDialog? _addModelProviderDialog;
 
@@ -187,7 +187,7 @@ namespace KfuPet.Views
 
             if (NavList.SelectedIndex == 4)
             {
-                _ = LoadNewVersionInfoAsync();
+                _ = LoadCurrentVersionInfoAsync();
             }
         }
 
@@ -812,27 +812,27 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 关于页“关于新版本”头部点击：展开或折叠更新内容，
+        /// 关于页“关于此版本”头部点击：展开或折叠更新内容，
         /// 箭头回弹旋转，内容区淡入下滑 / 淡出上滑。
         /// </summary>
-        private void AboutNewVersionHeader_Click(object sender, MouseButtonEventArgs e)
+        private void AboutCurrentVersionHeader_Click(object sender, MouseButtonEventArgs e)
         {
             AnimateHeaderScale(1);
 
-            _isNewVersionExpanded = !_isNewVersionExpanded;
+            _isCurrentVersionExpanded = !_isCurrentVersionExpanded;
 
-            var chevronAnimation = new DoubleAnimation(_isNewVersionExpanded ? 90 : 0, TimeSpan.FromMilliseconds(280))
+            var chevronAnimation = new DoubleAnimation(_isCurrentVersionExpanded ? 90 : 0, TimeSpan.FromMilliseconds(280))
             {
                 EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.6 }
             };
-            AboutNewVersionChevronRotate.BeginAnimation(RotateTransform.AngleProperty, chevronAnimation);
+            AboutCurrentVersionChevronRotate.BeginAnimation(RotateTransform.AngleProperty, chevronAnimation);
 
-            if (_isNewVersionExpanded)
+            if (_isCurrentVersionExpanded)
             {
-                AboutNewVersionContent.Visibility = Visibility.Visible;
-                AboutNewVersionContent.BeginAnimation(OpacityProperty,
+                AboutCurrentVersionContent.Visibility = Visibility.Visible;
+                AboutCurrentVersionContent.BeginAnimation(OpacityProperty,
                     new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
-                AboutNewVersionContentSlide.BeginAnimation(TranslateTransform.YProperty,
+                AboutCurrentVersionContentSlide.BeginAnimation(TranslateTransform.YProperty,
                     new DoubleAnimation(-10, 0, TimeSpan.FromMilliseconds(280))
                     {
                         EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
@@ -840,7 +840,7 @@ namespace KfuPet.Views
             }
             else
             {
-                AboutNewVersionContent.BeginAnimation(OpacityProperty,
+                AboutCurrentVersionContent.BeginAnimation(OpacityProperty,
                     new DoubleAnimation(0, TimeSpan.FromMilliseconds(150)));
                 var slideUp = new DoubleAnimation(-10, TimeSpan.FromMilliseconds(180))
                 {
@@ -849,46 +849,46 @@ namespace KfuPet.Views
                 slideUp.Completed += (s, _) =>
                 {
                     // 动画结束后再真正折叠，避免内容突然消失
-                    if (!_isNewVersionExpanded)
+                    if (!_isCurrentVersionExpanded)
                     {
-                        AboutNewVersionContent.Visibility = Visibility.Collapsed;
+                        AboutCurrentVersionContent.Visibility = Visibility.Collapsed;
                     }
                 };
-                AboutNewVersionContentSlide.BeginAnimation(TranslateTransform.YProperty, slideUp);
+                AboutCurrentVersionContentSlide.BeginAnimation(TranslateTransform.YProperty, slideUp);
             }
         }
 
         /// <summary>
         /// 头部悬停：高亮层淡入，箭头提亮。
         /// </summary>
-        private void AboutNewVersionHeader_MouseEnter(object sender, MouseEventArgs e)
+        private void AboutCurrentVersionHeader_MouseEnter(object sender, MouseEventArgs e)
         {
-            AboutNewVersionHoverOverlay.BeginAnimation(OpacityProperty,
+            AboutCurrentVersionHoverOverlay.BeginAnimation(OpacityProperty,
                 new DoubleAnimation(1, TimeSpan.FromMilliseconds(160))
                 {
                     EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
                 });
-            AboutNewVersionChevron.SetResourceReference(TextBlock.ForegroundProperty, "AppTextPrimaryBrush");
+            AboutCurrentVersionChevron.SetResourceReference(TextBlock.ForegroundProperty, "AppTextPrimaryBrush");
         }
 
         /// <summary>
         /// 头部离开：高亮层淡出，箭头恢复，同时复位按压缩放。
         /// </summary>
-        private void AboutNewVersionHeader_MouseLeave(object sender, MouseEventArgs e)
+        private void AboutCurrentVersionHeader_MouseLeave(object sender, MouseEventArgs e)
         {
-            AboutNewVersionHoverOverlay.BeginAnimation(OpacityProperty,
+            AboutCurrentVersionHoverOverlay.BeginAnimation(OpacityProperty,
                 new DoubleAnimation(0, TimeSpan.FromMilliseconds(220))
                 {
                     EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
                 });
-            AboutNewVersionChevron.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondaryBrush");
+            AboutCurrentVersionChevron.SetResourceReference(TextBlock.ForegroundProperty, "AppTextSecondaryBrush");
             AnimateHeaderScale(1);
         }
 
         /// <summary>
         /// 头部按下：轻微缩小，模拟按压手感。
         /// </summary>
-        private void AboutNewVersionHeader_MouseDown(object sender, MouseButtonEventArgs e)
+        private void AboutCurrentVersionHeader_MouseDown(object sender, MouseButtonEventArgs e)
         {
             AnimateHeaderScale(0.97);
         }
@@ -904,42 +904,44 @@ namespace KfuPet.Views
                 : new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.5 };
             var duration = TimeSpan.FromMilliseconds(pressed ? 110 : 220);
 
-            AboutNewVersionHeaderScale.BeginAnimation(ScaleTransform.ScaleXProperty,
+            AboutCurrentVersionHeaderScale.BeginAnimation(ScaleTransform.ScaleXProperty,
                 new DoubleAnimation(to, duration) { EasingFunction = easing });
-            AboutNewVersionHeaderScale.BeginAnimation(ScaleTransform.ScaleYProperty,
+            AboutCurrentVersionHeaderScale.BeginAnimation(ScaleTransform.ScaleYProperty,
                 new DoubleAnimation(to, duration) { EasingFunction = easing });
         }
 
         /// <summary>
-        /// 从 GitHub 拉取最新版本信息，填充“关于新版本”区块。只在关于页首次显示时加载一次。
+        /// 拉取本机版本对应的发布信息，填充“关于此版本”区块。只在关于页首次显示时加载一次。
         /// </summary>
-        private async Task LoadNewVersionInfoAsync()
+        private async Task LoadCurrentVersionInfoAsync()
         {
-            if (_hasLoadedNewVersionInfo || _isLoadingNewVersionInfo)
+            if (_hasLoadedCurrentVersionInfo || _isLoadingCurrentVersionInfo)
             {
                 return;
             }
 
-            _isLoadingNewVersionInfo = true;
+            _isLoadingCurrentVersionInfo = true;
             try
             {
-                var result = await _updateService.CheckAsync();
-                if (result == null)
+                var versionText = $"v{_updateService.CurrentVersion.ToString(3)}";
+
+                var release = await _updateService.GetCurrentReleaseAsync();
+                if (release == null)
                 {
-                    await ApplyVersionInfoAsync("获取失败", string.Empty, "无法获取更新信息，请检查网络后重试。");
+                    await ApplyVersionInfoAsync(versionText, string.Empty, "暂时获取不到此版本的更新说明，请检查网络后重试。");
                     return;
                 }
 
-                var dateText = result.PublishedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
-                var notesText = string.IsNullOrWhiteSpace(result.ReleaseNotes)
+                var dateText = release.PublishedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
+                var notesText = string.IsNullOrWhiteSpace(release.ReleaseNotes)
                     ? "该版本没有提供更新说明。"
-                    : result.ReleaseNotes.Trim();
-                await ApplyVersionInfoAsync($"v{result.LatestVersion.ToString(3)}", dateText, notesText);
-                _hasLoadedNewVersionInfo = true;
+                    : release.ReleaseNotes.Trim();
+                await ApplyVersionInfoAsync(versionText, dateText, notesText);
+                _hasLoadedCurrentVersionInfo = true;
             }
             finally
             {
-                _isLoadingNewVersionInfo = false;
+                _isLoadingCurrentVersionInfo = false;
             }
         }
 
@@ -953,28 +955,28 @@ namespace KfuPet.Views
             var fadeOut = new DoubleAnimation(0, fadeOutDuration);
             var fadeOutCompleted = new TaskCompletionSource();
             fadeOut.Completed += (s, _) => fadeOutCompleted.SetResult();
-            LatestVersionBadgeBorder.BeginAnimation(OpacityProperty, fadeOut);
-            LatestReleaseDateText.BeginAnimation(OpacityProperty, new DoubleAnimation(0, fadeOutDuration));
+            CurrentVersionBadgeBorder.BeginAnimation(OpacityProperty, fadeOut);
+            CurrentReleaseDateText.BeginAnimation(OpacityProperty, new DoubleAnimation(0, fadeOutDuration));
             await fadeOutCompleted.Task;
 
-            LatestVersionBadge.Text = badgeText;
-            LatestReleaseDateText.Text = dateText;
-            MarkdownRenderer.Render(notesText, LatestReleaseNotesPanel);
+            CurrentVersionBadge.Text = badgeText;
+            CurrentReleaseDateText.Text = dateText;
+            MarkdownRenderer.Render(notesText, CurrentReleaseNotesPanel);
 
             var fadeInDuration = TimeSpan.FromMilliseconds(220);
             var fadeInEasing = new CubicEase { EasingMode = EasingMode.EaseOut };
-            LatestVersionBadgeBorder.BeginAnimation(OpacityProperty,
+            CurrentVersionBadgeBorder.BeginAnimation(OpacityProperty,
                 new DoubleAnimation(1, fadeInDuration) { EasingFunction = fadeInEasing });
-            LatestReleaseDateText.BeginAnimation(OpacityProperty,
+            CurrentReleaseDateText.BeginAnimation(OpacityProperty,
                 new DoubleAnimation(1, fadeInDuration) { EasingFunction = fadeInEasing });
-            LatestReleaseDateSlide.BeginAnimation(TranslateTransform.XProperty,
+            CurrentReleaseDateSlide.BeginAnimation(TranslateTransform.XProperty,
                 new DoubleAnimation(-6, 0, fadeInDuration) { EasingFunction = fadeInEasing });
 
             var popDuration = TimeSpan.FromMilliseconds(320);
             var popEasing = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.6 };
-            LatestVersionBadgeScale.BeginAnimation(ScaleTransform.ScaleXProperty,
+            CurrentVersionBadgeScale.BeginAnimation(ScaleTransform.ScaleXProperty,
                 new DoubleAnimation(0.8, 1, popDuration) { EasingFunction = popEasing });
-            LatestVersionBadgeScale.BeginAnimation(ScaleTransform.ScaleYProperty,
+            CurrentVersionBadgeScale.BeginAnimation(ScaleTransform.ScaleYProperty,
                 new DoubleAnimation(0.8, 1, popDuration) { EasingFunction = popEasing });
         }
     }

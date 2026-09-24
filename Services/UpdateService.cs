@@ -23,6 +23,34 @@ namespace KfuPet.Services
             _currentVersion = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
         }
 
+        /// <summary>当前程序集版本。</summary>
+        public Version CurrentVersion => _currentVersion;
+
+        /// <summary>
+        /// 获取“当前版本”对应的发布信息（关于页“关于此版本”使用）。
+        /// 所有更新源均不可用或该版本没有发布信息时返回 null。
+        /// </summary>
+        public async Task<ReleaseInfo?> GetCurrentReleaseAsync()
+        {
+            foreach (var source in _sources)
+            {
+                try
+                {
+                    var release = await source.GetReleaseByVersionAsync(_currentVersion);
+                    if (release != null)
+                    {
+                        return release;
+                    }
+                }
+                catch
+                {
+                    continue; // 当前源失败，尝试下一个源
+                }
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// 检查是否有新版本。所有更新源均不可用或无法判断时返回 null。
         /// </summary>

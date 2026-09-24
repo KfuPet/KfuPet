@@ -14,5 +14,12 @@ namespace KfuPet.Services
             // 空壳实现：尚未接入服务器，直接返回 null，由 UpdateService 跳过该源。
             return Task.FromResult<ReleaseInfo?>(null);
         }
+
+        /// <inheritdoc />
+        public Task<ReleaseInfo?> GetReleaseByVersionAsync(Version version)
+        {
+            // 空壳实现：与获取最新版本一致，尚未接入服务器。
+            return Task.FromResult<ReleaseInfo?>(null);
+        }
     }
 }
