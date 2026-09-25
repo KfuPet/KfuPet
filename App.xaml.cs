@@ -3,6 +3,7 @@ using System.Windows;
 using Microsoft.Win32;
 using KfuPet.Models;
 using KfuPet.Services;
+using KfuPet.Services.Ipc;
 using KfuPet.Views;
 
 namespace KfuPet
@@ -22,6 +23,7 @@ namespace KfuPet
         private System.Windows.Forms.NotifyIcon? _notifyIcon;
         private SettingsWindow? _settingsWindow;
         private TrayMenuWindow? _trayMenu;
+        private LogPipeServer? _logPipeServer;
         private Mutex? _mutex;
         private bool _isDarkTheme;
         private readonly Services.ThemeService _themeService = new();
@@ -47,6 +49,12 @@ namespace KfuPet
             }
 
             base.OnStartup(e);
+
+            // 日志管道常开、尽早启动：不随开发者模式开关，且启动阶段的日志也要能被开发者工具收到。
+            // 必须放在单实例检查之后，否则第二个实例会在被拒绝前短暂占用同名管道。
+            _logPipeServer = new LogPipeServer(Log.Instance);
+            _logPipeServer.Start();
+            Log.Info("[IPC] 日志管道已启动");
 
             // 加载配色令牌：用户手动选过外观则以偏好为准，否则跟随系统深浅色并实时切换
             SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
@@ -312,6 +320,8 @@ namespace KfuPet
             Log.Info("[退出] KfuPet 正在退出，开始清理资源");
             SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
             _notifyIcon?.Dispose();
+            _logPipeServer?.Stop();
+            _logPipeServer?.Dispose();
             _mutex?.Dispose();
             Services.SkeletonService.CleanupCache();
             base.OnExit(e);

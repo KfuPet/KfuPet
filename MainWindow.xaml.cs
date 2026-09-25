@@ -70,8 +70,6 @@ namespace KfuPet
 
         private NamedPipeServer? _pipeServer;
 
-        private LogPipeServer? _logPipeServer;
-
         private DispatcherTimer? _toolMonitorTimer;
         private bool _wasToolRunning;
 
@@ -125,9 +123,8 @@ namespace KfuPet
             CommandDispatcher.RegisterService(VisionService);
 
             _pipeServer = new NamedPipeServer(CommandDispatcher, Application.Current);
-            _logPipeServer = new LogPipeServer(LogService);
 
-            // 管道由开发者模式开关控制，默认关闭
+            // 命令管道由开发者模式开关控制，默认关闭；日志管道常开，由 App 在启动时拉起
             DeveloperModeService.EnabledChanged += OnDeveloperModeChanged;
             ApplyDeveloperMode();
 
@@ -141,8 +138,6 @@ namespace KfuPet
             _toolMonitorTimer?.Stop();
             _pipeServer?.Stop();
             _pipeServer?.Dispose();
-            _logPipeServer?.Stop();
-            _logPipeServer?.Dispose();
         }
 
         private void OnDeveloperModeChanged(object? sender, EventArgs e)
@@ -153,19 +148,18 @@ namespace KfuPet
 
         /// <summary>
         /// 根据开发者模式开关状态启动或停止供开发者工具连接的命名管道。
+        /// 只管命令管道；日志管道常开，不随该开关变化。
         /// </summary>
         private void ApplyDeveloperMode()
         {
             if (DeveloperModeService.IsEnabled)
             {
                 _pipeServer?.Start();
-                _logPipeServer?.Start();
                 Log.Info("[开发者模式] 已开启，命名管道开始监听");
             }
             else
             {
                 _pipeServer?.Stop();
-                _logPipeServer?.Stop();
                 Log.Info("[开发者模式] 已关闭，命名管道已停止");
             }
         }
