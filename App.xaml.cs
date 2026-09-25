@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Windows;
 using Microsoft.Win32;
+using KfuPet.Models;
 using KfuPet.Services;
 using KfuPet.Views;
 
@@ -11,6 +12,12 @@ namespace KfuPet
     /// </summary>
     public partial class App : Application
     {
+        /// <summary>启动后静默检查更新的延迟：等启动动画与主窗口淡入结束，避免通知和开场特效抢注意力。</summary>
+        private static readonly TimeSpan StartupUpdateCheckDelay = TimeSpan.FromSeconds(3);
+
+        /// <summary>系统通知的停留时长（毫秒）。</summary>
+        private const int NotificationDisplayMilliseconds = 10000;
+
         private MainWindow? _mainWindow;
         private System.Windows.Forms.NotifyIcon? _notifyIcon;
         private SettingsWindow? _settingsWindow;
@@ -18,6 +25,10 @@ namespace KfuPet
         private Mutex? _mutex;
         private bool _isDarkTheme;
         private readonly Services.ThemeService _themeService = new();
+        private readonly UpdateService _updateService = new();
+
+        /// <summary>启动检查发现的新版本结果，供点击系统通知时展示更新弹窗。</summary>
+        private UpdateCheckResult? _startupUpdateResult;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -63,6 +74,9 @@ namespace KfuPet
                 _mainWindow.Show();
                 _mainWindow.PlayFadeInAnimation();
                 Log.Info("[启动] 启动画面已结束，主窗口已显示");
+
+                // 静默检查更新：不阻塞启动流程，检查失败或已是最新都不打扰用户
+                _ = CheckUpdateOnStartupAsync();
             };
             splashWindow.SplashCompleted += splashHandler;
             splashWindow.Show();
@@ -91,7 +105,76 @@ namespace KfuPet
                 }
             };
 
+            // 点击系统通知：展示启动检查发现的版本更新
+            _notifyIcon.BalloonTipClicked += (s, args) => ShowStartupUpdateDialog();
+
             Log.Debug("[托盘] 托盘图标已就绪");
+        }
+
+        /// <summary>
+        /// 启动后静默检查一次更新：已是最新或检查失败都只记日志，
+        /// 发现新版本时才通过系统通知告知用户。
+        /// </summary>
+        private async Task CheckUpdateOnStartupAsync()
+        {
+            try
+            {
+                await Task.Delay(StartupUpdateCheckDelay);
+
+                Log.Debug("[更新] 启动静默检查更新开始");
+
+                var result = await _updateService.CheckAsync();
+                if (result == null)
+                {
+                    // 所有更新源都不可用（断网、接口异常等）：静默跳过，不打扰用户
+                    Log.Debug("[更新] 启动检查：所有更新源均不可用，本次跳过");
+                    return;
+                }
+
+                if (!result.IsUpdateAvailable)
+                {
+                    Log.Debug($"[更新] 启动检查：已是最新（远端 v{result.LatestVersion.ToString(3)}）");
+                    return;
+                }
+
+                _startupUpdateResult = result;
+                Log.Info($"[更新] 启动检查发现新版本 v{result.LatestVersion.ToString(3)}，已发出系统通知");
+                ShowUpdateNotification(result);
+            }
+            catch (Exception ex)
+            {
+                // 静默检查不得影响启动流程，异常只记录
+                Log.Warning($"[更新] 启动检查更新失败：{ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 用托盘图标发出系统通知（Windows 10 起会显示为系统通知）。
+        /// </summary>
+        private void ShowUpdateNotification(UpdateCheckResult result)
+        {
+            if (_notifyIcon == null)
+            {
+                return;
+            }
+
+            _notifyIcon.BalloonTipTitle = $"发现新版本 v{result.LatestVersion.ToString(3)}";
+            _notifyIcon.BalloonTipText = $"当前版本 v{result.CurrentVersion.ToString(3)}，点击查看更新内容。";
+            _notifyIcon.BalloonTipIcon = System.Windows.Forms.ToolTipIcon.Info;
+            _notifyIcon.ShowBalloonTip(NotificationDisplayMilliseconds);
+        }
+
+        /// <summary>
+        /// 点击系统通知：展示更新弹窗，流程与设置窗口里的“检查更新”完全一致。
+        /// </summary>
+        private void ShowStartupUpdateDialog()
+        {
+            if (_startupUpdateResult is not { IsUpdateAvailable: true } result)
+            {
+                return;
+            }
+
+            Dispatcher.Invoke(() => UpdatePrompt.Show(_mainWindow, result));
         }
 
         /// <summary>

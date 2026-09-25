@@ -786,29 +786,7 @@ namespace KfuPet.Views
                 return;
             }
 
-            var dialog = new UpdateDialog(
-                result.IsUpdateAvailable,
-                result.CurrentVersion.ToString(3),
-                result.LatestVersion.ToString(3),
-                result.ReleaseNotes)
-            {
-                Owner = this
-            };
-
-            dialog.UpdateConfirmed += (s, e) =>
-            {
-                if (!UpdaterLauncher.TryLaunchUpdate(out string error))
-                {
-                    // 拉起失败（未安装、缺更新程序、用户取消 UAC）→ 留在桌宠里提示，不要退出。
-                    MessageBox.Show(error, "KfuPet", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                // 拉起成功才退出：更新程序在等这个进程结束，退不掉它就换不了文件。
-                // 走正常关闭（而不是 Environment.Exit），让 App.OnExit 里的保存与托盘释放照常执行。
-                Application.Current.Shutdown();
-            };
-            dialog.ShowDialog();
+            UpdatePrompt.Show(this, result);
         }
 
         /// <summary>
