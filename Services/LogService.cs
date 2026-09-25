@@ -16,6 +16,18 @@ namespace KfuPet.Services
         /// <summary>实时日志订阅者，仅在 <see cref="_gate"/> 锁内读写。</summary>
         private EventHandler<LogEntry>? _entryAdded;
 
+        /// <summary>日志落盘器，未挂载时为 null（此时日志只留在内存）。</summary>
+        private LogFileWriter? _fileWriter;
+
+        /// <summary>
+        /// 挂载日志落盘器：此后每条日志都会异步写入本地文件。
+        /// 只写挂载之后产生的日志，不回填历史。
+        /// </summary>
+        public void AttachFileWriter(LogFileWriter writer)
+        {
+            _fileWriter = writer;
+        }
+
         /// <summary>
         /// 订阅日志：在同一把锁内先回调历史日志、再挂上实时回调，
         /// 保证历史与实时之间不重复、不遗漏、不乱序。
@@ -64,6 +76,9 @@ namespace KfuPet.Services
                     // 订阅者异常不阻断日志写入，也不影响其他订阅者
                 }
             }
+
+            // 落盘在锁外进行：内部只入队，写盘慢也不会拖住调用线程
+            _fileWriter?.Write(entry);
         }
 
         public void Debug(string message) => Log(LogLevel.Debug, message);

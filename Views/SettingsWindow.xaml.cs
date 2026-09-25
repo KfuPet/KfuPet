@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
@@ -51,6 +52,9 @@ namespace KfuPet.Views
             _suppressAppearanceEvents = false;
 
             VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
+
+            // 直接用真实日志目录当提示，避免路径写死在文案里
+            OpenLogButton.ToolTip = $"在资源管理器中打开日志目录：{LogFileWriter.LogDirectory}";
 
             Loaded += (s, e) => PlayEntranceAnimation();
             KeyDown += (s, e) =>
@@ -787,6 +791,37 @@ namespace KfuPet.Views
             }
 
             UpdatePrompt.Show(this, result);
+        }
+
+        /// <summary>
+        /// 关于页“打开日志”按钮点击：在资源管理器中打开日志目录，并选中本次运行的日志文件。
+        /// </summary>
+        private void OpenLogButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Directory.CreateDirectory(LogFileWriter.LogDirectory);
+
+                var currentLogFile = (Application.Current as App)?.CurrentLogFilePath;
+                if (!string.IsNullOrEmpty(currentLogFile) && File.Exists(currentLogFile))
+                {
+                    // 选中本次运行的日志文件，省得用户自己在目录里翻
+                    Process.Start("explorer.exe", $"/select,\"{currentLogFile}\"");
+                }
+                else
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = LogFileWriter.LogDirectory,
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[日志] 打开日志目录失败：{ex.Message}");
+                MessageBox.Show($"打开日志目录失败：{ex.Message}", "KfuPet", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         /// <summary>

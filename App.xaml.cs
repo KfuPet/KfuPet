@@ -24,6 +24,7 @@ namespace KfuPet
         private SettingsWindow? _settingsWindow;
         private TrayMenuWindow? _trayMenu;
         private LogPipeServer? _logPipeServer;
+        private LogFileWriter? _logFileWriter;
         private Mutex? _mutex;
         private bool _isDarkTheme;
         private readonly Services.ThemeService _themeService = new();
@@ -32,10 +33,24 @@ namespace KfuPet
         /// <summary>启动检查发现的新版本结果，供点击系统通知时展示更新弹窗。</summary>
         private UpdateCheckResult? _startupUpdateResult;
 
+        /// <summary>本次运行的日志文件路径，供“打开日志”按钮定位；未启用落盘时为 null。</summary>
+        internal string? CurrentLogFilePath => _logFileWriter?.FilePath;
+
         protected override void OnStartup(StartupEventArgs e)
         {
+            // 日志落盘最先启动，启动阶段的日志也要写进文件
+            if (LogFileWriter.Prepare())
+            {
+                _logFileWriter = new LogFileWriter();
+                Log.Instance.AttachFileWriter(_logFileWriter);
+            }
+
             var version = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
             Log.Info($"[启动] KfuPet v{version} 启动");
+            if (_logFileWriter != null)
+            {
+                Log.Info($"[日志] 本次运行日志文件：{_logFileWriter.FilePath}");
+            }
 
             // 检测多开：只允许运行一个实例
             _mutex = new Mutex(true, "KfuPet_SingleInstance", out bool createdNew);
@@ -324,6 +339,9 @@ namespace KfuPet
             _logPipeServer?.Dispose();
             _mutex?.Dispose();
             Services.SkeletonService.CleanupCache();
+
+            // 落盘最后收尾，让上面的清理日志也能写进文件
+            _logFileWriter?.Dispose();
             base.OnExit(e);
         }
     }
