@@ -4,19 +4,20 @@ using KfuPet.Models;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 从 GitHub Releases 获取发布信息（最新版本 / 指定版本）。
+    /// 从 Gitee Releases 获取发布信息（最新版本 / 指定版本）。
+    /// 作为 GitHub 源不可达时的国内镜像兜底，镜像仓库与 KfuPetUpdate 保持一致。
+    /// Gitee 的 v5 接口读取公开仓库无需鉴权，字段与 GitHub 的差异是
+    /// 发布时间叫 created_at；tag 约定与 GitHub 相同，都是 “v版本号”。
     /// </summary>
-    internal class GitHubUpdateSource : IUpdateSource
+    internal class GiteeUpdateSource : IUpdateSource
     {
-        private const string Owner = "KfuPet";
-        private const string Repo = "KfuPet";
-        private const string ReleasesApiUrl = $"https://api.github.com/repos/{Owner}/{Repo}/releases";
+        private const string Owner = "lrht";
+        private const string Repo = "kfu-pet";
+        private const string ReleasesApiUrl = $"https://gitee.com/api/v5/repos/{Owner}/{Repo}/releases";
 
-        // 超时收得比 Gitee 源紧（与 KfuPetUpdate 一致）：国内直连 GitHub 常被阻断，
-        // 干等下去只会拖慢回退到 Gitee 镜像的速度。
         private static readonly HttpClient HttpClient = new()
         {
-            Timeout = TimeSpan.FromSeconds(3)
+            Timeout = TimeSpan.FromSeconds(10)
         };
 
         /// <inheritdoc />
@@ -28,7 +29,7 @@ namespace KfuPet.Services
         /// <inheritdoc />
         public Task<ReleaseInfo?> GetReleaseByVersionAsync(Version version)
         {
-            // 本仓库的 Release 一律以 “v版本号” 作为 tag
+            // 与 GitHub 源同一套 tag 约定：v版本号
             return FetchReleaseAsync($"{ReleasesApiUrl}/tags/v{version.ToString(3)}");
         }
 
@@ -38,7 +39,7 @@ namespace KfuPet.Services
         private static async Task<ReleaseInfo?> FetchReleaseAsync(string apiUrl)
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
-            // GitHub API 要求携带 User-Agent，否则返回 403
+            // 统一带上 User-Agent，避免被接口方当作异常客户端拦下
             request.Headers.UserAgent.ParseAdd("KfuPet-Update-Checker");
 
             using var response = await HttpClient.SendAsync(request);
@@ -62,11 +63,11 @@ namespace KfuPet.Services
                 : string.Empty;
 
             DateTimeOffset? publishedAt = null;
-            if (root.TryGetProperty("published_at", out var publishedAtElement) &&
-                publishedAtElement.ValueKind == JsonValueKind.String &&
-                DateTimeOffset.TryParse(publishedAtElement.GetString(), out var parsedPublishedAt))
+            if (root.TryGetProperty("created_at", out var createdAtElement) &&
+                createdAtElement.ValueKind == JsonValueKind.String &&
+                DateTimeOffset.TryParse(createdAtElement.GetString(), out var parsedCreatedAt))
             {
-                publishedAt = parsedPublishedAt;
+                publishedAt = parsedCreatedAt;
             }
 
             return new ReleaseInfo

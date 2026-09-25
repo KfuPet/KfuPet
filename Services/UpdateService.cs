@@ -4,16 +4,16 @@ using KfuPet.Models;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 检查更新：依次尝试多个更新源（GitHub → 自建服务器）做容错，
+    /// 检查更新：依次尝试多个更新源（GitHub → Gitee 国内镜像）做容错，
     /// 比较当前程序集版本与远端版本，返回结果。
     /// </summary>
     internal class UpdateService
     {
-        // 容错顺序：GitHub 优先，失败或无结果时回退到自建服务器。
+        // 容错顺序：GitHub 优先，失败或无结果时回退到 Gitee 国内镜像。
         private readonly IUpdateSource[] _sources =
         {
             new GitHubUpdateSource(),
-            new ServerUpdateSource()
+            new GiteeUpdateSource()
         };
 
         private readonly Version _currentVersion;
