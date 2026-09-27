@@ -1084,6 +1084,35 @@
                                     </ComboBox>
                                 </Grid>
                             </Border>
+
+                            <!-- 开机自启动卡片：标签居左，开关居右 -->
+                            <Border Margin="0,8,0,0"
+                                    Padding="14,10"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <Grid>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="开机自启动"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                        <TextBlock Text="开机后自动启动我，不用再手动打开"
+                                                   Margin="0,2,0,0"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                    </StackPanel>
+
+                                    <ToggleButton x:Name="AutoStartToggle"
+                                                  Style="{StaticResource ToggleSwitchStyle}"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center"
+                                                  Checked="AutoStartToggle_Changed"
+                                                  Unchecked="AutoStartToggle_Changed"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
 

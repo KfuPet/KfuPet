@@ -21,6 +21,7 @@ namespace KfuPet.Views
     {
         private readonly MainWindow _mainWindow;
         private readonly UpdateService _updateService = new();
+        private readonly StartupService _startupService = new();
         private bool _suppressToggleEvents;
         private bool _suppressModelToggleEvents;
         private bool _suppressDebugBonesEvents;
@@ -29,6 +30,7 @@ namespace KfuPet.Views
         private bool _hasLoadedCurrentVersionInfo;
         private bool _isLoadingCurrentVersionInfo;
         private bool _suppressAppearanceEvents;
+        private bool _suppressAutoStartEvents;
         private AddModelProviderDialog? _addModelProviderDialog;
 
         private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
@@ -50,6 +52,11 @@ namespace KfuPet.Views
                 ? app.ThemePreference switch { true => 2, false => 1, null => 0 }
                 : 0;
             _suppressAppearanceEvents = false;
+
+            // 开机自启动开关：状态直接读注册表，与系统实际设置保持一致
+            _suppressAutoStartEvents = true;
+            AutoStartToggle.IsChecked = _startupService.IsEnabled();
+            _suppressAutoStartEvents = false;
 
             VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
 
@@ -271,6 +278,25 @@ namespace KfuPet.Views
                     });
             };
             ThemeTransitionOverlay.BeginAnimation(OpacityProperty, fadeIn);
+        }
+
+        /// <summary>
+        /// 开机自启动开关变化：写入 / 删除当前用户注册表 Run 项。
+        /// 设置失败时回退到注册表实际状态，避免界面与系统不一致。
+        /// </summary>
+        private void AutoStartToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressAutoStartEvents)
+            {
+                return;
+            }
+
+            if (!_startupService.SetEnabled(AutoStartToggle.IsChecked == true))
+            {
+                _suppressAutoStartEvents = true;
+                AutoStartToggle.IsChecked = _startupService.IsEnabled();
+                _suppressAutoStartEvents = false;
+            }
         }
 
         /// <summary>
