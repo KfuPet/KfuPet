@@ -29,6 +29,7 @@ namespace KfuPet
         private bool _isDarkTheme;
         private readonly Services.ThemeService _themeService = new();
         private readonly UpdateService _updateService = new();
+        private readonly StartupService _startupService = new();
 
         /// <summary>启动检查发现的新版本结果，供点击系统通知时展示更新弹窗。</summary>
         private UpdateCheckResult? _startupUpdateResult;
@@ -84,6 +85,22 @@ namespace KfuPet
 
             // 主窗口预先创建但保持隐藏，等待 Splash 结束后再显示
             _mainWindow = new MainWindow();
+
+            // 校正开机自启动登记项：兼容旧版本写入的不带静默参数的登记项，以及程序被移动后的路径变化
+            _startupService.SyncRegistration();
+
+            // 开机自启动拉起时静默启动，不播放启动动画，避免开机时打扰用户
+            var isAutoStartLaunch = e.Args.Any(arg => string.Equals(arg, StartupService.AutoStartArgument, StringComparison.OrdinalIgnoreCase));
+            if (isAutoStartLaunch)
+            {
+                InitializeTrayIcon();
+                _mainWindow.Show();
+                Log.Info("[启动] 开机自启动，已跳过启动画面与淡入动画");
+
+                // 静默检查更新：不阻塞启动流程，检查失败或已是最新都不打扰用户
+                _ = CheckUpdateOnStartupAsync();
+                return;
+            }
 
             var splashWindow = new SplashWindow();
             EventHandler? splashHandler = null;

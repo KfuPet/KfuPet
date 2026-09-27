@@ -8,6 +8,11 @@ namespace KfuPet.Services
     /// </summary>
     internal class StartupService
     {
+        /// <summary>
+        /// 开机自启动时追加的命令行参数，App 据此识别“开机拉起”并跳过启动动画。
+        /// </summary>
+        public const string AutoStartArgument = "--autostart";
+
         private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
         private const string AppName = "KfuPet";
@@ -44,14 +49,13 @@ namespace KfuPet.Services
 
                 if (enabled)
                 {
-                    var exePath = Environment.ProcessPath;
-                    if (string.IsNullOrEmpty(exePath))
+                    var commandLine = BuildCommandLine();
+                    if (commandLine == null)
                     {
                         return false;
                     }
 
-                    // 路径带空格时需加引号，否则系统会拆成多个参数
-                    key.SetValue(AppName, $"\"{exePath}\"");
+                    key.SetValue(AppName, commandLine);
                 }
                 else
                 {
@@ -66,6 +70,47 @@ namespace KfuPet.Services
                 Log.Error($"[自启] 设置开机自启动失败：{ex.Message}");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 开机自启动仍开启时，按当前程序路径与静默参数校正登记项：
+        /// 兼容旧版本写入的不带参数的启动项，以及程序被移动后的路径变化。
+        /// </summary>
+        public void SyncRegistration()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath);
+                if (key?.GetValue(AppName) is not string currentValue || currentValue.Length == 0)
+                {
+                    return;
+                }
+
+                var commandLine = BuildCommandLine();
+                if (commandLine == null || commandLine == currentValue)
+                {
+                    return;
+                }
+
+                if (SetEnabled(true))
+                {
+                    Log.Info("[自启] 启动项已按当前路径与静默参数校正");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[自启] 校正开机自启动登记项失败：{ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 生成启动项命令行：程序路径加引号（路径含空格时必需），后跟静默启动参数。
+        /// 取不到进程路径时返回 null。
+        /// </summary>
+        private static string? BuildCommandLine()
+        {
+            var exePath = Environment.ProcessPath;
+            return string.IsNullOrEmpty(exePath) ? null : $"\"{exePath}\" {AutoStartArgument}";
         }
     }
 }
