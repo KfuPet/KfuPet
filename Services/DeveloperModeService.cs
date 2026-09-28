@@ -20,12 +20,21 @@ namespace KfuPet.Services
         public event EventHandler? EnabledChanged;
 
         /// <summary>
-        /// 设置开发者模式开关状态。
+        /// 从本地设置恢复上次的开关状态。
+        /// </summary>
+        public DeveloperModeService()
+        {
+            IsEnabled = SettingsService.Instance.DeveloperMode;
+        }
+
+        /// <summary>
+        /// 设置开发者模式开关状态，并持久化到本地设置。
         /// </summary>
         public void SetEnabled(bool enabled)
         {
             if (IsEnabled == enabled) return;
             IsEnabled = enabled;
+            SettingsService.Instance.SetDeveloperMode(enabled);
             EnabledChanged?.Invoke(this, EventArgs.Empty);
         }
 

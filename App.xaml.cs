@@ -28,7 +28,6 @@ namespace KfuPet
         private LogFileWriter? _logFileWriter;
         private Mutex? _mutex;
         private bool _isDarkTheme;
-        private readonly Services.ThemeService _themeService = new();
         private readonly UpdateService _updateService = new();
         private readonly StartupService _startupService = new();
 
@@ -75,9 +74,9 @@ namespace KfuPet
 
             // 加载配色令牌：用户手动选过外观则以偏好为准，否则跟随系统深浅色并实时切换
             SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
-            if (_themeService.PreferredDark.HasValue)
+            if (SettingsService.Instance.Theme.HasValue)
             {
-                ApplyTheme(_themeService.PreferredDark.Value);
+                ApplyTheme(SettingsService.Instance.Theme.Value);
             }
             else
             {
@@ -279,7 +278,7 @@ namespace KfuPet
         }
 
         /// <summary>当前主题偏好：true 深色，false 浅色，null 跟随系统。</summary>
-        public bool? ThemePreference => _themeService.PreferredDark;
+        public bool? ThemePreference => SettingsService.Instance.Theme;
 
         /// <summary>
         /// 设置主题偏好并保存：true/false 手动指定深色/浅色，null 恢复跟随系统主题。
@@ -295,7 +294,7 @@ namespace KfuPet
                 ApplySystemTheme();
             }
 
-            _themeService.SavePreference(isDark);
+            SettingsService.Instance.SetTheme(isDark);
         }
 
         /// <summary>
@@ -340,7 +339,7 @@ namespace KfuPet
         private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
         {
             // 用户手动选过外观后不再跟随系统
-            if (_themeService.PreferredDark.HasValue)
+            if (SettingsService.Instance.Theme.HasValue)
             {
                 return;
             }

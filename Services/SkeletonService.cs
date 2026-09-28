@@ -16,6 +16,14 @@ namespace KfuPet.Services
         private Skeleton? _skeleton;
 
         /// <summary>
+        /// 从本地设置恢复上次的调试线框开关状态。
+        /// </summary>
+        public SkeletonService()
+        {
+            ShowDebugSkeleton = SettingsService.Instance.DebugBones;
+        }
+
+        /// <summary>
         /// 骨骼发生变化时触发，UI 层可订阅此事件刷新渲染。
         /// </summary>
         public event EventHandler? SkeletonChanged;
@@ -486,6 +494,7 @@ namespace KfuPet.Services
         {
             if (ShowDebugSkeleton == show) return;
             ShowDebugSkeleton = show;
+            SettingsService.Instance.SetDebugBones(show);
             Log.Info($"[骨骼] 调试线框已{(show ? "开启" : "关闭")}");
             DebugSkeletonChanged?.Invoke(this, EventArgs.Empty);
         }

@@ -294,6 +294,10 @@ namespace KfuPet
             SkeletonService.BindSkeleton(_skeleton);
             SkeletonService.SkeletonChanged += OnSkeletonServiceChanged;
             SkeletonService.DebugSkeletonChanged += OnDebugSkeletonChanged;
+
+            // 应用上次保存的调试线框开关（状态变化事件不会在启动时触发）
+            CharacterCanvas.ShowDebugBones = SkeletonService.ShowDebugSkeleton;
+
             Log.Info($"[骨骼] 骨骼树初始化完成，共 {_skeleton.Bones.Count} 根骨骼");
         }
 
