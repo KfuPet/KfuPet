@@ -275,28 +275,21 @@ namespace KfuPet
                 LocalPosition = new Point(WINDOW_WIDTH / 2 / dpiScale, WINDOW_HEIGHT / 2 / dpiScale)
             });
 
+            // body 兼作躯干锚点，接管原 neck 所在的位置
             _skeleton.AddBone(new Bone
             {
                 Id = "body",
                 Name = "Body",
                 ParentId = "root",
-                LocalPosition = new Point(0, -100 / dpiScale)
-            });
-
-            _skeleton.AddBone(new Bone
-            {
-                Id = "neck",
-                Name = "Neck",
-                ParentId = "body",
-                LocalPosition = new Point(0, -80 / dpiScale)
+                LocalPosition = new Point(0, -130 / dpiScale)
             });
 
             _skeleton.AddBone(new Bone
             {
                 Id = "head",
                 Name = "Head",
-                ParentId = "neck",
-                LocalPosition = new Point(0, -50 / dpiScale)
+                ParentId = "body",
+                LocalPosition = new Point(0, -60 / dpiScale)
             });
 
             _skeleton.AddBone(new Bone

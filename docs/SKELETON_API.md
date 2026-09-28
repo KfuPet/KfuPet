@@ -219,7 +219,7 @@ string? parentId = client.GetParentBoneId("arm_left_lower");
 
 ```csharp
 var children = client.GetChildBoneIds("body");
-// 返回 ["neck", "arm_left_upper", "arm_right_upper"]
+// 返回 ["head", "arm_left_upper", "arm_right_upper"]
 ```
 
 **对应 action**：`GetChildBoneIds`
@@ -990,9 +990,8 @@ var ids = client.GetBoneAttachments("head");
 | 骨骼 ID | 名称 | 父骨骼 | 说明 |
 |---------|------|--------|------|
 | root | Root | 无 | 根骨骼（世界锚点），位于画布中心，不承载图片 |
-| body | Body | root | 身体主干 |
-| neck | Neck | body | 颈部 |
-| head | Head | neck | 头部 |
+| body | Body | root | 身体主干（锚点位于颈部根部） |
+| head | Head | body | 头部 |
 | arm_left_upper | LeftArmUpper | body | 左上臂 |
 | arm_left_lower | LeftArmLower | arm_left_upper | 左小臂 |
 | arm_right_upper | RightArmUpper | body | 右上臂 |
@@ -1007,8 +1006,7 @@ var ids = client.GetBoneAttachments("head");
 ```
 root
 ├── body
-│   ├── neck
-│   │   └── head
+│   ├── head
 │   ├── arm_left_upper
 │   │   └── arm_left_lower
 │   └── arm_right_upper
@@ -1076,11 +1074,11 @@ client.Batch(b =>
 using var client = new SkeletonPipeClient();
 
 // 头部向下点头
-client.SetRotation("neck", 15);
+client.SetRotation("head", 15);
 
 // 稍后复位
 Thread.Sleep(200);
-client.SetRotation("neck", 0);
+client.SetRotation("head", 0);
 ```
 
 ### 示例 3：行走姿势

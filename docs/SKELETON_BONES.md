@@ -2,7 +2,7 @@
 
 本文档记录当前默认角色实际使用的骨骼，内容以 `MainWindow.InitializeSkeleton` 中注册的骨骼为准。
 
-当前共使用 **12 根骨骼**。已经删除的 `hip` 不属于当前骨架。
+当前共使用 **11 根骨骼**。已经删除的 `hip`、`neck` 不属于当前骨架。
 
 ## 图片命名规则
 
@@ -16,25 +16,23 @@
 | 序号 | 骨骼 ID | 显示名称 | 父骨骼 | 部位 | 建议图片名 |
 |------|---------|----------|--------|------|------------|
 | 1 | `root` | Root | 无 | 整副骨架的根锚点 | `root.png`（可选） |
-| 2 | `body` | Body | `root` | 身体主干 | `body.png` |
-| 3 | `neck` | Neck | `body` | 颈部 | `neck.png` |
-| 4 | `head` | Head | `neck` | 头部 | `head.png` |
-| 5 | `arm_left_upper` | LeftArmUpper | `body` | 左上臂 | `arm_left_upper.png` |
-| 6 | `arm_left_lower` | LeftArmLower | `arm_left_upper` | 左小臂 | `arm_left_lower.png` |
-| 7 | `arm_right_upper` | RightArmUpper | `body` | 右上臂 | `arm_right_upper.png` |
-| 8 | `arm_right_lower` | RightArmLower | `arm_right_upper` | 右小臂 | `arm_right_lower.png` |
-| 9 | `leg_left_upper` | LeftLegUpper | `root` | 左大腿 | `leg_left_upper.png` |
-| 10 | `leg_left_lower` | LeftLegLower | `leg_left_upper` | 左小腿 | `leg_left_lower.png` |
-| 11 | `leg_right_upper` | RightLegUpper | `root` | 右大腿 | `leg_right_upper.png` |
-| 12 | `leg_right_lower` | RightLegLower | `leg_right_upper` | 右小腿 | `leg_right_lower.png` |
+| 2 | `body` | Body | `root` | 身体主干，锚点位于颈部根部 | `body.png` |
+| 3 | `head` | Head | `body` | 头部 | `head.png` |
+| 4 | `arm_left_upper` | LeftArmUpper | `body` | 左上臂 | `arm_left_upper.png` |
+| 5 | `arm_left_lower` | LeftArmLower | `arm_left_upper` | 左小臂 | `arm_left_lower.png` |
+| 6 | `arm_right_upper` | RightArmUpper | `body` | 右上臂 | `arm_right_upper.png` |
+| 7 | `arm_right_lower` | RightArmLower | `arm_right_upper` | 右小臂 | `arm_right_lower.png` |
+| 8 | `leg_left_upper` | LeftLegUpper | `root` | 左大腿 | `leg_left_upper.png` |
+| 9 | `leg_left_lower` | LeftLegLower | `leg_left_upper` | 左小腿 | `leg_left_lower.png` |
+| 10 | `leg_right_upper` | RightLegUpper | `root` | 右大腿 | `leg_right_upper.png` |
+| 11 | `leg_right_lower` | RightLegLower | `leg_right_upper` | 右小腿 | `leg_right_lower.png` |
 
 ## 骨骼层级
 
 ```text
 root
 ├── body
-│   ├── neck
-│   │   └── head
+│   ├── head
 │   ├── arm_left_upper
 │   │   └── arm_left_lower
 │   └── arm_right_upper
@@ -50,7 +48,6 @@ root
 | 文件名 | 对应部位 |
 |--------|----------|
 | `body.png` | 身体主干 |
-| `neck.png` | 颈部 |
 | `head.png` | 头部 |
 | `arm_left_upper.png` | 左上臂 |
 | `arm_left_lower.png` | 左小臂 |
