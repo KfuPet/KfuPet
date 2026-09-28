@@ -70,6 +70,14 @@ namespace KfuPet
             public uint dwFlags;
         }
 
+        // ── 窗口尺寸 ──────────────────────────────────
+
+        /// <summary>窗口宽度（物理像素）。固定物理尺寸，任何 DPI 下桌宠都按同样大小显示；改这里即可整体改窗口大小。</summary>
+        private const double WINDOW_WIDTH = 480;
+
+        /// <summary>窗口高度（物理像素）。角色高 410px（头顶点上 230、脚底点下 180），下方余量需容纳贴底的输入框。</summary>
+        private const double WINDOW_HEIGHT = 600;
+
         // ── 长按拖动 ──────────────────────────────────
         private DispatcherTimer? _holdTimer;
         private bool _isDragging;
@@ -178,8 +186,8 @@ namespace KfuPet
             var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
             int dpi = GetDpiForWindow(hwnd);
             double dpiScale = dpi / 96.0;
-            Width = 512 / dpiScale;
-            Height = 768 / dpiScale;
+            Width = WINDOW_WIDTH / dpiScale;
+            Height = WINDOW_HEIGHT / dpiScale;
             RestoreOrCenterPosition();
             InitializeSkeleton(dpiScale);
             Log.Debug($"[窗口] 主窗口加载完成：{Width:F0}×{Height:F0}，DPI 缩放 {dpiScale:F2}");
@@ -258,12 +266,13 @@ namespace KfuPet
             _skeleton = new Skeleton();
 
             // ==================== 根骨骼 ====================
+            // 根骨骼位于窗口中心，窗口尺寸变化时自动跟随，避免角色偏位
             _skeleton.AddBone(new Bone
             {
                 Id = "root",
                 Name = "Root",
                 ParentId = null,
-                LocalPosition = new Point(256 / dpiScale, 384 / dpiScale)
+                LocalPosition = new Point(WINDOW_WIDTH / 2 / dpiScale, WINDOW_HEIGHT / 2 / dpiScale)
             });
 
             _skeleton.AddBone(new Bone
