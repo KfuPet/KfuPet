@@ -35,20 +35,8 @@
 
 ## 😍 加入我们
 
-<table align="center">
-  <tr>
-    <td align="center">
-      <img src="docs/QQ.jpg" height="520" alt="欢迎加入讨论">
-      <br>
-      <span>欢迎加入讨论</span>
-    </td>
-    <td align="center">
-      <img src="docs/QQ2.jpg" height="520" alt="欢迎加入我们">
-      <br>
-      <span>欢迎加入我们</span>
-    </td>
-  </tr>
-</table>
+- [欢迎加入讨论](https://qm.qq.com/q/LBNhkMVkIg)
+- [欢迎加入开发](https://qm.qq.com/q/y1Lo8omucg)
 
 ## 😘 鸣谢
 
