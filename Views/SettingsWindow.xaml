@@ -943,10 +943,12 @@
                                                                     <TextBlock Text="{Binding SelectedItem.Tag, RelativeSource={RelativeSource AncestorType=ComboBox}}"
                                                                                FontFamily="{StaticResource FontFamilyIcon}"
                                                                                FontSize="{StaticResource FontSizeIconSmall}"
+                                                                               Foreground="{DynamicResource AppTextPrimaryBrush}"
                                                                                Margin="0,0,7,0"
                                                                                VerticalAlignment="Center"/>
                                                                     <ContentPresenter Grid.Column="1"
                                                                                       Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                                      TextElement.Foreground="{DynamicResource AppTextPrimaryBrush}"
                                                                                       Margin="0,0,20,0"
                                                                                       VerticalAlignment="Center"/>
                                                                     <TextBlock x:Name="Chevron"
