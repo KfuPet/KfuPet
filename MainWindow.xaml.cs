@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -7,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -30,11 +32,38 @@ namespace KfuPet
         [DllImport("user32.dll")]
         private static extern int GetDpiForWindow(IntPtr hWnd);
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+        private const uint MONITOR_DEFAULTTONEAREST = 2;
+
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT
         {
             public int X;
             public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
         }
 
         // ── 长按拖动 ──────────────────────────────────
@@ -48,6 +77,20 @@ namespace KfuPet
         private const int DRAG_THRESHOLD = 5;
         private double _dpiScaleX = double.NaN;
         private double _dpiScaleY = double.NaN;
+
+        // ── 越界回正 ──────────────────────────────────
+
+        /// <summary>窗口超出屏幕的比例达到该值（0~1）时触发回正。0.5 表示“一半越界才回正”；调小更严格，调大更宽容。</summary>
+        private const double SNAP_BACK_OUTSIDE_RATIO = 0.5;
+
+        /// <summary>下边判定时剔除的“输入框区域”高度（逻辑像素）：输入框贴在窗口最底部，不属于宠物本体，不参与下边越界判定。调大可把角色脚下的空白一并排除。</summary>
+        private const double SNAP_BACK_BOTTOM_EXCLUDE = 64;
+
+        /// <summary>回正滑动动画时长（毫秒），越大滑得越慢。</summary>
+        private const double SNAP_BACK_DURATION_MS = 260;
+
+
+        private DispatcherTimer? _snapTimer;
 
         private Skeleton? _skeleton;
 
@@ -135,6 +178,7 @@ namespace KfuPet
         {
             Log.Info("[窗口] 主窗口正在关闭，停止命名管道");
             _bubbleCts?.Cancel();
+            _snapTimer?.Stop();
             _toolMonitorTimer?.Stop();
             _pipeServer?.Stop();
             _pipeServer?.Dispose();
@@ -357,6 +401,10 @@ namespace KfuPet
                 return;
             }
 
+            // 新的拖动会接管窗口位置，先停止尚未播完的回正滑动
+            _snapTimer?.Stop();
+            _snapTimer = null;
+
             GetCursorPos(out _dragStartCursorPos);
             _windowStartLeft = Left;
             _windowStartTop = Top;
@@ -425,6 +473,99 @@ namespace KfuPet
             return (_dpiScaleX, _dpiScaleY);
         }
 
+        /// <summary>
+        /// 判定窗口是否有一半以上位于当前屏幕工作区之外（下边判定会剔除贴底的输入框区域）。
+        /// 若有，返回贴齐对应屏幕边缘（左/右/上/下）的回正目标位置，否则返回 null。
+        /// </summary>
+        private (double Left, double Top)? GetSnapBackTarget()
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            if (monitor == IntPtr.Zero)
+                return null;
+
+            var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            if (!GetMonitorInfo(monitor, ref info))
+                return null;
+
+            // 工作区为物理像素，按窗口所在屏幕的缩放换算为逻辑像素，与拖动使用同一坐标系
+            var (scaleX, scaleY) = GetDpiScale();
+            double workLeft = info.rcWork.Left * scaleX;
+            double workTop = info.rcWork.Top * scaleY;
+            double workRight = info.rcWork.Right * scaleX;
+            double workBottom = info.rcWork.Bottom * scaleY;
+
+            // 窗口超出工作区边缘的比例达到 SNAP_BACK_OUTSIDE_RATIO 即视为越界
+            double marginX = Width * SNAP_BACK_OUTSIDE_RATIO;
+            double marginY = Height * SNAP_BACK_OUTSIDE_RATIO;
+
+            // 下边判定剔除贴底的输入框区域，只按上层宠物内容高度计算越界比例
+            double bottomHeight = Height - SNAP_BACK_BOTTOM_EXCLUDE;
+            double bottomMarginY = bottomHeight * SNAP_BACK_OUTSIDE_RATIO;
+
+            double left = Left;
+            double top = Top;
+            bool offScreen = false;
+
+            if (workLeft - Left >= marginX)
+            {
+                left = workLeft;
+                offScreen = true;
+            }
+            else if (Left + Width - workRight >= marginX)
+            {
+                left = workRight - Width;
+                offScreen = true;
+            }
+
+            if (workTop - Top >= marginY)
+            {
+                top = workTop;
+                offScreen = true;
+            }
+            else if (Top + bottomHeight - workBottom >= bottomMarginY)
+            {
+                top = workBottom - Height;
+                offScreen = true;
+            }
+
+            return offScreen ? (left, top) : null;
+        }
+
+        /// <summary>
+        /// 用缓出动画把窗口平滑滑动到目标位置。
+        /// </summary>
+        private void SlideWindowTo(double targetLeft, double targetTop)
+        {
+            _snapTimer?.Stop();
+
+            double startLeft = Left;
+            double startTop = Top;
+            var stopwatch = Stopwatch.StartNew();
+
+            var timer = new DispatcherTimer(DispatcherPriority.Render)
+            {
+                Interval = TimeSpan.FromMilliseconds(15)
+            };
+            timer.Tick += (s, e) =>
+            {
+                double progress = Math.Min(stopwatch.Elapsed.TotalMilliseconds / SNAP_BACK_DURATION_MS, 1.0);
+                double eased = 1 - Math.Pow(1 - progress, 3); // 缓出：快起慢停
+
+                Left = startLeft + (targetLeft - startLeft) * eased;
+                Top = startTop + (targetTop - startTop) * eased;
+
+                if (progress >= 1)
+                {
+                    timer.Stop();
+                    _snapTimer = null;
+                }
+            };
+
+            _snapTimer = timer;
+            timer.Start();
+        }
+
         private void RootGrid_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             _holdTimer?.Stop();
@@ -433,8 +574,22 @@ namespace KfuPet
             if (_isDragging)
             {
                 _isDragging = false;
-                // 拖动结束后记录桌宠位置，下次启动恢复
-                SettingsService.Instance.SetWindowPosition(Left, Top);
+
+                var snapTarget = GetSnapBackTarget();
+                if (snapTarget.HasValue)
+                {
+                    // 一半以上拖出屏幕：回正贴边并说话，回正后的位置作为下次启动的恢复位置
+                    var (targetLeft, targetTop) = snapTarget.Value;
+                    SettingsService.Instance.SetWindowPosition(targetLeft, targetTop);
+                    SlideWindowTo(targetLeft, targetTop);
+                    ShowBubbleBatches(new List<string> { "呜哇！差点掉出屏幕啦，我先靠边站好～" });
+                    Log.Debug($"[窗口] 拖动越界，已回正到 ({targetLeft:F0}, {targetTop:F0})");
+                }
+                else
+                {
+                    // 拖动结束后记录桌宠位置，下次启动恢复
+                    SettingsService.Instance.SetWindowPosition(Left, Top);
+                }
             }
 
             Mouse.Capture(null);
