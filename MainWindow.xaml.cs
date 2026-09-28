@@ -114,7 +114,7 @@ namespace KfuPet
             double dpiScale = dpi / 96.0;
             Width = 512 / dpiScale;
             Height = 768 / dpiScale;
-            CenterWindow();
+            RestoreOrCenterPosition();
             InitializeSkeleton(dpiScale);
             Log.Debug($"[窗口] 主窗口加载完成：{Width:F0}×{Height:F0}，DPI 缩放 {dpiScale:F2}");
 
@@ -323,6 +323,24 @@ namespace KfuPet
         }
 
         /// <summary>
+        /// 恢复上次记录的桌宠位置；没有记录时居中显示。
+        /// 位置与窗口宽高同为逻辑像素（DIP），坐标系一致。
+        /// </summary>
+        private void RestoreOrCenterPosition()
+        {
+            var settings = SettingsService.Instance;
+            if (settings.WindowLeft.HasValue && settings.WindowTop.HasValue)
+            {
+                Left = settings.WindowLeft.Value;
+                Top = settings.WindowTop.Value;
+            }
+            else
+            {
+                CenterWindow();
+            }
+        }
+
+        /// <summary>
         /// 播放主窗口淡入动画。
         /// </summary>
         public void PlayFadeInAnimation()
@@ -415,6 +433,8 @@ namespace KfuPet
             if (_isDragging)
             {
                 _isDragging = false;
+                // 拖动结束后记录桌宠位置，下次启动恢复
+                SettingsService.Instance.SetWindowPosition(Left, Top);
             }
 
             Mouse.Capture(null);

@@ -4,7 +4,7 @@ namespace KfuPet.Services
 {
     /// <summary>
     /// 应用通用设置，统一读写 %AppData%\KfuPet\Config\settings.json。
-    /// 目前包含主题偏好、开发者模式、骨骼调试线框三项；后续通用设置继续在此扩展字段。
+    /// 目前包含主题偏好、开发者模式、骨骼调试线框与桌宠窗口位置；后续通用设置继续在此扩展字段。
     /// </summary>
     internal class SettingsService
     {
@@ -26,6 +26,12 @@ namespace KfuPet.Services
 
         /// <summary>是否显示骨骼调试线框。</summary>
         public bool DebugBones { get; private set; }
+
+        /// <summary>桌宠窗口左上角 X 坐标（逻辑像素）；null 表示尚未记录，启动时居中。</summary>
+        public double? WindowLeft { get; private set; }
+
+        /// <summary>桌宠窗口左上角 Y 坐标（逻辑像素）；null 表示尚未记录，启动时居中。</summary>
+        public double? WindowTop { get; private set; }
 
         private SettingsService()
         {
@@ -50,6 +56,14 @@ namespace KfuPet.Services
         public void SetDebugBones(bool show)
         {
             DebugBones = show;
+            Save();
+        }
+
+        /// <summary>保存桌宠窗口位置（逻辑像素）。</summary>
+        public void SetWindowPosition(double left, double top)
+        {
+            WindowLeft = left;
+            WindowTop = top;
             Save();
         }
 
@@ -89,6 +103,18 @@ namespace KfuPet.Services
                 {
                     DebugBones = debugBonesElement.GetBoolean();
                 }
+
+                if (root.TryGetProperty("WindowLeft", out var windowLeftElement) &&
+                    windowLeftElement.ValueKind == JsonValueKind.Number)
+                {
+                    WindowLeft = windowLeftElement.GetDouble();
+                }
+
+                if (root.TryGetProperty("WindowTop", out var windowTopElement) &&
+                    windowTopElement.ValueKind == JsonValueKind.Number)
+                {
+                    WindowTop = windowTopElement.GetDouble();
+                }
             }
             catch (Exception ex)
             {
@@ -106,7 +132,9 @@ namespace KfuPet.Services
                 {
                     Theme = Theme switch { true => "Dark", false => "Light", null => "System" },
                     DeveloperMode,
-                    DebugBones
+                    DebugBones,
+                    WindowLeft,
+                    WindowTop
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }
