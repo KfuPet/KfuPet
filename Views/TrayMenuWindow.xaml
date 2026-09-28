@@ -79,6 +79,21 @@
         </Border.RenderTransform>
 
         <StackPanel>
+            <Button x:Name="CharacterModelItem" Style="{StaticResource MenuItemStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE77B;"
+                               FontFamily="{StaticResource FontFamilyIcon}"
+                               FontSize="{StaticResource FontSizeIcon}" Width="26"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                    <TextBlock Text="角色模型"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                </StackPanel>
+            </Button>
+
             <Button x:Name="ModelConfigItem" Style="{StaticResource MenuItemStyle}">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE8F1;"

@@ -22,6 +22,7 @@ namespace KfuPet
         private MainWindow? _mainWindow;
         private System.Windows.Forms.NotifyIcon? _notifyIcon;
         private SettingsWindow? _settingsWindow;
+        private CharacterGalleryWindow? _characterGalleryWindow;
         private TrayMenuWindow? _trayMenu;
         private LogPipeServer? _logPipeServer;
         private LogFileWriter? _logFileWriter;
@@ -226,6 +227,7 @@ namespace KfuPet
             {
                 _trayMenu = new TrayMenuWindow();
                 _trayMenu.SettingsClicked += (s, e) => OpenSettingsWindow();
+                _trayMenu.CharacterModelClicked += (s, e) => OpenCharacterGalleryWindow();
                 _trayMenu.ExitClicked += (s, e) =>
                 {
                     Log.Info("[托盘] 用户选择退出程序");
@@ -258,6 +260,22 @@ namespace KfuPet
 
             _settingsWindow.Show();
             _settingsWindow.Activate();
+        }
+
+        /// <summary>
+        /// 打开角色模型窗口（单例），再次点击时激活已有窗口。
+        /// </summary>
+        private void OpenCharacterGalleryWindow()
+        {
+            if (_characterGalleryWindow == null)
+            {
+                Log.Info("[窗口] 打开角色模型窗口");
+                _characterGalleryWindow = new CharacterGalleryWindow();
+                _characterGalleryWindow.Closed += (s, e) => _characterGalleryWindow = null;
+            }
+
+            _characterGalleryWindow.Show();
+            _characterGalleryWindow.Activate();
         }
 
         /// <summary>当前主题偏好：true 深色，false 浅色，null 跟随系统。</summary>

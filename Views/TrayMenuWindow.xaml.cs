@@ -13,6 +13,9 @@ namespace KfuPet.Views
     /// </summary>
     public partial class TrayMenuWindow : Window
     {
+        /// <summary>点击“角色模型”时触发。</summary>
+        public event EventHandler? CharacterModelClicked;
+
         /// <summary>点击“模型配置”时触发。</summary>
         public event EventHandler? ModelConfigClicked;
 
@@ -85,6 +88,7 @@ namespace KfuPet.Views
                 }
             };
 
+            CharacterModelItem.Click += (s, e) => OnItemClicked(CharacterModelClicked);
             ModelConfigItem.Click += (s, e) => OnItemClicked(ModelConfigClicked);
             SettingsItem.Click += (s, e) => OnItemClicked(SettingsClicked);
             ExitItem.Click += (s, e) => OnItemClicked(ExitClicked);

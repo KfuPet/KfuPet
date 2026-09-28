@@ -99,8 +99,9 @@ namespace KfuPet.Services
 
         /// <summary>
         /// 定位 Characters 目录：优先程序输出目录，开发场景下向上回溯到项目根目录。
+        /// 角色包检索与角色模型列表共用此入口。
         /// </summary>
-        private static string? FindCharactersDirectory()
+        internal static string? FindCharactersDirectory()
         {
             var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
             for (var i = 0; dir != null && i < 6; i++)
