@@ -3,13 +3,13 @@ using System.Text.Json;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 管理外观主题偏好，加载 / 保存到本地 JSON 文件（%AppData%\KfuPet\settings.json）。
+    /// 管理外观主题偏好，加载 / 保存到本地 JSON 文件（%AppData%\KfuPet\Config\settings.json）。
     /// 未保存过偏好时跟随系统主题。
     /// </summary>
     internal class ThemeService
     {
         private static readonly string ConfigDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet");
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet", "Config");
 
         private static readonly string ConfigFilePath = Path.Combine(ConfigDirectory, "settings.json");
 

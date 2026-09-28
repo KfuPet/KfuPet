@@ -3,13 +3,13 @@ using System.Text.Json;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 管理关键词检索的停用词，加载 / 保存到 %AppData%\KfuPet\stopwords.json。
+    /// 管理关键词检索的停用词，加载 / 保存到 %AppData%\KfuPet\Config\stopwords.json。
     /// 配置缺失或损坏时回退到内置默认停用词。
     /// </summary>
     internal class StopWordsService
     {
         private static readonly string ConfigDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet");
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet", "Config");
 
         private static readonly string ConfigFilePath = Path.Combine(ConfigDirectory, "stopwords.json");
 
