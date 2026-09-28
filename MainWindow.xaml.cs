@@ -39,6 +39,10 @@ namespace KfuPet
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
 
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
         private const uint MONITOR_DEFAULTTONEAREST = 2;
 
         [StructLayout(LayoutKind.Sequential)]
@@ -81,7 +85,7 @@ namespace KfuPet
         // ── 越界回正 ──────────────────────────────────
 
         /// <summary>窗口超出屏幕的比例达到该值（0~1）时触发回正。0.5 表示“一半越界才回正”；调小更严格，调大更宽容。</summary>
-        private const double SNAP_BACK_OUTSIDE_RATIO = 0.5;
+        private const double SNAP_BACK_OUTSIDE_RATIO = 0.4;
 
         /// <summary>下边判定时剔除的“输入框区域”高度（逻辑像素）：输入框贴在窗口最底部，不属于宠物本体，不参与下边越界判定。调大可把角色脚下的空白一并排除。</summary>
         private const double SNAP_BACK_BOTTOM_EXCLUDE = 64;
@@ -89,8 +93,27 @@ namespace KfuPet
         /// <summary>回正滑动动画时长（毫秒），越大滑得越慢。</summary>
         private const double SNAP_BACK_DURATION_MS = 260;
 
+        // ── 输入框显隐动画 ─────────────────────────────
+
+        /// <summary>输入框淡入时长（毫秒）。</summary>
+        private const double CHAT_INPUT_FADE_IN_MS = 200;
+
+        /// <summary>输入框淡出时长（毫秒），略快于淡入，收起时更利落。</summary>
+        private const double CHAT_INPUT_FADE_OUT_MS = 150;
+
+        /// <summary>输入框淡入时向上浮动的距离（逻辑像素）。</summary>
+        private const double CHAT_INPUT_SLIDE_IN = 8;
 
         private DispatcherTimer? _snapTimer;
+
+        /// <summary>输入框是否处于“应显示”状态（含淡入淡出过程中），用于避免重复播放显隐动画。</summary>
+        private bool _isChatInputVisible;
+
+        /// <summary>输入框显隐动画的令牌：每次请求显隐都递增，过期的动画完成回调直接忽略，避免互相打断后状态错乱。</summary>
+        private int _chatInputFadeToken;
+
+        /// <summary>输入框是否因拖动被临时收起，用于松手后按最终位置恢复显示。</summary>
+        private bool _chatInputHiddenByDrag;
 
         private Skeleton? _skeleton;
 
@@ -423,7 +446,12 @@ namespace KfuPet
 
         private void RootGrid_MouseMove(object sender, MouseEventArgs e)
         {
-            UpdatePetHover(e.GetPosition(CharacterCanvas));
+            // 拖动时窗口整体跟随光标，光标相对窗口的位置不变，命中测试结果也不会变；
+            // 跳过它可以省下每帧的逐像素检测，避免拖动掉帧。
+            if (!_isDragging)
+            {
+                UpdatePetHover(e.GetPosition(CharacterCanvas));
+            }
 
             if (_holdTimer == null && !_isDragging) return;
 
@@ -442,6 +470,9 @@ namespace KfuPet
                 _isDragging = true;
                 // 继续往下执行，立即更新窗口位置
             }
+
+            // 窗口即将移动，输入框跟随会因位置不同步而抖动，先收起
+            HideChatInputForDrag();
 
             GetCursorPos(out POINT pos);
             var (sx, sy) = GetDpiScale();
@@ -474,8 +505,8 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 判定窗口是否有一半以上位于当前屏幕工作区之外（下边判定会剔除贴底的输入框区域）。
-        /// 若有，返回贴齐对应屏幕边缘（左/右/上/下）的回正目标位置，否则返回 null。
+        /// 判定窗口超出工作区的部分是否达到 SNAP_BACK_OUTSIDE_RATIO（下边判定会剔除贴底的输入框区域）。
+        /// 若达到，返回贴齐对应屏幕边缘（左/右/上/下）的回正目标位置，否则返回 null。
         /// </summary>
         private (double Left, double Top)? GetSnapBackTarget()
         {
@@ -535,7 +566,8 @@ namespace KfuPet
         /// <summary>
         /// 用缓出动画把窗口平滑滑动到目标位置。
         /// </summary>
-        private void SlideWindowTo(double targetLeft, double targetTop)
+        /// <param name="onCompleted">滑动结束后的回调，用于在窗口静止后再恢复输入框等依赖位置的 UI。</param>
+        private void SlideWindowTo(double targetLeft, double targetTop, Action? onCompleted = null)
         {
             _snapTimer?.Stop();
 
@@ -559,6 +591,7 @@ namespace KfuPet
                 {
                     timer.Stop();
                     _snapTimer = null;
+                    onCompleted?.Invoke();
                 }
             };
 
@@ -578,10 +611,10 @@ namespace KfuPet
                 var snapTarget = GetSnapBackTarget();
                 if (snapTarget.HasValue)
                 {
-                    // 一半以上拖出屏幕：回正贴边并说话，回正后的位置作为下次启动的恢复位置
+                    // 越界达到阈值：回正贴边并说话，回正后的位置作为下次启动的恢复位置
                     var (targetLeft, targetTop) = snapTarget.Value;
                     SettingsService.Instance.SetWindowPosition(targetLeft, targetTop);
-                    SlideWindowTo(targetLeft, targetTop);
+                    SlideWindowTo(targetLeft, targetTop, RestoreChatInputAfterDrag);
                     ShowBubbleBatches(new List<string> { "呜哇！差点掉出屏幕啦，我先靠边站好～" });
                     Log.Debug($"[窗口] 拖动越界，已回正到 ({targetLeft:F0}, {targetTop:F0})");
                 }
@@ -589,6 +622,7 @@ namespace KfuPet
                 {
                     // 拖动结束后记录桌宠位置，下次启动恢复
                     SettingsService.Instance.SetWindowPosition(Left, Top);
+                    RestoreChatInputAfterDrag();
                 }
             }
 
@@ -635,23 +669,140 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 显示输入框（淡入 + 轻微上浮），并把焦点交给文本框。
+        /// 计算输入框需要向上偏移的距离（逻辑像素，向上为负）。返回 0 表示无需偏移。
+        /// 用窗口在屏幕上的真实矩形与显示器工作区（都是设备像素、整数）做整数对齐，
+        /// 若改用 Window.Left/Top 会因请求值与系统实际取整后的位置存在亚像素差而产生抖动。
+        /// </summary>
+        private double GetChatInputBottomShift()
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (!GetWindowRect(hwnd, out RECT windowRect))
+                return 0;
+
+            var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            if (monitor == IntPtr.Zero)
+                return 0;
+
+            var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            if (!GetMonitorInfo(monitor, ref info))
+                return 0;
+
+            // scaleY 为“逻辑像素 → 设备像素”的换算系数
+            var (_, scaleY) = GetDpiScale();
+            double toDevice = 1.0 / scaleY;
+
+            // 输入框底边在屏幕上的位置 = 窗口底边 - 下边距，允许的最大上移量即它与工作区底边的差
+            double marginBottomDevice = ChatInputPanel.Margin.Bottom * toDevice;
+            double maxShiftDevice = info.rcWork.Bottom - windowRect.Bottom + marginBottomDevice;
+
+            if (maxShiftDevice >= 0)
+                return 0;
+
+            // 向下取整到整设备像素：既保证输入框完整可见，又让偏移量是整数、不再逐帧抖动
+            return Math.Floor(maxShiftDevice) * scaleY;
+        }
+
+        /// <summary>
+        /// 拖动开始时收起输入框（渐隐）。
+        /// 拖动过程中窗口位置逐帧变化，输入框若跟随移动无法与窗口位置严格同步（两者不在同一时钟上），
+        /// 会表现为明显抖动；因此先收起，等松手、窗口静止后再按最终位置重新弹出。
+        /// </summary>
+        private void HideChatInputForDrag()
+        {
+            if (!_isChatInputVisible)
+                return;
+
+            _inputHideTimer?.Stop();
+            _isHoveringInput = false;
+            _chatInputHiddenByDrag = true;
+
+            FadeOutChatInput();
+        }
+
+        /// <summary>
+        /// 拖动结束后恢复输入框：此时窗口已静止，重新弹出不会抖动。
+        /// 回正滑动期间不恢复，由滑动结束回调触发。
+        /// </summary>
+        private void RestoreChatInputAfterDrag()
+        {
+            if (!_chatInputHiddenByDrag)
+                return;
+
+            _chatInputHiddenByDrag = false;
+
+            // 拖动中光标始终停在角色上，松手后仍处于悬停状态才恢复
+            if (!_isHoveringPet && !_isHoveringInput)
+                return;
+
+            ShowChatInput();
+        }
+
+        /// <summary>
+        /// 显示输入框：淡入（透明度渐显）+ 轻微上浮，并把焦点交给文本框。
+        /// 窗口下方越界时输入框会整体上移，避免被屏幕边缘挡住。
         /// </summary>
         private void ShowChatInput()
         {
             _inputHideTimer?.Stop();
-            if (ChatInputPanel.Visibility == Visibility.Visible) return;
+
+            // 回正滑动尚未结束：窗口位置还在变化，此时显示会抖动，等滑动结束再显示
+            if (_snapTimer != null) return;
+
+            // 已在显示或正在淡入，无需重复播放
+            if (_isChatInputVisible) return;
+
+            _isChatInputVisible = true;
+            ++_chatInputFadeToken;
 
             ChatInputPanel.Visibility = Visibility.Visible;
+
+            // 窗口下边缘越界时，把输入框整体上移到可见区域内
+            double shift = GetChatInputBottomShift();
+
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            // 不指定起始值：从当前透明度接着渐变，淡出途中被重新唤出时不会闪跳
             ChatInputPanel.BeginAnimation(OpacityProperty,
-                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)) { EasingFunction = ease });
+                new DoubleAnimation(1, TimeSpan.FromMilliseconds(CHAT_INPUT_FADE_IN_MS))
+                {
+                    EasingFunction = ease
+                });
 
             if (ChatInputPanel.RenderTransform is TranslateTransform translate)
             {
+                // 在上浮动画的基准位置上叠加越界偏移，动画结束后停在偏移位置
                 translate.BeginAnimation(TranslateTransform.YProperty,
-                    new DoubleAnimation(8, 0, TimeSpan.FromMilliseconds(180)) { EasingFunction = ease });
+                    new DoubleAnimation(shift + CHAT_INPUT_SLIDE_IN, shift,
+                        TimeSpan.FromMilliseconds(CHAT_INPUT_FADE_IN_MS))
+                    {
+                        EasingFunction = ease
+                    });
             }
+        }
+
+        /// <summary>
+        /// 淡出并收起输入框（透明度渐隐），拖动收起与悬停超时收起共用。
+        /// 同一时刻只保留一个淡出：淡出途中若被要求重新显示，其完成回调会因令牌过期而放弃收起。
+        /// </summary>
+        private void FadeOutChatInput()
+        {
+            if (!_isChatInputVisible)
+                return;
+
+            _isChatInputVisible = false;
+            int token = ++_chatInputFadeToken;
+
+            var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(CHAT_INPUT_FADE_OUT_MS))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            fadeOut.Completed += (s, e) =>
+            {
+                if (token != _chatInputFadeToken) return;
+
+                ChatInputPanel.Visibility = Visibility.Collapsed;
+            };
+            ChatInputPanel.BeginAnimation(OpacityProperty, fadeOut);
         }
 
         /// <summary>
@@ -659,7 +810,7 @@ namespace KfuPet
         /// </summary>
         private void ScheduleChatInputHide()
         {
-            if (ChatInputPanel.Visibility != Visibility.Visible) return;
+            if (!_isChatInputVisible) return;
 
             _inputHideTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
             _inputHideTimer.Tick -= InputHideTimer_Tick;
@@ -673,15 +824,7 @@ namespace KfuPet
             _inputHideTimer?.Stop();
             if (_isHoveringPet || _isHoveringInput || ChatInputBox.IsKeyboardFocused) return;
 
-            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(150));
-            fade.Completed += (s, args) =>
-            {
-                if (!_isHoveringPet && !_isHoveringInput && !ChatInputBox.IsKeyboardFocused)
-                {
-                    ChatInputPanel.Visibility = Visibility.Collapsed;
-                }
-            };
-            ChatInputPanel.BeginAnimation(OpacityProperty, fade);
+            FadeOutChatInput();
         }
 
         // ── AI 聊天：发送与气泡 ─────────────────────
