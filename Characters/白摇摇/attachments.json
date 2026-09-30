@@ -1,0 +1,106 @@
+{
+  "version": "1.0.0",
+  "scale": 0.293,
+  "attachments": [
+    {
+      "id": "leg_left_upper",
+      "boneId": "leg_left_upper",
+      "name": "左大腿",
+      "resource": "images/leg_left_upper.png",
+      "pivot": [0.5, 0.0],
+      "offset": [0.0, 0.0],
+      "zOrder": 10,
+      "visible": true
+    },
+    {
+      "id": "leg_right_upper",
+      "boneId": "leg_right_upper",
+      "name": "右大腿",
+      "resource": "images/leg_right_upper.png",
+      "pivot": [0.5, 0.0],
+      "offset": [0.0, 0.0],
+      "zOrder": 11,
+      "visible": true
+    },
+    {
+      "id": "leg_left_lower",
+      "boneId": "leg_left_lower",
+      "name": "左小腿",
+      "resource": "images/leg_left_lower.png",
+      "pivot": [0.5, 0.0],
+      "offset": [0.0, 0.0],
+      "zOrder": 12,
+      "visible": true
+    },
+    {
+      "id": "leg_right_lower",
+      "boneId": "leg_right_lower",
+      "name": "右小腿",
+      "resource": "images/leg_right_lower.png",
+      "pivot": [0.5, 0.0],
+      "offset": [0.0, 0.0],
+      "zOrder": 13,
+      "visible": true
+    },
+    {
+      "id": "body",
+      "boneId": "body",
+      "name": "身体",
+      "resource": "images/body.png",
+      "pivot": [0.5, 0.0],
+      "offset": [0.0, 0.0],
+      "zOrder": 20,
+      "visible": true
+    },
+    {
+      "id": "arm_right_upper",
+      "boneId": "arm_right_upper",
+      "name": "右上臂",
+      "resource": "images/arm_left_upper.png",
+      "pivot": [0.0, 0.5],
+      "offset": [0.0, 0.0],
+      "zOrder": 31,
+      "visible": true
+    },
+    {
+      "id": "arm_right_lower",
+      "boneId": "arm_right_lower",
+      "name": "右小臂",
+      "resource": "images/arm_left_lower.png",
+      "pivot": [0.0, 0.5],
+      "offset": [0.0, 0.0],
+      "zOrder": 32,
+      "visible": true
+    },
+    {
+      "id": "arm_left_upper",
+      "boneId": "arm_left_upper",
+      "name": "左上臂",
+      "resource": "images/arm_right_upper.png",
+      "pivot": [1.0, 0.5],
+      "offset": [0.0, 0.0],
+      "zOrder": 33,
+      "visible": true
+    },
+    {
+      "id": "arm_left_lower",
+      "boneId": "arm_left_lower",
+      "name": "左小臂",
+      "resource": "images/arm_right_lower.png",
+      "pivot": [1.0, 0.5],
+      "offset": [0.0, 0.0],
+      "zOrder": 34,
+      "visible": true
+    },
+    {
+      "id": "head",
+      "boneId": "head",
+      "name": "头部",
+      "resource": "images/head.png",
+      "pivot": [0.5, 1.0],
+      "offset": [0.0, 0.0],
+      "zOrder": 40,
+      "visible": true
+    }
+  ]
+}
