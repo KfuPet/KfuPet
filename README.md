@@ -24,7 +24,6 @@
 | 平台 | 开始安装 |
 | --- | --- |
 | Windows | [点击下载](https://github.com/Lrht-llw/KfuPet/releases/latest) |
-| Android | [点击下载](https://github.com/KfuPet/KfuPet-for-Android/releases/latest) |
 | 开发者工具 | [点击下载](https://github.com/KfuPet/KfuPet-Tool/releases/latest) |
 
 ## 🧑‍💻 参与贡献
