@@ -72,10 +72,10 @@ namespace KfuPet
 
         // ── 窗口尺寸 ──────────────────────────────────
 
-        /// <summary>窗口宽度（物理像素）。固定物理尺寸，任何 DPI 下桌宠都按同样大小显示；改这里即可整体改窗口大小。</summary>
+        /// <summary>窗口宽度（DIP）。随系统缩放等比放大，桌宠在各缩放设置下看起来一样大；改这里即可整体改窗口大小。</summary>
         private const double WINDOW_WIDTH = 480;
 
-        /// <summary>窗口高度（物理像素）。角色高 410px（头顶点上 230、脚底点下 180），下方余量需容纳贴底的输入框。</summary>
+        /// <summary>窗口高度（DIP）。角色高 410 DIP（头顶点上 230、脚底点下 180），下方余量需容纳贴底的输入框。</summary>
         private const double WINDOW_HEIGHT = 600;
 
         // ── 长按拖动 ──────────────────────────────────
@@ -124,6 +124,9 @@ namespace KfuPet
         private bool _chatInputHiddenByDrag;
 
         private Skeleton? _skeleton;
+
+        /// <summary>本次启动加载附件配置的角色包目录；为空表示没有可回写的角色包。</summary>
+        private string? _attachmentsPackageDir;
 
         internal SkeletonService SkeletonService { get; } = new SkeletonService();
 
@@ -186,10 +189,12 @@ namespace KfuPet
             var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
             int dpi = GetDpiForWindow(hwnd);
             double dpiScale = dpi / 96.0;
-            Width = WINDOW_WIDTH / dpiScale;
-            Height = WINDOW_HEIGHT / dpiScale;
+            // 窗口与骨骼统一使用 DIP：DPI 越高物理像素越多，桌宠在各缩放设置下看起来一样大
+            Width = WINDOW_WIDTH;
+            Height = WINDOW_HEIGHT;
             RestoreOrCenterPosition();
-            InitializeSkeleton(dpiScale);
+            InitializeSkeleton();
+            LoadCharacterAttachments();
             Log.Debug($"[窗口] 主窗口加载完成：{Width:F0}×{Height:F0}，DPI 缩放 {dpiScale:F2}");
 
             CommandDispatcher.RegisterService(SkeletonService);
@@ -208,11 +213,39 @@ namespace KfuPet
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             Log.Info("[窗口] 主窗口正在关闭，停止命名管道");
+            SaveCharacterAttachments();
             _bubbleCts?.Cancel();
             _snapTimer?.Stop();
             _toolMonitorTimer?.Stop();
             _pipeServer?.Stop();
             _pipeServer?.Dispose();
+        }
+
+        /// <summary>
+        /// 启动时从角色包加载部位图片附件（attachments.json），挂到已初始化的骨骼上。
+        /// 没有找到带附件配置的角色包时跳过，角色只显示骨骼调试线框。
+        /// </summary>
+        private void LoadCharacterAttachments()
+        {
+            var packageDir = CharacterAttachmentService.FindPackageWithAttachments();
+            if (packageDir == null)
+            {
+                Log.Info("[附件] 未找到带附件配置的角色包，跳过部位挂载");
+                return;
+            }
+
+            _attachmentsPackageDir = packageDir;
+            CharacterAttachmentService.Load(SkeletonService, packageDir);
+        }
+
+        /// <summary>
+        /// 关闭时把当前附件状态回写到角色包，固化在开发者工具里调好的位置。
+        /// 未从角色包加载过附件时不写盘，避免清空已有配置。
+        /// </summary>
+        private void SaveCharacterAttachments()
+        {
+            if (_attachmentsPackageDir == null) return;
+            CharacterAttachmentService.Save(SkeletonService, _attachmentsPackageDir);
         }
 
         private void OnDeveloperModeChanged(object? sender, EventArgs e)
@@ -261,7 +294,7 @@ namespace KfuPet
             _toolMonitorTimer.Start();
         }
 
-        private void InitializeSkeleton(double dpiScale)
+        private void InitializeSkeleton()
         {
             _skeleton = new Skeleton();
 
@@ -272,7 +305,7 @@ namespace KfuPet
                 Id = "root",
                 Name = "Root",
                 ParentId = null,
-                LocalPosition = new Point(WINDOW_WIDTH / 2 / dpiScale, WINDOW_HEIGHT / 2 / dpiScale)
+                LocalPosition = new Point(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2)
             });
 
             // body 兼作躯干锚点，接管原 neck 所在的位置
@@ -281,7 +314,7 @@ namespace KfuPet
                 Id = "body",
                 Name = "Body",
                 ParentId = "root",
-                LocalPosition = new Point(0, -130 / dpiScale)
+                LocalPosition = new Point(0, -130)
             });
 
             _skeleton.AddBone(new Bone
@@ -289,7 +322,7 @@ namespace KfuPet
                 Id = "head",
                 Name = "Head",
                 ParentId = "body",
-                LocalPosition = new Point(0, -60 / dpiScale)
+                LocalPosition = new Point(0, -60)
             });
 
             _skeleton.AddBone(new Bone
@@ -297,7 +330,7 @@ namespace KfuPet
                 Id = "arm_left_upper",
                 Name = "LeftArmUpper",
                 ParentId = "body",
-                LocalPosition = new Point(-80 / dpiScale, 0)
+                LocalPosition = new Point(-80, 0)
             });
 
             _skeleton.AddBone(new Bone
@@ -305,7 +338,7 @@ namespace KfuPet
                 Id = "arm_left_lower",
                 Name = "LeftArmLower",
                 ParentId = "arm_left_upper",
-                LocalPosition = new Point(-100 / dpiScale, 0)
+                LocalPosition = new Point(-100, 0)
             });
 
             _skeleton.AddBone(new Bone
@@ -313,7 +346,7 @@ namespace KfuPet
                 Id = "arm_right_upper",
                 Name = "RightArmUpper",
                 ParentId = "body",
-                LocalPosition = new Point(80 / dpiScale, 0)
+                LocalPosition = new Point(80, 0)
             });
 
             _skeleton.AddBone(new Bone
@@ -321,7 +354,7 @@ namespace KfuPet
                 Id = "arm_right_lower",
                 Name = "RightArmLower",
                 ParentId = "arm_right_upper",
-                LocalPosition = new Point(100 / dpiScale, 0)
+                LocalPosition = new Point(100, 0)
             });
 
             _skeleton.AddBone(new Bone
@@ -329,7 +362,7 @@ namespace KfuPet
                 Id = "leg_left_upper",
                 Name = "LeftLegUpper",
                 ParentId = "root",
-                LocalPosition = new Point(-40 / dpiScale, 80 / dpiScale)
+                LocalPosition = new Point(-40, 80)
             });
 
             _skeleton.AddBone(new Bone
@@ -337,7 +370,7 @@ namespace KfuPet
                 Id = "leg_left_lower",
                 Name = "LeftLegLower",
                 ParentId = "leg_left_upper",
-                LocalPosition = new Point(0, 100 / dpiScale)
+                LocalPosition = new Point(0, 100)
             });
 
             _skeleton.AddBone(new Bone
@@ -345,7 +378,7 @@ namespace KfuPet
                 Id = "leg_right_upper",
                 Name = "RightLegUpper",
                 ParentId = "root",
-                LocalPosition = new Point(40 / dpiScale, 80 / dpiScale)
+                LocalPosition = new Point(40, 80)
             });
 
             _skeleton.AddBone(new Bone
@@ -353,7 +386,7 @@ namespace KfuPet
                 Id = "leg_right_lower",
                 Name = "RightLegLower",
                 ParentId = "leg_right_upper",
-                LocalPosition = new Point(0, 100 / dpiScale)
+                LocalPosition = new Point(0, 100)
             });
 
             // ==================== 更新变换 ====================

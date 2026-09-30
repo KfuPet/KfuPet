@@ -295,7 +295,8 @@ namespace KfuPet.Services
         /// </summary>
         public Attachment? AddAttachment(string boneId, string attachmentId, string name,
             string resourcePath, double offsetX = 0, double offsetY = 0,
-            double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0)
+            double pivotX = 0.5, double pivotY = 0.5, int zOrder = 0,
+            double scaleX = 1.0, double scaleY = 1.0)
         {
             var bone = _skeleton?.FindBone(boneId);
             if (bone == null || bone.ParentId == null)
@@ -312,7 +313,9 @@ namespace KfuPet.Services
                 Name = name,
                 Offset = new Point(offsetX, offsetY),
                 Pivot = new Point(pivotX, pivotY),
-                ZOrder = zOrder
+                ZOrder = zOrder,
+                ScaleX = scaleX,
+                ScaleY = scaleY
             };
             attachment.Set.DefaultResource = "default";
             attachment.Set.Resources["default"] = resourcePath;
