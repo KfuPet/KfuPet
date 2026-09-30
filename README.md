@@ -1,5 +1,5 @@
 <div align="center">
-<img alt="logo" height="100" width="100" src="docs/logo.png" />
+<img alt="logo" height="100" width="100" src="docs/assets/logo.png" />
 <h2>Kfu Pet</h2>
 <p>你的智能桌面伙伴</p>
 <h3><s>AI桌宠</s> ≠ 智能生命体桌宠</h3>
