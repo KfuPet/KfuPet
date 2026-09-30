@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace KfuPet.Models
 {
     /// <summary>
@@ -11,7 +13,8 @@ namespace KfuPet.Models
         /// <summary>API 基础地址。</summary>
         public string BaseUrl { get; set; } = string.Empty;
 
-        /// <summary>API 密钥。</summary>
+        /// <summary>API 密钥。落盘时由转换器用 DPAPI 加密。</summary>
+        [JsonConverter(typeof(ProtectedStringConverter))]
         public string ApiKey { get; set; } = string.Empty;
 
         /// <summary>模型显示名称，仅用于列表展示，不参与 API 请求。</summary>

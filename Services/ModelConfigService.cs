@@ -103,6 +103,14 @@ namespace KfuPet.Services
                     _models.AddRange(models);
                 }
                 Log.Info($"[配置] 模型配置已加载：{_models.Count} 条");
+
+                // 历史版本以明文保存密钥：读到明文就立刻加密回写一次，用户无感完成迁移
+                if (_models.Any(m => !string.IsNullOrEmpty(m.ApiKey)) &&
+                    !json.Contains(ProtectedStringConverter.CipherPrefix, StringComparison.Ordinal))
+                {
+                    Log.Info("[配置] 检测到明文密钥，正在加密回写");
+                    Save();
+                }
             }
             catch (Exception ex)
             {
