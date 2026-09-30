@@ -122,6 +122,10 @@ namespace KfuPet.Core.Rendering
                 Height = image.PixelHeight * attachment.ScaleY
             };
 
+            // 部位图原始像素远大于显示尺寸（缩小到约 1/3），默认的线性插值会丢掉细线条、产生锯齿，
+            // 改用高质量缩放（Fant）做降采样
+            RenderOptions.SetBitmapScalingMode(imageControl, BitmapScalingMode.HighQuality);
+
             // 按 Pivot 放置：左上角位置 = 世界位置 - 缩放后尺寸 * 锚点
             Canvas.SetLeft(imageControl, worldPos.X - image.PixelWidth * attachment.ScaleX * attachment.Pivot.X);
             Canvas.SetTop(imageControl, worldPos.Y - image.PixelHeight * attachment.ScaleY * attachment.Pivot.Y);
