@@ -104,7 +104,7 @@ namespace KfuPet
         /// <summary>触发抚摸反应所需的滑动段数：左一下 + 右一下。</summary>
         private const int TOUCH_WIGGLE_STROKES = 2;
 
-        /// <summary>触摸反应台词服务：读取角色包 reactions.json，缺省时使用内置默认台词。</summary>
+        /// <summary>触摸反应台词服务：台词读取自角色包 reactions.json，未配置的角色/部位触摸无反应。</summary>
         private readonly TouchReactionService _touchReactions = new();
 
         /// <summary>上一次触摸反应的时间，用于冷却判定。</summary>
@@ -821,7 +821,12 @@ namespace KfuPet
             }
 
             var line = _touchReactions.PickLine(partKey);
-            if (line == null) return;
+            if (line == null)
+            {
+                Log.Debug($"[触摸] {partKey} 没有配置台词，触摸无反应" +
+                          $"（可在角色包 {TouchReactionService.ManifestFileName} 中补充）");
+                return;
+            }
 
             _lastTouchReactionTime = DateTime.UtcNow;
             ShowBubbleBatches(new List<string> { line });

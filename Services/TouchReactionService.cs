@@ -4,8 +4,8 @@ using KfuPet.Models;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 触摸反应服务：从角色包读取 reactions.json（各部位被触摸时的台词），
-    /// 文件缺失或解析失败时退回内置默认台词，保证任何角色都能响应触摸。
+    /// 触摸反应服务：从角色包读取 reactions.json（各部位被触摸时的台词）。
+    /// 台词只来自角色包：未提供该文件、或某个部位没写时，该角色/部位触摸不会有反应。
     /// 左右与骨骼命名一致，指画面上的左右（Left 为画面左侧）。
     /// </summary>
     internal class TouchReactionService
@@ -36,26 +36,21 @@ namespace KfuPet.Services
             WriteIndented = true
         };
 
-        /// <summary>各部位的台词表：构造时填入内置默认台词，加载角色包后按部位覆盖。</summary>
+        /// <summary>各部位的台词表，由 Load 从角色包填充；未配置的部位没有台词。</summary>
         private readonly Dictionary<string, List<string>> _lines = new();
 
         /// <summary>各部位上一句说过的台词，用于避免连续两次触发说同一句。</summary>
         private readonly Dictionary<string, string> _lastLines = new();
 
-        public TouchReactionService()
-        {
-            ApplyDefaultLines();
-        }
-
         /// <summary>
-        /// 从角色包目录加载 reactions.json；未提供该文件或解析失败时保留内置默认台词。
+        /// 从角色包目录加载 reactions.json；未提供该文件或解析失败时没有任何台词可用。
         /// </summary>
         public void Load(string packageDir)
         {
             var manifestPath = Path.Combine(packageDir, ManifestFileName);
             if (!File.Exists(manifestPath))
             {
-                Log.Info($"[触摸] 未找到 {ManifestFileName}，使用内置默认台词");
+                Log.Info($"[触摸] 未找到 {ManifestFileName}，该角色触摸时不会说话");
                 return;
             }
 
@@ -67,13 +62,13 @@ namespace KfuPet.Services
             }
             catch (Exception ex)
             {
-                Log.Warning($"[触摸] {ManifestFileName} 解析失败，使用内置默认台词：{ex.Message}");
+                Log.Warning($"[触摸] {ManifestFileName} 解析失败，该角色触摸时不会说话：{ex.Message}");
                 return;
             }
 
             if (manifest?.Reactions == null || manifest.Reactions.Count == 0)
             {
-                Log.Warning($"[触摸] {ManifestFileName} 中没有台词定义，使用内置默认台词");
+                Log.Warning($"[触摸] {ManifestFileName} 中没有台词定义，该角色触摸时不会说话");
                 return;
             }
 
@@ -149,55 +144,6 @@ namespace KfuPet.Services
                 "legleft" => PartLegLeft,
                 "legright" => PartLegRight,
                 _ => null
-            };
-        }
-
-        /// <summary>
-        /// 内置默认台词：角色包没有提供 reactions.json 时使用，保证触摸反应始终可用。
-        /// </summary>
-        private void ApplyDefaultLines()
-        {
-            _lines[PartHead] = new List<string>
-            {
-                "唔……摸头要提前打招呼的啦～",
-                "嘿嘿，好舒服……再摸一下？",
-                "头发要被揉乱啦！"
-            };
-
-            // 台词正文按角色自身视角写：画面左侧的手脚是角色的右手/右腿
-            _lines[PartArmLeft] = new List<string>
-            {
-                "呀！右手被捏到了～",
-                "哼，再捏我就要还手了哦！",
-                "这只手要留着干正事的啦！"
-            };
-
-            _lines[PartArmRight] = new List<string>
-            {
-                "呀！左手被抓住了～",
-                "喂喂，这只手还要干正事的！",
-                "轻一点啦，别拽～"
-            };
-
-            _lines[PartLegLeft] = new List<string>
-            {
-                "呀，右腿痒痒的～",
-                "再戳我就不站着了，我要坐下！",
-                "右腿也是要好好保护的呀～"
-            };
-
-            _lines[PartLegRight] = new List<string>
-            {
-                "痒痒的！左腿不许戳～",
-                "别戳啦，站不稳了～",
-                "左腿可是站得最稳的那条！"
-            };
-
-            _lines[PartBody] = new List<string>
-            {
-                "喂喂，戳肚子会痒的啦！",
-                "呀！偷袭是不讲武德的！",
-                "哼哼，我才不怕痒呢……才怪～"
             };
         }
     }
