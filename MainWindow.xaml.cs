@@ -104,9 +104,6 @@ namespace KfuPet
         /// <summary>触发抚摸反应所需的滑动段数：左一下 + 右一下。</summary>
         private const int TOUCH_WIGGLE_STROKES = 2;
 
-        /// <summary>部位轻抖补间时长内的摆动次数（正弦周期数）。</summary>
-        private const double TOUCH_SHAKE_CYCLES = 2;
-
         /// <summary>触摸反应台词服务：读取角色包 reactions.json，缺省时使用内置默认台词。</summary>
         private readonly TouchReactionService _touchReactions = new();
 
@@ -130,9 +127,6 @@ namespace KfuPet
 
         /// <summary>已完成的滑动段数。</summary>
         private int _wiggleStrokeCount;
-
-        /// <summary>部位轻抖补间的计时器。</summary>
-        private DispatcherTimer? _partShakeTimer;
 
         // ── 越界回正 ──────────────────────────────────
 
@@ -260,7 +254,6 @@ namespace KfuPet
             SaveCharacterAttachments();
             _bubbleCts?.Cancel();
             _snapTimer?.Stop();
-            _partShakeTimer?.Stop();
             _toolMonitorTimer?.Stop();
             _pipeServer?.Stop();
             _pipeServer?.Dispose();
@@ -524,25 +517,29 @@ namespace KfuPet
             _windowStartLeft = Left;
             _windowStartTop = Top;
 
-            // 按下落在头部时进入抚摸判定：横向来回滑动算抚摸，长按后仍照常拖动窗口
+            // 按下落在头部时进入抚摸判定：头部只响应抚摸/双击，不参与拖动窗口
             var pressPoint = e.GetPosition(CharacterCanvas);
             ResetTouchGesture();
-            if (TouchReactionService.ResolvePartKey(CharacterCanvas.HitTestAttachmentBoneId(pressPoint))
-                == TouchReactionService.PartHead)
+            var pressOnHead = TouchReactionService.ResolvePartKey(CharacterCanvas.HitTestAttachmentBoneId(pressPoint))
+                              == TouchReactionService.PartHead;
+            if (pressOnHead)
             {
                 _touchGestureTracking = true;
                 _wiggleAnchorX = pressPoint.X;
                 _wiggleExtremeX = pressPoint.X;
             }
-
-            _holdTimer = new DispatcherTimer();
-            _holdTimer.Interval = TimeSpan.FromMilliseconds(HOLD_DELAY_MS);
-            _holdTimer.Tick += (s, args) =>
+            else
             {
-                _holdTimer?.Stop();
-                StartDrag();
-            };
-            _holdTimer.Start();
+                // 非头部部位才启动长按拖动计时
+                _holdTimer = new DispatcherTimer();
+                _holdTimer.Interval = TimeSpan.FromMilliseconds(HOLD_DELAY_MS);
+                _holdTimer.Tick += (s, args) =>
+                {
+                    _holdTimer?.Stop();
+                    StartDrag();
+                };
+                _holdTimer.Start();
+            }
 
             Mouse.Capture(RootGrid);
         }
@@ -597,9 +594,6 @@ namespace KfuPet
             GetCursorPos(out _dragStartCursorPos);
             _windowStartLeft = Left;
             _windowStartTop = Top;
-
-            // 拖动接管后抚摸判定立即结束
-            _touchGestureTracking = false;
 
             _isDragging = true;
         }
@@ -766,7 +760,7 @@ namespace KfuPet
 
         /// <summary>
         /// 推进头部抚摸判定：横向来回滑动（左一下 + 右一下，每段至少 TOUCH_WIGGLE_STROKE_MIN DIP）
-        /// 完成时触发触摸反应。判定期间窗口保持不动；长按转为拖动后不再参与判定。
+        /// 完成时触发触摸反应。头部不参与拖动窗口，整个判定期间窗口保持不动。
         /// </summary>
         private void UpdateHeadWiggle(Point canvasPoint)
         {
@@ -798,10 +792,6 @@ namespace KfuPet
                 _wiggleDirection = -_wiggleDirection;
                 _wiggleExtremeX = canvasPoint.X;
 
-                // 已进入真正的来回滑动，停止长按计时，避免拖动打断抚摸
-                _holdTimer?.Stop();
-                _holdTimer = null;
-
                 if (_wiggleStrokeCount >= TOUCH_WIGGLE_STROKES)
                 {
                     _touchGestureConsumed = true;
@@ -816,7 +806,7 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 触发一次触摸反应：说话 + 被触碰部位轻抖。冷却期间（2 秒）的触摸动作一律无效。
+        /// 触发一次触摸反应：说出该部位对应的台词。冷却期间（2 秒）的触摸动作一律无效。
         /// </summary>
         private void TriggerTouchReaction(string boneId)
         {
@@ -835,61 +825,7 @@ namespace KfuPet
 
             _lastTouchReactionTime = DateTime.UtcNow;
             ShowBubbleBatches(new List<string> { line });
-            PlayPartShake(boneId, partKey);
             Log.Info($"[触摸] {boneId} → {partKey}：{line}");
-        }
-
-        /// <summary>
-        /// 被触碰部位的小动作反馈：约 0.3~0.4 秒的衰减摆动后精确回到原姿态。
-        /// 头/手/腿做轻微摆动，身体做一下下沉。属临场补间，后续动画系统落地后可替换为播放动画剪辑。
-        /// </summary>
-        private void PlayPartShake(string boneId, string partKey)
-        {
-            var (rotationAmplitude, positionAmplitudeY, durationMs) = partKey switch
-            {
-                TouchReactionService.PartHead => (6.0, 0.0, 420.0),
-                TouchReactionService.PartBody => (0.0, 5.0, 360.0),
-                TouchReactionService.PartArmLeft or TouchReactionService.PartArmRight => (7.0, 0.0, 360.0),
-                _ => (5.0, 0.0, 360.0)
-            };
-
-            _partShakeTimer?.Stop();
-            _partShakeTimer = null;
-
-            var baseRotation = SkeletonService.GetRotation(boneId);
-            var basePosition = SkeletonService.GetPosition(boneId);
-            if (baseRotation == null || basePosition == null) return;
-
-            var stopwatch = Stopwatch.StartNew();
-            var timer = new DispatcherTimer(DispatcherPriority.Render)
-            {
-                Interval = TimeSpan.FromMilliseconds(16)
-            };
-            timer.Tick += (s, e) =>
-            {
-                var progress = Math.Min(stopwatch.Elapsed.TotalMilliseconds / durationMs, 1.0);
-                // 正弦摆动叠加线性衰减：结束帧波形归零，姿态自然回到原位
-                var wave = Math.Sin(progress * Math.PI * 2 * TOUCH_SHAKE_CYCLES) * (1 - progress);
-
-                if (rotationAmplitude > 0)
-                {
-                    SkeletonService.SetRotation(boneId, baseRotation.Value + wave * rotationAmplitude);
-                }
-                if (positionAmplitudeY > 0)
-                {
-                    SkeletonService.SetPosition(
-                        boneId, basePosition.Value.X, basePosition.Value.Y + wave * positionAmplitudeY);
-                }
-
-                if (progress >= 1)
-                {
-                    timer.Stop();
-                    _partShakeTimer = null;
-                }
-            };
-
-            _partShakeTimer = timer;
-            timer.Start();
         }
 
         // ── AI 聊天：悬停输入框 ─────────────────────

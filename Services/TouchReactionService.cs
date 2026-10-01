@@ -164,6 +164,7 @@ namespace KfuPet.Services
                 "头发要被揉乱啦！"
             };
 
+            // 台词正文按角色自身视角写：画面左侧的手脚是角色的右手/右腿
             _lines[PartArmLeft] = new List<string>
             {
                 "呀！右手被捏到了～",
