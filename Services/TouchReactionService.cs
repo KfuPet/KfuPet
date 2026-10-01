@@ -166,30 +166,30 @@ namespace KfuPet.Services
 
             _lines[PartArmLeft] = new List<string>
             {
-                "呀！左手被抓住了～",
-                "喂喂，这只手还要干正事的！",
-                "轻一点啦，别拽～"
-            };
-
-            _lines[PartArmRight] = new List<string>
-            {
                 "呀！右手被捏到了～",
                 "哼，再捏我就要还手了哦！",
                 "这只手要留着干正事的啦！"
             };
 
-            _lines[PartLegLeft] = new List<string>
+            _lines[PartArmRight] = new List<string>
             {
-                "痒痒的！左腿不许戳～",
-                "别戳啦，站不稳了～",
-                "左腿可是站得最稳的那条！"
+                "呀！左手被抓住了～",
+                "喂喂，这只手还要干正事的！",
+                "轻一点啦，别拽～"
             };
 
-            _lines[PartLegRight] = new List<string>
+            _lines[PartLegLeft] = new List<string>
             {
                 "呀，右腿痒痒的～",
                 "再戳我就不站着了，我要坐下！",
                 "右腿也是要好好保护的呀～"
+            };
+
+            _lines[PartLegRight] = new List<string>
+            {
+                "痒痒的！左腿不许戳～",
+                "别戳啦，站不稳了～",
+                "左腿可是站得最稳的那条！"
             };
 
             _lines[PartBody] = new List<string>
