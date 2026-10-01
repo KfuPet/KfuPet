@@ -119,7 +119,9 @@ namespace KfuPet.Core.Rendering
             {
                 Source = image,
                 Width = image.PixelWidth * attachment.ScaleX,
-                Height = image.PixelHeight * attachment.ScaleY
+                Height = image.PixelHeight * attachment.ScaleY,
+                // 记录所属骨骼，供命中检测判定触摸到的是哪个部位
+                Tag = attachment.BoneId
             };
 
             // 部位图原始像素远大于显示尺寸（缩小到约 1/3），默认的线性插值会丢掉细线条、产生锯齿，

@@ -90,6 +90,50 @@ namespace KfuPet
         private double _dpiScaleX = double.NaN;
         private double _dpiScaleY = double.NaN;
 
+        // ── 触摸反应 ──────────────────────────────────
+
+        /// <summary>触摸反应冷却时长（毫秒）：一次反应后 2 秒内再做触摸动作一律无效。</summary>
+        private const int TOUCH_REACTION_COOLDOWN_MS = 2000;
+
+        /// <summary>头部抚摸的单段横向位移下限（DIP）：达到该值才算一段滑动。</summary>
+        private const double TOUCH_WIGGLE_STROKE_MIN = 20;
+
+        /// <summary>判定滑动方向所需的最小位移（DIP），用于过滤鼠标抖动。</summary>
+        private const double TOUCH_WIGGLE_DIRECTION_MIN = 4;
+
+        /// <summary>触发抚摸反应所需的滑动段数：左一下 + 右一下。</summary>
+        private const int TOUCH_WIGGLE_STROKES = 2;
+
+        /// <summary>部位轻抖补间时长内的摆动次数（正弦周期数）。</summary>
+        private const double TOUCH_SHAKE_CYCLES = 2;
+
+        /// <summary>触摸反应台词服务：读取角色包 reactions.json，缺省时使用内置默认台词。</summary>
+        private readonly TouchReactionService _touchReactions = new();
+
+        /// <summary>上一次触摸反应的时间，用于冷却判定。</summary>
+        private DateTime _lastTouchReactionTime = DateTime.MinValue;
+
+        /// <summary>本次按下是否处于头部抚摸判定中（判定期间窗口不跟随移动）。</summary>
+        private bool _touchGestureTracking;
+
+        /// <summary>本次按下是否已触发过抚摸反应；触发后剩余动作一律无效。</summary>
+        private bool _touchGestureConsumed;
+
+        /// <summary>当前滑动段的起点 X（画布坐标 DIP）。</summary>
+        private double _wiggleAnchorX;
+
+        /// <summary>当前滑动段已到达的最远 X。</summary>
+        private double _wiggleExtremeX;
+
+        /// <summary>当前滑动段方向：1 向右、-1 向左、0 未定。</summary>
+        private int _wiggleDirection;
+
+        /// <summary>已完成的滑动段数。</summary>
+        private int _wiggleStrokeCount;
+
+        /// <summary>部位轻抖补间的计时器。</summary>
+        private DispatcherTimer? _partShakeTimer;
+
         // ── 越界回正 ──────────────────────────────────
 
         /// <summary>窗口超出屏幕的比例达到该值（0~1）时触发回正。0.5 表示“一半越界才回正”；调小更严格，调大更宽容。</summary>
@@ -216,6 +260,7 @@ namespace KfuPet
             SaveCharacterAttachments();
             _bubbleCts?.Cancel();
             _snapTimer?.Stop();
+            _partShakeTimer?.Stop();
             _toolMonitorTimer?.Stop();
             _pipeServer?.Stop();
             _pipeServer?.Dispose();
@@ -236,6 +281,7 @@ namespace KfuPet
 
             _attachmentsPackageDir = packageDir;
             CharacterAttachmentService.Load(SkeletonService, packageDir);
+            _touchReactions.Load(packageDir);
         }
 
         /// <summary>
@@ -459,6 +505,17 @@ namespace KfuPet
                 return;
             }
 
+            // 双击部位：触发该部位的触摸反应，本次按下不再参与拖动
+            if (e.ClickCount == 2)
+            {
+                var doubleClickBoneId = CharacterCanvas.HitTestAttachmentBoneId(e.GetPosition(CharacterCanvas));
+                if (doubleClickBoneId != null)
+                {
+                    TriggerTouchReaction(doubleClickBoneId);
+                    return;
+                }
+            }
+
             // 新的拖动会接管窗口位置，先停止尚未播完的回正滑动
             _snapTimer?.Stop();
             _snapTimer = null;
@@ -466,6 +523,17 @@ namespace KfuPet
             GetCursorPos(out _dragStartCursorPos);
             _windowStartLeft = Left;
             _windowStartTop = Top;
+
+            // 按下落在头部时进入抚摸判定：横向来回滑动算抚摸，长按后仍照常拖动窗口
+            var pressPoint = e.GetPosition(CharacterCanvas);
+            ResetTouchGesture();
+            if (TouchReactionService.ResolvePartKey(CharacterCanvas.HitTestAttachmentBoneId(pressPoint))
+                == TouchReactionService.PartHead)
+            {
+                _touchGestureTracking = true;
+                _wiggleAnchorX = pressPoint.X;
+                _wiggleExtremeX = pressPoint.X;
+            }
 
             _holdTimer = new DispatcherTimer();
             _holdTimer.Interval = TimeSpan.FromMilliseconds(HOLD_DELAY_MS);
@@ -485,7 +553,15 @@ namespace KfuPet
             // 跳过它可以省下每帧的逐像素检测，避免拖动掉帧。
             if (!_isDragging)
             {
-                UpdatePetHover(e.GetPosition(CharacterCanvas));
+                var canvasPoint = e.GetPosition(CharacterCanvas);
+                UpdatePetHover(canvasPoint);
+
+                // 头部抚摸判定：按住头部来回滑动期间窗口保持不动，滑动完成触发反应
+                if (_touchGestureTracking)
+                {
+                    UpdateHeadWiggle(canvasPoint);
+                    return;
+                }
             }
 
             if (_holdTimer == null && !_isDragging) return;
@@ -517,6 +593,14 @@ namespace KfuPet
 
         private void StartDrag()
         {
+            // 长按后转入拖动：以当前位置重新锚定，窗口不会跳到光标累计位移处
+            GetCursorPos(out _dragStartCursorPos);
+            _windowStartLeft = Left;
+            _windowStartTop = Top;
+
+            // 拖动接管后抚摸判定立即结束
+            _touchGestureTracking = false;
+
             _isDragging = true;
         }
 
@@ -661,7 +745,151 @@ namespace KfuPet
                 }
             }
 
+            ResetTouchGesture();
             Mouse.Capture(null);
+        }
+
+        // ── 触摸反应：双击与头部抚摸 ─────────────────
+
+        /// <summary>
+        /// 清空本次按下的抚摸判定状态（按下与松开时调用）。
+        /// </summary>
+        private void ResetTouchGesture()
+        {
+            _touchGestureTracking = false;
+            _touchGestureConsumed = false;
+            _wiggleDirection = 0;
+            _wiggleStrokeCount = 0;
+            _wiggleAnchorX = 0;
+            _wiggleExtremeX = 0;
+        }
+
+        /// <summary>
+        /// 推进头部抚摸判定：横向来回滑动（左一下 + 右一下，每段至少 TOUCH_WIGGLE_STROKE_MIN DIP）
+        /// 完成时触发触摸反应。判定期间窗口保持不动；长按转为拖动后不再参与判定。
+        /// </summary>
+        private void UpdateHeadWiggle(Point canvasPoint)
+        {
+            if (_touchGestureConsumed) return;
+
+            // 方向未定：从按下点横向移动一小段后确定滑动方向
+            if (_wiggleDirection == 0)
+            {
+                var offset = canvasPoint.X - _wiggleAnchorX;
+                if (Math.Abs(offset) < TOUCH_WIGGLE_DIRECTION_MIN) return;
+
+                _wiggleDirection = offset > 0 ? 1 : -1;
+                _wiggleExtremeX = canvasPoint.X;
+                return;
+            }
+
+            // 继续沿当前方向滑动：本段最远点继续外扩
+            if ((canvasPoint.X - _wiggleExtremeX) * _wiggleDirection >= 0)
+            {
+                _wiggleExtremeX = canvasPoint.X;
+                return;
+            }
+
+            // 方向掉头：上一段位移达到下限才计一段，否则视为手抖
+            if (Math.Abs(_wiggleExtremeX - _wiggleAnchorX) >= TOUCH_WIGGLE_STROKE_MIN)
+            {
+                _wiggleStrokeCount++;
+                _wiggleAnchorX = _wiggleExtremeX;   // 上一段的终点成为新一段的起点
+                _wiggleDirection = -_wiggleDirection;
+                _wiggleExtremeX = canvasPoint.X;
+
+                // 已进入真正的来回滑动，停止长按计时，避免拖动打断抚摸
+                _holdTimer?.Stop();
+                _holdTimer = null;
+
+                if (_wiggleStrokeCount >= TOUCH_WIGGLE_STROKES)
+                {
+                    _touchGestureConsumed = true;
+                    TriggerTouchReaction("head");
+                }
+                return;
+            }
+
+            // 上半段过短（手抖）：不计段，直接把当前方向当作新的滑动方向，起点保持不变
+            _wiggleDirection = canvasPoint.X >= _wiggleAnchorX ? 1 : -1;
+            _wiggleExtremeX = canvasPoint.X;
+        }
+
+        /// <summary>
+        /// 触发一次触摸反应：说话 + 被触碰部位轻抖。冷却期间（2 秒）的触摸动作一律无效。
+        /// </summary>
+        private void TriggerTouchReaction(string boneId)
+        {
+            var partKey = TouchReactionService.ResolvePartKey(boneId);
+            if (partKey == null) return;
+
+            var elapsedMs = (DateTime.UtcNow - _lastTouchReactionTime).TotalMilliseconds;
+            if (elapsedMs < TOUCH_REACTION_COOLDOWN_MS)
+            {
+                Log.Debug($"[触摸] 冷却中（{elapsedMs:F0} ms），本次触摸无效：{boneId}");
+                return;
+            }
+
+            var line = _touchReactions.PickLine(partKey);
+            if (line == null) return;
+
+            _lastTouchReactionTime = DateTime.UtcNow;
+            ShowBubbleBatches(new List<string> { line });
+            PlayPartShake(boneId, partKey);
+            Log.Info($"[触摸] {boneId} → {partKey}：{line}");
+        }
+
+        /// <summary>
+        /// 被触碰部位的小动作反馈：约 0.3~0.4 秒的衰减摆动后精确回到原姿态。
+        /// 头/手/腿做轻微摆动，身体做一下下沉。属临场补间，后续动画系统落地后可替换为播放动画剪辑。
+        /// </summary>
+        private void PlayPartShake(string boneId, string partKey)
+        {
+            var (rotationAmplitude, positionAmplitudeY, durationMs) = partKey switch
+            {
+                TouchReactionService.PartHead => (6.0, 0.0, 420.0),
+                TouchReactionService.PartBody => (0.0, 5.0, 360.0),
+                TouchReactionService.PartArmLeft or TouchReactionService.PartArmRight => (7.0, 0.0, 360.0),
+                _ => (5.0, 0.0, 360.0)
+            };
+
+            _partShakeTimer?.Stop();
+            _partShakeTimer = null;
+
+            var baseRotation = SkeletonService.GetRotation(boneId);
+            var basePosition = SkeletonService.GetPosition(boneId);
+            if (baseRotation == null || basePosition == null) return;
+
+            var stopwatch = Stopwatch.StartNew();
+            var timer = new DispatcherTimer(DispatcherPriority.Render)
+            {
+                Interval = TimeSpan.FromMilliseconds(16)
+            };
+            timer.Tick += (s, e) =>
+            {
+                var progress = Math.Min(stopwatch.Elapsed.TotalMilliseconds / durationMs, 1.0);
+                // 正弦摆动叠加线性衰减：结束帧波形归零，姿态自然回到原位
+                var wave = Math.Sin(progress * Math.PI * 2 * TOUCH_SHAKE_CYCLES) * (1 - progress);
+
+                if (rotationAmplitude > 0)
+                {
+                    SkeletonService.SetRotation(boneId, baseRotation.Value + wave * rotationAmplitude);
+                }
+                if (positionAmplitudeY > 0)
+                {
+                    SkeletonService.SetPosition(
+                        boneId, basePosition.Value.X, basePosition.Value.Y + wave * positionAmplitudeY);
+                }
+
+                if (progress >= 1)
+                {
+                    timer.Stop();
+                    _partShakeTimer = null;
+                }
+            };
+
+            _partShakeTimer = timer;
+            timer.Start();
         }
 
         // ── AI 聊天：悬停输入框 ─────────────────────

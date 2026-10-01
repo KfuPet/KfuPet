@@ -127,6 +127,27 @@ namespace KfuPet.Controls
         }
 
         /// <summary>
+        /// 返回画布坐标命中的部位图所属骨骼 ID（按 Z 序从上往下取第一个不透明命中），
+        /// 供触摸反应区分头/手/腿/身体。未命中任何部位图时返回 null；调试线框不参与判定。
+        /// </summary>
+        public string? HitTestAttachmentBoneId(Point canvasPoint)
+        {
+            foreach (var element in RenderCanvas.Children.OfType<UIElement>()
+                         .OrderByDescending(Panel.GetZIndex))
+            {
+                if (element is Image image &&
+                    image.Tag is string boneId &&
+                    image.Source is BitmapSource source &&
+                    HitTestImage(image, source, canvasPoint))
+                {
+                    return boneId;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// 图片附件命中检测：逆变换到图片本地坐标后检查像素 Alpha。
         /// </summary>
         private bool HitTestImage(Image image, BitmapSource source, Point canvasPoint)
