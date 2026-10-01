@@ -104,7 +104,7 @@ namespace KfuPet
         /// <summary>触发抚摸反应所需的滑动段数：左一下 + 右一下。</summary>
         private const int TOUCH_WIGGLE_STROKES = 2;
 
-        /// <summary>触摸反应备用台词服务：AI 未接入或请求失败时，用角色包 reactions.json 的台词。</summary>
+        /// <summary>触摸反应服务：构造发给 AI 的触摸事件提示，并提供角色包 reactions.json 里的备用台词。</summary>
         private readonly TouchReactionService _touchReactions = new();
 
         /// <summary>上一次触摸反应的时间，用于冷却判定。</summary>
@@ -851,7 +851,7 @@ namespace KfuPet
                 {
                     var reply = await _chatService.SendAsync(
                         model, _memorySystem.BuildBaseSystemPrompt(),
-                        Array.Empty<ChatMessage>(), BuildTouchReactionPrompt(partKey, isPetting));
+                        Array.Empty<ChatMessage>(), TouchReactionService.BuildEventPrompt(partKey, isPetting));
                     line = NormalizeReactionLine(reply);
                     source = "AI";
                 }
@@ -881,28 +881,6 @@ namespace KfuPet
 
             ShowBubbleBatches(new List<string> { line });
             Log.Info($"[触摸] {boneId} → {partKey}（{source}）：{line}");
-        }
-
-        /// <summary>
-        /// 构造触摸事件给 AI 的用户消息：说明被触碰的部位与动作，并要求一句符合人设的短回应。
-        /// 部位按角色自身视角描述（画面左侧的手脚是角色的右手/右腿），与 reactions.json 的写法一致。
-        /// </summary>
-        private static string BuildTouchReactionPrompt(string partKey, bool isPetting)
-        {
-            var action = partKey switch
-            {
-                TouchReactionService.PartHead when isPetting => "主人按住你的头，轻轻来回抚摸了几下",
-                TouchReactionService.PartHead => "主人戳了戳你的头",
-                TouchReactionService.PartArmLeft => "主人戳了戳你的右手",
-                TouchReactionService.PartArmRight => "主人戳了戳你的左手",
-                TouchReactionService.PartLegLeft => "主人戳了戳你的右腿",
-                TouchReactionService.PartLegRight => "主人戳了戳你的左腿",
-                TouchReactionService.PartBody => "主人戳了戳你的身体",
-                _ => "主人碰了碰你"
-            };
-
-            return $"（触摸事件）{action}。请用符合你人设的一句话回应，" +
-                   "只输出这一句话（30 字以内），不要引号、不要旁白、不要解释。";
         }
 
         /// <summary>整理 AI 回复：去掉首尾空白、成对引号与多余的行，只保留一句回应。</summary>

@@ -4,9 +4,11 @@ using KfuPet.Models;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 触摸反应备用台词服务：从角色包读取 reactions.json（各部位被触摸时的备用台词）。
-    /// 触摸反应优先由 AI 现场生成，这里只在未接入 AI 或 AI 请求失败时使用；
-    /// 台词只来自角色包：未提供该文件、或某个部位没写时，该角色/部位没有备用台词。
+    /// 触摸反应服务：汇总触摸事件所需的两类文案。
+    /// 一、事件提示：把"被触碰的部位 + 动作"整理成发给 AI 的用户消息（<see cref="BuildEventPrompt"/>），
+    ///     触摸反应优先由 AI 现场生成回应；
+    /// 二、备用台词：从角色包 reactions.json 读取，仅在未接入 AI 或 AI 请求失败时使用
+    ///     （台词只来自角色包：未提供该文件、或某个部位没写时，该角色/部位没有备用台词）。
     /// 左右与骨骼命名一致，指画面上的左右（Left 为画面左侧）。
     /// </summary>
     internal class TouchReactionService
@@ -129,6 +131,30 @@ namespace KfuPet.Services
             if (boneId.StartsWith("leg_left", StringComparison.Ordinal)) return PartLegLeft;
             if (boneId.StartsWith("leg_right", StringComparison.Ordinal)) return PartLegRight;
             return null;
+        }
+
+        /// <summary>
+        /// 构造触摸事件给 AI 的用户消息：说明被触碰的部位与动作，并要求一句符合人设的短回应。
+        /// 部位按角色自身视角描述（画面左侧的手脚是角色的右手/右腿），与 reactions.json 的写法一致。
+        /// </summary>
+        /// <param name="partKey">反应部位键（head / armLeft / armRight / legLeft / legRight / body）。</param>
+        /// <param name="isPetting">true 表示抚摸手势（按住头部来回滑动），false 表示双击。</param>
+        public static string BuildEventPrompt(string partKey, bool isPetting)
+        {
+            var action = partKey switch
+            {
+                PartHead when isPetting => "主人按住你的头，轻轻来回抚摸了几下",
+                PartHead => "主人戳了戳你的头",
+                PartArmLeft => "主人戳了戳你的右手",
+                PartArmRight => "主人戳了戳你的左手",
+                PartLegLeft => "主人戳了戳你的右腿",
+                PartLegRight => "主人戳了戳你的左腿",
+                PartBody => "主人戳了戳你的身体",
+                _ => "主人碰了碰你"
+            };
+
+            return $"（触摸事件）{action}。请用符合你人设的一句话回应，" +
+                   "只输出这一句话（30 字以内），不要引号、不要旁白、不要解释。";
         }
 
         /// <summary>把配置里的键统一到标准部位键（忽略大小写与首尾空白）。</summary>
