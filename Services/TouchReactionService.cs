@@ -4,8 +4,9 @@ using KfuPet.Models;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 触摸反应服务：从角色包读取 reactions.json（各部位被触摸时的台词）。
-    /// 台词只来自角色包：未提供该文件、或某个部位没写时，该角色/部位触摸不会有反应。
+    /// 触摸反应备用台词服务：从角色包读取 reactions.json（各部位被触摸时的备用台词）。
+    /// 触摸反应优先由 AI 现场生成，这里只在未接入 AI 或 AI 请求失败时使用；
+    /// 台词只来自角色包：未提供该文件、或某个部位没写时，该角色/部位没有备用台词。
     /// 左右与骨骼命名一致，指画面上的左右（Left 为画面左侧）。
     /// </summary>
     internal class TouchReactionService
@@ -36,21 +37,21 @@ namespace KfuPet.Services
             WriteIndented = true
         };
 
-        /// <summary>各部位的台词表，由 Load 从角色包填充；未配置的部位没有台词。</summary>
+        /// <summary>各部位的备用台词表，由 Load 从角色包填充；未配置的部位没有备用台词。</summary>
         private readonly Dictionary<string, List<string>> _lines = new();
 
         /// <summary>各部位上一句说过的台词，用于避免连续两次触发说同一句。</summary>
         private readonly Dictionary<string, string> _lastLines = new();
 
         /// <summary>
-        /// 从角色包目录加载 reactions.json；未提供该文件或解析失败时没有任何台词可用。
+        /// 从角色包目录加载 reactions.json；未提供该文件或解析失败时没有备用台词可用。
         /// </summary>
         public void Load(string packageDir)
         {
             var manifestPath = Path.Combine(packageDir, ManifestFileName);
             if (!File.Exists(manifestPath))
             {
-                Log.Info($"[触摸] 未找到 {ManifestFileName}，该角色触摸时不会说话");
+                Log.Info($"[触摸] 未找到 {ManifestFileName}，该角色没有备用台词");
                 return;
             }
 
@@ -62,13 +63,13 @@ namespace KfuPet.Services
             }
             catch (Exception ex)
             {
-                Log.Warning($"[触摸] {ManifestFileName} 解析失败，该角色触摸时不会说话：{ex.Message}");
+                Log.Warning($"[触摸] {ManifestFileName} 解析失败，该角色没有备用台词：{ex.Message}");
                 return;
             }
 
             if (manifest?.Reactions == null || manifest.Reactions.Count == 0)
             {
-                Log.Warning($"[触摸] {ManifestFileName} 中没有台词定义，该角色触摸时不会说话");
+                Log.Warning($"[触摸] {ManifestFileName} 中没有台词定义，该角色没有备用台词");
                 return;
             }
 

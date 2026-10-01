@@ -104,11 +104,14 @@ namespace KfuPet
         /// <summary>触发抚摸反应所需的滑动段数：左一下 + 右一下。</summary>
         private const int TOUCH_WIGGLE_STROKES = 2;
 
-        /// <summary>触摸反应台词服务：台词读取自角色包 reactions.json，未配置的角色/部位触摸无反应。</summary>
+        /// <summary>触摸反应备用台词服务：AI 未接入或请求失败时，用角色包 reactions.json 的台词。</summary>
         private readonly TouchReactionService _touchReactions = new();
 
         /// <summary>上一次触摸反应的时间，用于冷却判定。</summary>
         private DateTime _lastTouchReactionTime = DateTime.MinValue;
+
+        /// <summary>是否正在等待 AI 生成触摸回应，避免并发请求、后到的回复覆盖先到的。</summary>
+        private bool _touchReactionPending;
 
         /// <summary>本次按下是否处于头部抚摸判定中（判定期间窗口不跟随移动）。</summary>
         private bool _touchGestureTracking;
@@ -504,7 +507,7 @@ namespace KfuPet
                 var doubleClickBoneId = CharacterCanvas.HitTestAttachmentBoneId(e.GetPosition(CharacterCanvas));
                 if (doubleClickBoneId != null)
                 {
-                    TriggerTouchReaction(doubleClickBoneId);
+                    TriggerTouchReaction(doubleClickBoneId, isPetting: false);
                     return;
                 }
             }
@@ -795,7 +798,7 @@ namespace KfuPet
                 if (_wiggleStrokeCount >= TOUCH_WIGGLE_STROKES)
                 {
                     _touchGestureConsumed = true;
-                    TriggerTouchReaction("head");
+                    TriggerTouchReaction("head", isPetting: true);
                 }
                 return;
             }
@@ -806,9 +809,11 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 触发一次触摸反应：说出该部位对应的台词。冷却期间（2 秒）的触摸动作一律无效。
+        /// 触发一次触摸反应：优先让 AI 现场生成一句回应，未接入 AI 或请求失败时改用角色包的备用台词，
+        /// 两者都没有则不作声。冷却期间（2 秒）的触摸动作一律无效。
         /// </summary>
-        private void TriggerTouchReaction(string boneId)
+        /// <param name="isPetting">true 表示抚摸手势（按住头部来回滑动），false 表示双击。</param>
+        private void TriggerTouchReaction(string boneId, bool isPetting)
         {
             var partKey = TouchReactionService.ResolvePartKey(boneId);
             if (partKey == null) return;
@@ -820,17 +825,112 @@ namespace KfuPet
                 return;
             }
 
-            var line = _touchReactions.PickLine(partKey);
-            if (line == null)
+            if (_touchReactionPending)
             {
-                Log.Debug($"[触摸] {partKey} 没有配置台词，触摸无反应" +
-                          $"（可在角色包 {TouchReactionService.ManifestFileName} 中补充）");
+                Log.Debug("[触摸] 上一次触摸反应还在等 AI 回复，本次触摸无效");
                 return;
             }
 
             _lastTouchReactionTime = DateTime.UtcNow;
+            _ = RunTouchReactionAsync(boneId, partKey, isPetting);
+        }
+
+        /// <summary>
+        /// 执行触摸反应：AI 优先，未接入 AI 或请求失败时退回角色包备用台词，两者都没有则不作声。
+        /// </summary>
+        private async Task RunTouchReactionAsync(string boneId, string partKey, bool isPetting)
+        {
+            var model = ModelConfigService.Models.FirstOrDefault(m => m.IsActive);
+            string? line = null;
+            var source = string.Empty;
+
+            if (model != null)
+            {
+                _touchReactionPending = true;
+                try
+                {
+                    var reply = await _chatService.SendAsync(
+                        model, _memorySystem.BuildBaseSystemPrompt(),
+                        Array.Empty<ChatMessage>(), BuildTouchReactionPrompt(partKey, isPetting));
+                    line = NormalizeReactionLine(reply);
+                    source = "AI";
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning($"[触摸] AI 反应失败，改用备用台词：{ex.Message}");
+                }
+                finally
+                {
+                    _touchReactionPending = false;
+                }
+            }
+
+            if (string.IsNullOrEmpty(line))
+            {
+                // 未接入 AI，或 AI 回复为空、请求失败：用角色包的备用台词
+                line = _touchReactions.PickLine(partKey);
+                source = "备用台词";
+            }
+
+            if (string.IsNullOrEmpty(line))
+            {
+                Log.Debug($"[触摸] {partKey} 既没有 AI 回应也没有备用台词，触摸不作声" +
+                          $"（可在角色包 {TouchReactionService.ManifestFileName} 中补充）");
+                return;
+            }
+
             ShowBubbleBatches(new List<string> { line });
-            Log.Info($"[触摸] {boneId} → {partKey}：{line}");
+            Log.Info($"[触摸] {boneId} → {partKey}（{source}）：{line}");
+        }
+
+        /// <summary>
+        /// 构造触摸事件给 AI 的用户消息：说明被触碰的部位与动作，并要求一句符合人设的短回应。
+        /// 部位按角色自身视角描述（画面左侧的手脚是角色的右手/右腿），与 reactions.json 的写法一致。
+        /// </summary>
+        private static string BuildTouchReactionPrompt(string partKey, bool isPetting)
+        {
+            var action = partKey switch
+            {
+                TouchReactionService.PartHead when isPetting => "主人按住你的头，轻轻来回抚摸了几下",
+                TouchReactionService.PartHead => "主人戳了戳你的头",
+                TouchReactionService.PartArmLeft => "主人戳了戳你的右手",
+                TouchReactionService.PartArmRight => "主人戳了戳你的左手",
+                TouchReactionService.PartLegLeft => "主人戳了戳你的右腿",
+                TouchReactionService.PartLegRight => "主人戳了戳你的左腿",
+                TouchReactionService.PartBody => "主人戳了戳你的身体",
+                _ => "主人碰了碰你"
+            };
+
+            return $"（触摸事件）{action}。请用符合你人设的一句话回应，" +
+                   "只输出这一句话（30 字以内），不要引号、不要旁白、不要解释。";
+        }
+
+        /// <summary>整理 AI 回复：去掉首尾空白、成对引号与多余的行，只保留一句回应。</summary>
+        private static string NormalizeReactionLine(string reply)
+        {
+            var text = reply.Trim();
+
+            // 去掉模型自行添加的成对引号
+            if (text.Length >= 2)
+            {
+                var first = text[0];
+                var last = text[^1];
+                if ((first == '"' && last == '"') ||
+                    (first == '「' && last == '」') ||
+                    (first == '『' && last == '』'))
+                {
+                    text = text[1..^1].Trim();
+                }
+            }
+
+            // 只保留第一行，避免模型在回应后追加解释
+            var newlineIndex = text.IndexOfAny(new[] { '\r', '\n' });
+            if (newlineIndex > 0)
+            {
+                text = text[..newlineIndex].Trim();
+            }
+
+            return text;
         }
 
         // ── AI 聊天：悬停输入框 ─────────────────────
