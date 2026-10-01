@@ -10,6 +10,13 @@ namespace KfuPet.Models
         public string Version { get; set; } = string.Empty;
 
         /// <summary>
+        /// 触摸事件提示（发给 AI 的"发生了什么"描述与应答要求），键：
+        /// headPet（抚摸头部）/ head / armLeft / armRight / legLeft / legRight / body / instruction（应答要求）。
+        /// 缺省项用程序内置默认文案，整段可以省略。
+        /// </summary>
+        public Dictionary<string, string>? EventPrompt { get; set; }
+
+        /// <summary>
         /// 各部位的反应台词，键为部位键（head / armLeft / armRight / legLeft / legRight / body），
         /// 值为该部位的候选台词列表（随机抽取）。左右与骨骼命名一致，指画面上的左右。
         /// </summary>

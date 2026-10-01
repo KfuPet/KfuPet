@@ -851,7 +851,7 @@ namespace KfuPet
                 {
                     var reply = await _chatService.SendAsync(
                         model, _memorySystem.BuildBaseSystemPrompt(),
-                        Array.Empty<ChatMessage>(), TouchReactionService.BuildEventPrompt(partKey, isPetting));
+                        Array.Empty<ChatMessage>(), _touchReactions.BuildEventPrompt(partKey, isPetting));
                     line = NormalizeReactionLine(reply);
                     source = "AI";
                 }

@@ -6,8 +6,8 @@ namespace KfuPet.Services
     /// <summary>
     /// 触摸反应服务：汇总触摸事件所需的两类文案。
     /// 一、事件提示：把"被触碰的部位 + 动作"整理成发给 AI 的用户消息（<see cref="BuildEventPrompt"/>），
-    ///     触摸反应优先由 AI 现场生成回应；
-    /// 二、备用台词：从角色包 reactions.json 读取，仅在未接入 AI 或 AI 请求失败时使用
+    ///     文案取自角色包 reactions.json 的 eventPrompt 段，缺省项用内置默认，触摸反应优先由 AI 现场生成回应；
+    /// 二、备用台词：从角色包 reactions.json 的 reactions 段读取，仅在未接入 AI 或 AI 请求失败时使用
     ///     （台词只来自角色包：未提供该文件、或某个部位没写时，该角色/部位没有备用台词）。
     /// 左右与骨骼命名一致，指画面上的左右（Left 为画面左侧）。
     /// </summary>
@@ -30,6 +30,31 @@ namespace KfuPet.Services
 
         public const string PartBody = "body";
 
+        // ── 事件提示键（与 reactions.json 里 eventPrompt 的键一致）────
+
+        /// <summary>抚摸头部（按住头部来回滑动）的事件键。</summary>
+        private const string EventHeadPet = "headPet";
+
+        /// <summary>应答要求的事件键：整条提示共用的尾部指令。</summary>
+        private const string EventInstructionKey = "instruction";
+
+        /// <summary>部位键无法识别时使用的事件描述。</summary>
+        private const string GenericEventAction = "主人碰了碰你";
+
+        /// <summary>内置事件提示：角色包 eventPrompt 未提供或某项缺省时使用这一套。</summary>
+        private static readonly Dictionary<string, string> BuiltInEventPrompt = new()
+        {
+            [EventHeadPet] = "主人按住你的头，轻轻来回抚摸了几下",
+            [PartHead] = "主人戳了戳你的头",
+            [PartArmLeft] = "主人戳了戳你的右手",
+            [PartArmRight] = "主人戳了戳你的左手",
+            [PartLegLeft] = "主人戳了戳你的右腿",
+            [PartLegRight] = "主人戳了戳你的左腿",
+            [PartBody] = "主人戳了戳你的身体",
+            [EventInstructionKey] =
+                "请用符合你人设的一句话回应，只输出这一句话（30 字以内），不要引号、不要旁白、不要解释。"
+        };
+
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -45,15 +70,19 @@ namespace KfuPet.Services
         /// <summary>各部位上一句说过的台词，用于避免连续两次触发说同一句。</summary>
         private readonly Dictionary<string, string> _lastLines = new();
 
+        /// <summary>角色包提供的事件提示覆盖项（键同 eventPrompt），构建时优先于内置默认。</summary>
+        private readonly Dictionary<string, string> _eventPromptOverrides = new();
+
         /// <summary>
-        /// 从角色包目录加载 reactions.json；未提供该文件或解析失败时没有备用台词可用。
+        /// 从角色包目录加载 reactions.json：eventPrompt 段作为事件提示的覆盖项、reactions 段作为备用台词。
+        /// 未提供该文件或解析失败时，事件提示全用内置默认，且没有备用台词。
         /// </summary>
         public void Load(string packageDir)
         {
             var manifestPath = Path.Combine(packageDir, ManifestFileName);
             if (!File.Exists(manifestPath))
             {
-                Log.Info($"[触摸] 未找到 {ManifestFileName}，该角色没有备用台词");
+                Log.Info($"[触摸] 未找到 {ManifestFileName}，事件提示用内置默认，且该角色没有备用台词");
                 return;
             }
 
@@ -65,16 +94,37 @@ namespace KfuPet.Services
             }
             catch (Exception ex)
             {
-                Log.Warning($"[触摸] {ManifestFileName} 解析失败，该角色没有备用台词：{ex.Message}");
+                Log.Warning($"[触摸] {ManifestFileName} 解析失败，事件提示用内置默认，且该角色没有备用台词：{ex.Message}");
                 return;
             }
 
-            if (manifest?.Reactions == null || manifest.Reactions.Count == 0)
+            if (manifest == null)
             {
-                Log.Warning($"[触摸] {ManifestFileName} 中没有台词定义，该角色没有备用台词");
+                Log.Warning($"[触摸] {ManifestFileName} 内容为空，事件提示用内置默认，且该角色没有备用台词");
                 return;
             }
 
+            // 事件提示：只记录角色包的覆盖项，缺省项在构建时回退到内置默认
+            var overridden = 0;
+            if (manifest.EventPrompt != null)
+            {
+                foreach (var (key, text) in manifest.EventPrompt)
+                {
+                    var eventKey = ResolveEventKey(key);
+                    if (eventKey == null)
+                    {
+                        Log.Warning($"[触摸] 跳过未知的事件提示键：{key}");
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(text)) continue;
+
+                    _eventPromptOverrides[eventKey] = text.Trim();
+                    overridden++;
+                }
+            }
+
+            // 备用台词
             var loaded = 0;
             foreach (var (key, lines) in manifest.Reactions)
             {
@@ -95,7 +145,7 @@ namespace KfuPet.Services
                 loaded++;
             }
 
-            Log.Info($"[触摸] 已加载 {loaded} 类反应台词：{Path.GetFileName(packageDir)}");
+            Log.Info($"[触摸] 已加载 {loaded} 类备用台词、{overridden} 项事件提示覆盖：{Path.GetFileName(packageDir)}");
         }
 
         /// <summary>
@@ -135,26 +185,42 @@ namespace KfuPet.Services
 
         /// <summary>
         /// 构造触摸事件给 AI 的用户消息：说明被触碰的部位与动作，并要求一句符合人设的短回应。
-        /// 部位按角色自身视角描述（画面左侧的手脚是角色的右手/右腿），与 reactions.json 的写法一致。
+        /// 文案优先取角色包 eventPrompt 的覆盖项，缺省项用内置默认；
+        /// 部位按角色自身视角描述（画面左侧的手脚是角色的右手/右腿），与备用台词写法一致。
         /// </summary>
         /// <param name="partKey">反应部位键（head / armLeft / armRight / legLeft / legRight / body）。</param>
         /// <param name="isPetting">true 表示抚摸手势（按住头部来回滑动），false 表示双击。</param>
-        public static string BuildEventPrompt(string partKey, bool isPetting)
+        public string BuildEventPrompt(string partKey, bool isPetting)
         {
-            var action = partKey switch
-            {
-                PartHead when isPetting => "主人按住你的头，轻轻来回抚摸了几下",
-                PartHead => "主人戳了戳你的头",
-                PartArmLeft => "主人戳了戳你的右手",
-                PartArmRight => "主人戳了戳你的左手",
-                PartLegLeft => "主人戳了戳你的右腿",
-                PartLegRight => "主人戳了戳你的左腿",
-                PartBody => "主人戳了戳你的身体",
-                _ => "主人碰了碰你"
-            };
+            var eventKey = partKey == PartHead && isPetting ? EventHeadPet : partKey;
+            var action = ResolveEventText(eventKey, GenericEventAction);
+            var instruction = ResolveEventText(EventInstructionKey, string.Empty);
 
-            return $"（触摸事件）{action}。请用符合你人设的一句话回应，" +
-                   "只输出这一句话（30 字以内），不要引号、不要旁白、不要解释。";
+            return $"（触摸事件）{action}。{instruction}";
+        }
+
+        /// <summary>取事件提示文案：角色包覆盖项优先，其次内置默认，最后用调用方给的兜底文案。</summary>
+        private string ResolveEventText(string eventKey, string fallback)
+        {
+            if (_eventPromptOverrides.TryGetValue(eventKey, out var text)) return text;
+            if (BuiltInEventPrompt.TryGetValue(eventKey, out var builtIn)) return builtIn;
+            return fallback;
+        }
+
+        /// <summary>把配置里的键统一到标准事件键（部位键 + headPet + instruction，忽略大小写与首尾空白）。</summary>
+        private static string? ResolveEventKey(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return null;
+
+            var partKey = ResolveConfiguredKey(key);
+            if (partKey != null) return partKey;
+
+            return key.Trim().ToLowerInvariant() switch
+            {
+                "headpet" => EventHeadPet,
+                "instruction" => EventInstructionKey,
+                _ => null
+            };
         }
 
         /// <summary>把配置里的键统一到标准部位键（忽略大小写与首尾空白）。</summary>
