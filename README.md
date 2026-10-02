@@ -21,10 +21,17 @@
 
 ## 📥 开始使用
 
-| 平台 | 开始安装 |
-| --- | --- |
-| Windows | [点击下载](https://github.com/Lrht-llw/KfuPet/releases/latest) |
-| 开发者工具 | [点击下载](https://github.com/KfuPet/KfuPet-Tool/releases/latest) |
+**KfuPet** 发布在 GitHub（主源），国内另有两个镜像（只同步发行版附件）：GitCode、Gitee。三个源发布的是同一个版本，任选能访问的一个下载：
+
+| 下载源 | 地址 | 说明 |
+| --- | --- | --- |
+| GitHub（主源） | [点击下载](https://github.com/KfuPet/KfuPet/releases/latest) | 版本最及时 |
+| GitCode（国内镜像） | [点击下载](https://gitcode.com/Lrht/KfuPet/releases) | GitHub 访问不畅时优先使用 |
+| Gitee（国内镜像） | [点击下载](https://gitee.com/lrht/kfu-pet/releases) | 紧急备用 |
+
+> 下载 **`KfuPetInstall.exe`** 运行即可安装 / 升级。安装器自身也按「GitHub → GitCode → Gitee」的顺序自动挑选可用源，装好之后不必再手动找镜像。
+
+**开发者工具**：[点击下载](https://github.com/KfuPet/KfuPet-Tool/releases/latest)
 
 ## 🧑‍💻 参与贡献
 
