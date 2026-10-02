@@ -277,7 +277,9 @@
                         Margin="0,0,0,16"
                         Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock Text="更新内容"
+                        <!-- 面板固定标题：发行说明自带 Markdown 标题时由代码隐藏，避免出现两个标题 -->
+                        <TextBlock x:Name="ReleaseNotesTitle"
+                                   Text="更新内容"
                                    FontFamily="{StaticResource FontFamilyBody}"
                                    FontSize="{StaticResource FontSizeCaption}"
                                    FontWeight="{StaticResource FontWeightSemiBold}"

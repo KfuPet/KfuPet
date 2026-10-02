@@ -47,6 +47,10 @@ namespace KfuPet.Views
 
                 if (!string.IsNullOrWhiteSpace(releaseNotes))
                 {
+                    // 发行说明自带 Markdown 标题（如“## 更新内容”）时，隐藏面板固定标题，避免两个标题叠在一起
+                    ReleaseNotesTitle.Visibility = StartsWithHeading(releaseNotes)
+                        ? Visibility.Collapsed
+                        : Visibility.Visible;
                     MarkdownRenderer.Render(releaseNotes, ReleaseNotesPanelContent);
                     ReleaseNotesPanel.Visibility = Visibility.Visible;
                 }
@@ -59,6 +63,26 @@ namespace KfuPet.Views
                 StatusDetailText.Text = $"当前版本 v{currentVersion}";
                 ConfirmButton.Content = "确定";
             }
+        }
+
+        /// <summary>
+        /// 判断文本的首个非空行是否为 Markdown 标题（以 # 开头），
+        /// 与 MarkdownRenderer 的标题识别保持一致。
+        /// </summary>
+        private static bool StartsWithHeading(string text)
+        {
+            foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+            {
+                var trimmed = line.Trim();
+                if (trimmed.Length == 0)
+                {
+                    continue;
+                }
+
+                return trimmed.StartsWith("#", StringComparison.Ordinal);
+            }
+
+            return false;
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
