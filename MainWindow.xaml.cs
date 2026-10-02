@@ -170,6 +170,9 @@ namespace KfuPet
 
         private Skeleton? _skeleton;
 
+        /// <summary>主窗口内容是否已完成初始化：启动画面期间提前初始化与 Loaded 兜底共用，避免重复执行。</summary>
+        private bool _contentInitialized;
+
         /// <summary>本次启动加载附件配置的角色包目录；为空表示没有可回写的角色包。</summary>
         private string? _attachmentsPackageDir;
 
@@ -231,16 +234,34 @@ namespace KfuPet
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // 正常路径下初始化已由 App 在启动画面播放期间提前完成；此处兜底执行（如开机自启直接显示时）
+            InitializeContent();
+
             var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
             int dpi = GetDpiForWindow(hwnd);
-            double dpiScale = dpi / 96.0;
+            Log.Debug($"[窗口] 主窗口加载完成：{Width:F0}×{Height:F0}，DPI 缩放 {dpi / 96.0:F2}");
+        }
+
+        /// <summary>
+        /// 主窗口显示前的初始化：窗口尺寸与位置、骨骼与角色包附件、命令管道与监控。
+        /// 由 App 在启动画面播放期间提前调用；未提前调用时由 Loaded 兜底执行，重复调用只生效一次。
+        /// </summary>
+        internal void InitializeContent()
+        {
+            if (_contentInitialized)
+            {
+                return;
+            }
+
+            _contentInitialized = true;
+
             // 窗口与骨骼统一使用 DIP：DPI 越高物理像素越多，桌宠在各缩放设置下看起来一样大
             Width = WINDOW_WIDTH;
             Height = WINDOW_HEIGHT;
             RestoreOrCenterPosition();
             InitializeSkeleton();
             LoadCharacterAttachments();
-            Log.Debug($"[窗口] 主窗口加载完成：{Width:F0}×{Height:F0}，DPI 缩放 {dpiScale:F2}");
+            Log.Debug($"[窗口] 主窗口内容初始化完成：{Width:F0}×{Height:F0}");
 
             CommandDispatcher.RegisterService(SkeletonService);
             CommandDispatcher.RegisterService(EmotionService);
@@ -509,12 +530,34 @@ namespace KfuPet
         }
 
         /// <summary>
+        /// 显示前把根布局置为全透明：窗口出现后、淡入动画生效前，
+        /// 渲染线程可能先合成出一帧基础不透明度（1）的画面，看起来像"闪一下"，置 0 后提前合成的帧不可见。
+        /// 必须在 <see cref="Window.Show"/> 之前调用，随后立即调用 <see cref="PlayFadeInAnimation"/>。
+        /// </summary>
+        public void PrepareFadeIn()
+        {
+            RootGrid.Opacity = 0;
+        }
+
+        /// <summary>
         /// 播放主窗口淡入动画。
         /// </summary>
         public void PlayFadeInAnimation()
         {
             var storyboard = (Storyboard)RootGrid.Resources["FadeInStoryboard"];
+            storyboard.Completed -= FadeInStoryboard_Completed;
+            storyboard.Completed += FadeInStoryboard_Completed;
             storyboard.Begin();
+        }
+
+        /// <summary>
+        /// 淡入结束后把基础不透明度固化为 1，动画停止或移除后画面不会回落到透明。
+        /// </summary>
+        private void FadeInStoryboard_Completed(object? sender, EventArgs e)
+        {
+            var storyboard = (Storyboard)RootGrid.Resources["FadeInStoryboard"];
+            storyboard.Completed -= FadeInStoryboard_Completed;
+            RootGrid.Opacity = 1;
         }
 
         private void RootGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

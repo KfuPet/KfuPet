@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Windows;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using KfuPet.Models;
 using KfuPet.Services;
@@ -115,6 +116,8 @@ namespace KfuPet
                 // 启动动画播放完成后显示系统托盘图标
                 InitializeTrayIcon();
 
+                // 先置为透明再显示，避免窗口出现后、淡入动画生效前闪出一帧完整画面
+                _mainWindow.PrepareFadeIn();
                 _mainWindow.Show();
                 _mainWindow.PlayFadeInAnimation();
                 Log.Info("[启动] 启动画面已结束，主窗口已显示");
@@ -137,6 +140,10 @@ namespace KfuPet
             };
 
             splashWindow.Show();
+
+            // 主窗初始化提前到启动画面播放期间完成：等启动画面首帧渲染后再执行（Background 优先级），
+            // 既不拖慢启动画面的出现，Splash 结束时主窗也已就绪；没跑完则由主窗 Loaded 兜底执行。
+            Dispatcher.InvokeAsync(_mainWindow.InitializeContent, DispatcherPriority.Background);
         }
 
         /// <summary>
