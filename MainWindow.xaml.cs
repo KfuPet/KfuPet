@@ -254,6 +254,7 @@ namespace KfuPet
             }
 
             _contentInitialized = true;
+            var stopwatch = Stopwatch.StartNew();
 
             // 窗口与骨骼统一使用 DIP：DPI 越高物理像素越多，桌宠在各缩放设置下看起来一样大
             Width = WINDOW_WIDTH;
@@ -261,7 +262,7 @@ namespace KfuPet
             RestoreOrCenterPosition();
             InitializeSkeleton();
             LoadCharacterAttachments();
-            Log.Debug($"[窗口] 主窗口内容初始化完成：{Width:F0}×{Height:F0}");
+            Log.Debug($"[窗口] 主窗口内容初始化完成：{Width:F0}×{Height:F0}，耗时 {stopwatch.ElapsedMilliseconds} ms");
 
             CommandDispatcher.RegisterService(SkeletonService);
             CommandDispatcher.RegisterService(EmotionService);

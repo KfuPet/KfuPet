@@ -142,8 +142,13 @@ namespace KfuPet
             splashWindow.Show();
 
             // 主窗初始化提前到启动画面播放期间完成：等启动画面首帧渲染后再执行（Background 优先级），
-            // 既不拖慢启动画面的出现，Splash 结束时主窗也已就绪；没跑完则由主窗 Loaded 兜底执行。
-            Dispatcher.InvokeAsync(_mainWindow.InitializeContent, DispatcherPriority.Background);
+            // 既不拖慢启动画面的出现，Splash 结束时主窗也已就绪。
+            // 完成后通知启动画面结束等待：固定展示时长已到则立即淡出，未到则照常等满。
+            Dispatcher.InvokeAsync(() =>
+            {
+                _mainWindow.InitializeContent();
+                splashWindow.SetContentReady();
+            }, DispatcherPriority.Background);
         }
 
         /// <summary>

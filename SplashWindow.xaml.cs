@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Windows;
@@ -6,11 +7,13 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using KfuPet.Services;
 
 namespace KfuPet
 {
     /// <summary>
-    /// 启动窗口，展示 Logo 动画与版本号，4 秒后淡出并通知主窗口显示。
+    /// 启动窗口，展示 Logo 动画与版本号：固定展示后淡出并通知主窗口显示；
+    /// 若固定展示时间已到而主窗内容仍未就绪，则保持动画结束状态等待，就绪后再淡出（不循环播放）。
     /// </summary>
     public partial class SplashWindow : Window
     {
@@ -20,9 +23,23 @@ namespace KfuPet
         private const double TextGap = 16;
 
         /// <summary>
+        /// 固定展示时长（秒）：主窗内容在此之前就绪也照常等满。
+        /// </summary>
+        private const int CountdownSeconds = 4;
+
+        /// <summary>
         /// 启动动画完成（含淡出）时触发，主窗口监听此事件后显示。
         /// </summary>
         public event EventHandler? SplashCompleted;
+
+        /// <summary>固定展示时间是否已到点（此时入场动画早已播完，画面处于静止状态）。</summary>
+        private bool _countdownElapsed;
+
+        /// <summary>主窗内容是否已就绪（由 <see cref="SetContentReady"/> 置位）。</summary>
+        private bool _contentReady;
+
+        /// <summary>等待主窗内容就绪的计时器，仅用于记录等待时长。</summary>
+        private readonly Stopwatch _waitStopwatch = new();
 
         public SplashWindow()
         {
@@ -134,20 +151,50 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 4 秒后开始淡出动画，完成后触发 SplashCompleted 事件并关闭窗口。
+        /// 主窗内容加载完成：固定展示时间已到则立即淡出结束，未到则照常等满固定时长。
+        /// </summary>
+        public void SetContentReady()
+        {
+            _contentReady = true;
+            if (_countdownElapsed)
+            {
+                _waitStopwatch.Stop();
+                Log.Info($"[启动画面] 主窗内容已就绪，开始淡出（已等待 {_waitStopwatch.ElapsedMilliseconds} ms）");
+                StartFadeOut();
+            }
+        }
+
+        /// <summary>
+        /// 固定展示时长到点后开始淡出；主窗内容还没就绪时保持动画结束状态等待，
+        /// 由 <see cref="SetContentReady"/> 触发淡出。淡出完成后触发 SplashCompleted 事件并关闭窗口。
         /// </summary>
         private void StartCountdown()
         {
             var timer = new DispatcherTimer();
-            timer.Interval = TimeSpan.FromSeconds(4);
+            timer.Interval = TimeSpan.FromSeconds(CountdownSeconds);
             timer.Tick += (s, e) =>
             {
                 timer.Stop();
-                var storyboard = (Storyboard)RootGrid.Resources["FadeOutStoryboard"];
-                storyboard.Completed += FadeOutStoryboard_Completed;
-                storyboard.Begin();
+                _countdownElapsed = true;
+                if (_contentReady)
+                {
+                    StartFadeOut();
+                }
+                else
+                {
+                    // 主窗内容未就绪：保持动画结束画面等待（不循环），就绪后再淡出
+                    _waitStopwatch.Start();
+                    Log.Info("[启动画面] 固定展示结束，主窗内容未就绪，保持动画结束画面等待");
+                }
             };
             timer.Start();
+        }
+
+        private void StartFadeOut()
+        {
+            var storyboard = (Storyboard)RootGrid.Resources["FadeOutStoryboard"];
+            storyboard.Completed += FadeOutStoryboard_Completed;
+            storyboard.Begin();
         }
 
         private void FadeOutStoryboard_Completed(object? sender, EventArgs e)
