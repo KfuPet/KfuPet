@@ -2133,7 +2133,7 @@
                                             Margin="-18,16,-18,0"
                                             Background="{DynamicResource AppBorderBrush}"/>
 
-                                    <!-- 关于此版本：默认折叠，点击头部展开显示本机版本的更新内容 -->
+                                    <!-- 关于此版本 / 关于新版本（检测到新版本时切换）：默认折叠，点击头部展开显示对应版本的更新内容 -->
                                     <Border x:Name="AboutCurrentVersionHeader"
                                             Margin="-6,6,-6,0"
                                             Padding="6,8"
@@ -2162,7 +2162,8 @@
                                                     CornerRadius="8"
                                                     Background="{DynamicResource AppBorderBrush}"
                                                     Opacity="0"/>
-                                            <TextBlock Text="关于此版本"
+                                            <TextBlock x:Name="AboutVersionTitle"
+                                                       Text="关于此版本"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
@@ -2211,7 +2212,7 @@
                                         </Grid>
                                     </Border>
 
-                                    <!-- 展开区域：本机版本的更新内容 -->
+                                    <!-- 展开区域：对应版本（本机版本 / 新版本）的更新内容 -->
                                     <Border x:Name="AboutCurrentVersionContent"
                                             Visibility="Collapsed"
                                             Opacity="0"

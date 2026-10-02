@@ -817,6 +817,13 @@ namespace KfuPet.Views
             }
 
             UpdatePrompt.Show(this, result);
+
+            // 弹窗关闭后（如用户选择“取消”），把区块同步为本次检查结果，保证“关于新版本”内容一致
+            if (result.IsUpdateAvailable)
+            {
+                await ApplyNewVersionInfoAsync(result);
+                _hasLoadedCurrentVersionInfo = true;
+            }
         }
 
         /// <summary>
@@ -950,7 +957,9 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 拉取本机版本对应的发布信息，填充“关于此版本”区块。只在关于页首次显示时加载一次。
+        /// 拉取版本发布信息，填充“关于此版本 / 关于新版本”区块：
+        /// 检测到新版本时切换为“关于新版本”并展示新版本信息，否则展示本机版本信息。
+        /// 只在关于页首次显示时加载一次。
         /// </summary>
         private async Task LoadCurrentVersionInfoAsync()
         {
@@ -962,12 +971,21 @@ namespace KfuPet.Views
             _isLoadingCurrentVersionInfo = true;
             try
             {
+                // 先检测是否有新版本：有则区块切换为“关于新版本”，内容同步为新版本的发布信息
+                var checkResult = await _updateService.CheckAsync();
+                if (checkResult is { IsUpdateAvailable: true })
+                {
+                    await ApplyNewVersionInfoAsync(checkResult);
+                    _hasLoadedCurrentVersionInfo = true;
+                    return;
+                }
+
                 var versionText = $"v{_updateService.CurrentVersion.ToString(3)}";
 
                 var release = await _updateService.GetCurrentReleaseAsync();
                 if (release == null)
                 {
-                    await ApplyVersionInfoAsync(versionText, string.Empty, "暂时获取不到此版本的更新说明，请检查网络后重试。");
+                    await ApplyVersionInfoAsync("关于此版本", versionText, string.Empty, "暂时获取不到此版本的更新说明，请检查网络后重试。");
                     return;
                 }
 
@@ -975,7 +993,7 @@ namespace KfuPet.Views
                 var notesText = string.IsNullOrWhiteSpace(release.ReleaseNotes)
                     ? "该版本没有提供更新说明。"
                     : release.ReleaseNotes.Trim();
-                await ApplyVersionInfoAsync(versionText, dateText, notesText);
+                await ApplyVersionInfoAsync("关于此版本", versionText, dateText, notesText);
                 _hasLoadedCurrentVersionInfo = true;
             }
             finally
@@ -985,10 +1003,23 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 版本信息入场：先淡出占位内容，替换文本后再淡入，
+        /// 按检查更新结果同步“关于新版本”区块：标题、版本徽章、发布日期与更新说明均取新版本的信息。
+        /// </summary>
+        private async Task ApplyNewVersionInfoAsync(UpdateCheckResult result)
+        {
+            var versionText = $"v{result.LatestVersion.ToString(3)}";
+            var dateText = result.PublishedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
+            var notesText = string.IsNullOrWhiteSpace(result.ReleaseNotes)
+                ? "该版本没有提供更新说明。"
+                : result.ReleaseNotes.Trim();
+            await ApplyVersionInfoAsync("关于新版本", versionText, dateText, notesText);
+        }
+
+        /// <summary>
+        /// 版本信息入场：先淡出占位内容，替换标题与文本后再淡入，
         /// 徽章带回弹放大，日期从左侧滑入。
         /// </summary>
-        private async Task ApplyVersionInfoAsync(string badgeText, string dateText, string notesText)
+        private async Task ApplyVersionInfoAsync(string titleText, string badgeText, string dateText, string notesText)
         {
             var fadeOutDuration = TimeSpan.FromMilliseconds(140);
             var fadeOut = new DoubleAnimation(0, fadeOutDuration);
@@ -996,8 +1027,10 @@ namespace KfuPet.Views
             fadeOut.Completed += (s, _) => fadeOutCompleted.SetResult();
             CurrentVersionBadgeBorder.BeginAnimation(OpacityProperty, fadeOut);
             CurrentReleaseDateText.BeginAnimation(OpacityProperty, new DoubleAnimation(0, fadeOutDuration));
+            AboutVersionTitle.BeginAnimation(OpacityProperty, new DoubleAnimation(0, fadeOutDuration));
             await fadeOutCompleted.Task;
 
+            AboutVersionTitle.Text = titleText;
             CurrentVersionBadge.Text = badgeText;
             CurrentReleaseDateText.Text = dateText;
             MarkdownRenderer.Render(notesText, CurrentReleaseNotesPanel);
@@ -1007,6 +1040,8 @@ namespace KfuPet.Views
             CurrentVersionBadgeBorder.BeginAnimation(OpacityProperty,
                 new DoubleAnimation(1, fadeInDuration) { EasingFunction = fadeInEasing });
             CurrentReleaseDateText.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(1, fadeInDuration) { EasingFunction = fadeInEasing });
+            AboutVersionTitle.BeginAnimation(OpacityProperty,
                 new DoubleAnimation(1, fadeInDuration) { EasingFunction = fadeInEasing });
             CurrentReleaseDateSlide.BeginAnimation(TranslateTransform.XProperty,
                 new DoubleAnimation(-6, 0, fadeInDuration) { EasingFunction = fadeInEasing });
