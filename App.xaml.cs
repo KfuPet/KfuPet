@@ -60,6 +60,7 @@ namespace KfuPet
             {
                 Log.Warning("[启动] 检测到已有实例在运行，本次启动已退出");
                 MessageBox.Show("我已经在桌面上啦，不用再叫醒我一次～", "KfuPet", MessageBoxButton.OK, MessageBoxImage.Information);
+                _mutex.Dispose();
                 _mutex = null;
                 Shutdown();
                 return;
@@ -104,9 +105,11 @@ namespace KfuPet
             }
 
             var splashWindow = new SplashWindow();
+            var splashCompleted = false;
             EventHandler? splashHandler = null;
             splashHandler = (s, args) =>
             {
+                splashCompleted = true;
                 splashWindow.SplashCompleted -= splashHandler;
 
                 // 启动动画播放完成后显示系统托盘图标
@@ -120,6 +123,19 @@ namespace KfuPet
                 _ = CheckUpdateOnStartupAsync();
             };
             splashWindow.SplashCompleted += splashHandler;
+
+            // 启动动画走完之前启动画面就被关闭（如 Alt+F4）：不再进入主界面，直接结束整个程序
+            splashWindow.Closed += (s, args) =>
+            {
+                if (splashCompleted)
+                {
+                    return;
+                }
+
+                Log.Info("[启动] 启动画面被提前关闭，程序直接退出");
+                Shutdown();
+            };
+
             splashWindow.Show();
         }
 

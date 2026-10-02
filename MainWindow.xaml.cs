@@ -79,6 +79,9 @@ namespace KfuPet
         /// <summary>窗口高度（DIP）。角色高 410 DIP（头顶点上 230、脚底点下 180），下方余量需容纳贴底的输入框。</summary>
         private const double WINDOW_HEIGHT = 600;
 
+        /// <summary>启动恢复位置时要求的最小可见比例（0~1）：与虚拟屏幕的重叠低于该比例视为位置失效，回退到屏幕居中。</summary>
+        private const double MIN_RESTORE_VISIBLE_RATIO = 0.2;
+
         // ── 长按拖动 ──────────────────────────────────
         private DispatcherTimer? _holdTimer;
         private bool _isDragging;
@@ -468,13 +471,14 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 恢复上次记录的桌宠位置；没有记录时居中显示。
+        /// 恢复上次记录的桌宠位置；没有记录、或记录的位置已不在屏幕内时居中显示。
         /// 位置与窗口宽高同为逻辑像素（DIP），坐标系一致。
         /// </summary>
         private void RestoreOrCenterPosition()
         {
             var settings = SettingsService.Instance;
-            if (settings.WindowLeft.HasValue && settings.WindowTop.HasValue)
+            if (settings.WindowLeft.HasValue && settings.WindowTop.HasValue &&
+                IsSavedPositionVisible(settings.WindowLeft.Value, settings.WindowTop.Value))
             {
                 Left = settings.WindowLeft.Value;
                 Top = settings.WindowTop.Value;
@@ -483,6 +487,25 @@ namespace KfuPet
             {
                 CenterWindow();
             }
+        }
+
+        /// <summary>
+        /// 判断保存的位置与虚拟屏幕（全部显示器的并集）是否有足够重叠。
+        /// 换显示器、改分辨率或远程桌面后保存的坐标可能落在屏幕外，
+        /// 重叠低于 <see cref="MIN_RESTORE_VISIBLE_RATIO"/> 时视为失效，启动时回到屏幕中间。
+        /// </summary>
+        private static bool IsSavedPositionVisible(double left, double top)
+        {
+            var virtualRight = SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth;
+            var virtualBottom = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
+
+            var overlapWidth = Math.Min(left + WINDOW_WIDTH, virtualRight)
+                - Math.Max(left, SystemParameters.VirtualScreenLeft);
+            var overlapHeight = Math.Min(top + WINDOW_HEIGHT, virtualBottom)
+                - Math.Max(top, SystemParameters.VirtualScreenTop);
+
+            return overlapWidth >= WINDOW_WIDTH * MIN_RESTORE_VISIBLE_RATIO
+                && overlapHeight >= WINDOW_HEIGHT * MIN_RESTORE_VISIBLE_RATIO;
         }
 
         /// <summary>
