@@ -12,6 +12,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using KfuPet.Helpers;
 using KfuPet.Models;
 using KfuPet.Services;
 using KfuPet.Services.Ipc;
@@ -886,29 +887,7 @@ namespace KfuPet
         /// <summary>整理 AI 回复：去掉首尾空白、成对引号与多余的行，只保留一句回应。</summary>
         private static string NormalizeReactionLine(string reply)
         {
-            var text = reply.Trim();
-
-            // 去掉模型自行添加的成对引号
-            if (text.Length >= 2)
-            {
-                var first = text[0];
-                var last = text[^1];
-                if ((first == '"' && last == '"') ||
-                    (first == '「' && last == '」') ||
-                    (first == '『' && last == '』'))
-                {
-                    text = text[1..^1].Trim();
-                }
-            }
-
-            // 只保留第一行，避免模型在回应后追加解释
-            var newlineIndex = text.IndexOfAny(new[] { '\r', '\n' });
-            if (newlineIndex > 0)
-            {
-                text = text[..newlineIndex].Trim();
-            }
-
-            return text;
+            return ModelReplyText.ToSingleLine(reply);
         }
 
         // ── AI 聊天：悬停输入框 ─────────────────────

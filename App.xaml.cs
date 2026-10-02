@@ -30,6 +30,7 @@ namespace KfuPet
         private bool _isDarkTheme;
         private readonly UpdateService _updateService = new();
         private readonly StartupService _startupService = new();
+        private readonly ChatService _chatService = new();
 
         /// <summary>启动检查发现的新版本结果，供点击系统通知时展示更新弹窗。</summary>
         private UpdateCheckResult? _startupUpdateResult;
@@ -178,8 +179,11 @@ namespace KfuPet
                 }
 
                 _startupUpdateResult = result;
+
+                // 通知正文优先由 AI 按角色人设生成，生成期间不打扰用户；失败时回退固定文案
+                var notificationText = await BuildUpdateNotificationTextAsync(result);
                 Log.Info($"[更新] 启动检查发现新版本 v{result.LatestVersion.ToString(3)}，已发出系统通知");
-                ShowUpdateNotification(result);
+                ShowUpdateNotification(result, notificationText);
             }
             catch (Exception ex)
             {
@@ -190,8 +194,9 @@ namespace KfuPet
 
         /// <summary>
         /// 用托盘图标发出系统通知（Windows 10 起会显示为系统通知）。
+        /// 标题固定为新版本号，正文由 <see cref="BuildUpdateNotificationTextAsync"/> 提供。
         /// </summary>
-        private void ShowUpdateNotification(UpdateCheckResult result)
+        private void ShowUpdateNotification(UpdateCheckResult result, string text)
         {
             if (_notifyIcon == null)
             {
@@ -199,9 +204,49 @@ namespace KfuPet
             }
 
             _notifyIcon.BalloonTipTitle = $"发现新版本 v{result.LatestVersion.ToString(3)}";
-            _notifyIcon.BalloonTipText = $"当前版本 v{result.CurrentVersion.ToString(3)}，点击查看更新内容。";
+            _notifyIcon.BalloonTipText = text;
             _notifyIcon.BalloonTipIcon = System.Windows.Forms.ToolTipIcon.Info;
             _notifyIcon.ShowBalloonTip(NotificationDisplayMilliseconds);
+        }
+
+        /// <summary>
+        /// 生成更新通知的正文：优先让 AI 按角色人设写一句；
+        /// 未接入 AI、回复为空或请求失败时回退到固定文案。
+        /// </summary>
+        private async Task<string> BuildUpdateNotificationTextAsync(UpdateCheckResult result)
+        {
+            var fallbackText = $"当前版本 v{result.CurrentVersion.ToString(3)}，点击查看更新内容。";
+
+            var model = _mainWindow?.ModelConfigService.Models.FirstOrDefault(m => m.IsActive);
+            if (model == null || _mainWindow == null)
+            {
+                Log.Debug("[更新] 未接入 AI 模型，通知正文使用固定文案");
+                return fallbackText;
+            }
+
+            try
+            {
+                var reply = await _chatService.SendAsync(
+                    model,
+                    _mainWindow.MemorySystem.BuildBaseSystemPrompt(),
+                    Array.Empty<ChatMessage>(),
+                    UpdateNotificationService.BuildEventPrompt(result));
+
+                var line = UpdateNotificationService.NormalizeLine(reply);
+                if (!string.IsNullOrEmpty(line))
+                {
+                    Log.Info($"[更新] 通知正文由 AI 生成：{line}");
+                    return line;
+                }
+
+                Log.Debug("[更新] AI 通知正文为空，改用固定文案");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[更新] AI 生成通知正文失败，改用固定文案：{ex.Message}");
+            }
+
+            return fallbackText;
         }
 
         /// <summary>
