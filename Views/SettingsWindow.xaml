@@ -1059,12 +1059,10 @@
 
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="通用" Style="{StaticResource SectionTitleStyle}"/>
-                            <TextBlock Text="软件的日常设置都收在这里。"
-                                       Style="{StaticResource HintTextStyle}"
-                                       Margin="0,6,0,24"/>
 
                             <!-- 外观卡片：标签居左，浅色/深色分段选择器居右 -->
-                            <Border Padding="14,10"
+                            <Border Margin="0,16,0,0"
+                                    Padding="14,10"
                                     Background="{DynamicResource AppSurfaceBrush}"
                                     BorderBrush="{DynamicResource AppBorderBrush}"
                                     BorderThickness="1"
@@ -1176,10 +1174,6 @@
                                 </Button>
                             </Grid>
 
-                            <TextBlock Text="这里会列出你添加过的所有模型。点击开关可以切换我当前使用的模型，删除按钮可以移除不再需要的模型。"
-                                       Style="{StaticResource HintTextStyle}"
-                                       Margin="0,0,0,16"/>
-
                             <!-- 模型列表（数据由 ModelConfigService 本地持久化） -->
                             <ItemsControl x:Name="ModelList"
                                           Background="Transparent"
@@ -1212,12 +1206,10 @@
 
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="模型功能" Style="{StaticResource SectionTitleStyle}"/>
-                            <TextBlock Text="这里控制哪些功能会调用模型。开启节省后，对应功能改用内置文案，不再消耗模型请求。"
-                                       Style="{StaticResource HintTextStyle}"
-                                       Margin="0,6,0,24"/>
 
                             <!-- 节省模式卡片：标签居左，关闭 / 节省 / 自定义三档选择居右 -->
-                            <Border Padding="14,10"
+                            <Border Margin="0,16,0,0"
+                                    Padding="14,10"
                                     Background="{DynamicResource AppSurfaceBrush}"
                                     BorderBrush="{DynamicResource AppBorderBrush}"
                                     BorderThickness="1"
@@ -1440,12 +1432,9 @@
                                     </Button.Template>
                                 </Button>
                             </Grid>
-                            <TextBlock Text="这里可以看到我记住了多少事，也能调整记忆检索的设置。"
-                                       Style="{StaticResource HintTextStyle}"
-                                       Margin="0,6,0,24"/>
 
                             <!-- 记忆概览：三级记忆状态卡片（数字滚动 + 进度条缓动填充） -->
-                            <Grid>
+                            <Grid Margin="0,16,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
@@ -2124,12 +2113,10 @@
 
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="开发者模式" Style="{StaticResource SectionTitleStyle}"/>
-                            <TextBlock Text="想看看我身体里的构造吗？打开开关，就把骨骼和调试工具都摆出来给你看。"
-                                       Style="{StaticResource HintTextStyle}"
-                                       Margin="0,6,0,24"/>
 
                             <!-- 选项卡片：标签居左，开关统一居右 -->
-                            <Border Padding="14,10"
+                            <Border Margin="0,16,0,0"
+                                    Padding="14,10"
                                     Background="{DynamicResource AppSurfaceBrush}"
                                     BorderBrush="{DynamicResource AppBorderBrush}"
                                     BorderThickness="1"
