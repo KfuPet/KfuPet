@@ -1200,6 +1200,38 @@
                                   Visibility="Collapsed"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer.Resources>
+                            <!-- 分段滑块按钮：文字选项，选中态由背后的滑块承载 -->
+                            <Style x:Key="SegmentButtonStyle" TargetType="RadioButton">
+                                <Setter Property="Width" Value="68"/>
+                                <Setter Property="Padding" Value="0,6"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
+                                <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="RadioButton">
+                                            <Border Background="Transparent"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"
+                                                                  TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsChecked" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ScrollViewer.Resources>
                         <ScrollViewer.RenderTransform>
                             <TranslateTransform/>
                         </ScrollViewer.RenderTransform>
@@ -1207,7 +1239,7 @@
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="模型功能" Style="{StaticResource SectionTitleStyle}"/>
 
-                            <!-- 节省模式卡片：标签居左，关闭 / 节省 / 自定义三档选择居右 -->
+                            <!-- 节省消耗卡片：标签居左，关闭 / 开启 / 自定义滑块居右 -->
                             <Border Margin="0,16,0,0"
                                     Padding="14,10"
                                     Background="{DynamicResource AppSurfaceBrush}"
@@ -1223,24 +1255,56 @@
                                     <StackPanel Grid.Column="0"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,16,0">
-                                        <TextBlock Text="模型消耗"
+                                        <TextBlock Text="节省模型消耗"
                                                    FontFamily="{StaticResource FontFamilyBody}"
                                                    FontSize="{StaticResource FontSizeBody}"
                                                    Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-                                        <TextBlock x:Name="SavingModeHintText"
-                                                   Style="{StaticResource HintTextStyle}"
-                                                   Margin="0,3,0,0"/>
                                     </StackPanel>
 
-                                    <ComboBox x:Name="SavingModeComboBox"
-                                              Grid.Column="1"
-                                              Style="{StaticResource AppearanceComboStyle}"
-                                              VerticalAlignment="Center"
-                                              SelectionChanged="SavingModeComboBox_SelectionChanged">
-                                        <ComboBoxItem Content="关闭" Tag="&#xE711;"/>
-                                        <ComboBoxItem Content="节省" Tag="&#xE945;"/>
-                                        <ComboBoxItem Content="自定义" Tag="&#xE70F;"/>
-                                    </ComboBox>
+                                    <!-- 分段滑块：关闭 / 开启 / 自定义，选中项由滑块承载 -->
+                                    <Border x:Name="SavingModeSegmented"
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Background="{DynamicResource AppSurfaceBrush}"
+                                            BorderBrush="{DynamicResource AppBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="17"
+                                            Padding="3">
+                                        <Grid x:Name="SavingModeTrack">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- 滑块：随选中项左右滑动 -->
+                                            <Border x:Name="SavingModeThumb"
+                                                    Grid.Column="0"
+                                                    Background="{DynamicResource AppBorderBrush}"
+                                                    CornerRadius="14"
+                                                    SizeChanged="SavingModeThumb_SizeChanged">
+                                                <Border.RenderTransform>
+                                                    <TranslateTransform/>
+                                                </Border.RenderTransform>
+                                            </Border>
+
+                                            <RadioButton x:Name="SavingOffRadio"
+                                                         Grid.Column="0"
+                                                         Style="{StaticResource SegmentButtonStyle}"
+                                                         Content="关闭"
+                                                         Checked="SavingModeRadio_Checked"/>
+                                            <RadioButton x:Name="SavingOnRadio"
+                                                         Grid.Column="1"
+                                                         Style="{StaticResource SegmentButtonStyle}"
+                                                         Content="开启"
+                                                         Checked="SavingModeRadio_Checked"/>
+                                            <RadioButton x:Name="SavingCustomRadio"
+                                                         Grid.Column="2"
+                                                         Style="{StaticResource SegmentButtonStyle}"
+                                                         Content="自定义"
+                                                         Checked="SavingModeRadio_Checked"/>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
                             </Border>
 

@@ -59,18 +59,18 @@ namespace KfuPet.Views
             AutoStartToggle.IsChecked = _startupService.IsEnabled();
             _suppressAutoStartEvents = false;
 
-            // 节省模式：按已保存的档位选中对应项，并同步自定义细分选项（0 AI 生成 / 1 内置文案）
+            // 节省消耗档位：按已保存的设置选中对应滑块项，并同步自定义细分选项（0 AI 生成 / 1 内置文案）
             _suppressSavingEvents = true;
-            SavingModeComboBox.SelectedIndex = SettingsService.Instance.ModelSavingMode switch
+            (SettingsService.Instance.ModelSavingMode switch
             {
-                SavingMode.Saving => 1,
-                SavingMode.Custom => 2,
-                _ => 0
-            };
+                SavingMode.Saving => SavingOnRadio,
+                SavingMode.Custom => SavingCustomRadio,
+                _ => SavingOffRadio
+            }).IsChecked = true;
             TouchReactionSavingComboBox.SelectedIndex = SettingsService.Instance.CustomTouchReactionUseAi ? 0 : 1;
             UpdateNotificationSavingComboBox.SelectedIndex = SettingsService.Instance.CustomUpdateNotificationUseAi ? 0 : 1;
             _suppressSavingEvents = false;
-            UpdateSavingModePresentation();
+            UpdateCustomSavingOptionsVisibility();
 
             VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
 
@@ -317,23 +317,53 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 节省模式选择变化：0 关闭 / 1 节省 / 2 自定义，保存档位并刷新提示与自定义细分选项。
+        /// 节省消耗档位变化：关闭 / 开启 / 自定义，保存档位、滑动滑块并刷新自定义细分选项。
         /// </summary>
-        private void SavingModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void SavingModeRadio_Checked(object sender, RoutedEventArgs e)
         {
             if (_suppressSavingEvents)
             {
                 return;
             }
 
-            var mode = SavingModeComboBox.SelectedIndex switch
-            {
-                1 => SavingMode.Saving,
-                2 => SavingMode.Custom,
-                _ => SavingMode.Off
-            };
+            var mode = sender == SavingOnRadio ? SavingMode.Saving
+                : sender == SavingCustomRadio ? SavingMode.Custom
+                : SavingMode.Off;
             SettingsService.Instance.SetModelSavingMode(mode);
-            UpdateSavingModePresentation();
+            UpdateSavingThumb(animate: true);
+            UpdateCustomSavingOptionsVisibility();
+        }
+
+        /// <summary>滑块位置同步：播放滑动动画；首次布局或尺寸变化时直接落位。</summary>
+        private void UpdateSavingThumb(bool animate)
+        {
+            var index = SavingCustomRadio.IsChecked == true ? 2 : SavingOnRadio.IsChecked == true ? 1 : 0;
+            var translate = FindTranslateTransform(SavingModeThumb);
+            if (translate == null || SavingModeThumb.ActualWidth <= 0)
+            {
+                return;
+            }
+
+            var target = index * SavingModeThumb.ActualWidth;
+            if (animate)
+            {
+                translate.BeginAnimation(TranslateTransform.XProperty,
+                    new DoubleAnimation(target, TimeSpan.FromMilliseconds(180))
+                    {
+                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                    });
+            }
+            else
+            {
+                translate.BeginAnimation(TranslateTransform.XProperty, null);
+                translate.X = target;
+            }
+        }
+
+        /// <summary>滑块尺寸随窗口或 DPI 变化后重新落位，避免停在旧位置。</summary>
+        private void SavingModeThumb_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateSavingThumb(animate: false);
         }
 
         /// <summary>
@@ -363,19 +393,11 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 按当前节省档位刷新提示文字，并在自定义模式下展开细分选项（淡入 + 上滑）。
+        /// 按当前档位刷新自定义细分选项的显隐：自定义模式展开（淡入 + 上滑），其余档位收起。
         /// </summary>
-        private void UpdateSavingModePresentation()
+        private void UpdateCustomSavingOptionsVisibility()
         {
-            var index = SavingModeComboBox.SelectedIndex;
-            SavingModeHintText.Text = index switch
-            {
-                1 => "触摸反应与更新通知文案改用内置文案，不再消耗模型请求。",
-                2 => "分别设置每个功能是否使用 AI 生成。",
-                _ => "保持现状：触摸反应与更新通知文案由 AI 生成。"
-            };
-
-            if (index == 2)
+            if (SavingCustomRadio.IsChecked == true)
             {
                 if (CustomSavingOptionsPanel.Visibility == Visibility.Visible)
                 {
