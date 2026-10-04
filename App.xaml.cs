@@ -239,16 +239,18 @@ namespace KfuPet
 
         /// <summary>
         /// 生成更新通知的正文：优先让 AI 按角色人设写一句；
-        /// 未接入 AI、回复为空或请求失败时回退到固定文案。
+        /// 未接入 AI、节省模式、回复为空或请求失败时回退到固定文案。
         /// </summary>
         private async Task<string> BuildUpdateNotificationTextAsync(UpdateCheckResult result)
         {
             var fallbackText = $"当前版本 v{result.CurrentVersion.ToString(3)}，点击查看更新内容。";
 
-            var model = _mainWindow?.ModelConfigService.Models.FirstOrDefault(m => m.IsActive);
+            // 节省模式：不请求 AI，直接用固定文案
+            var useAi = SettingsService.Instance.UpdateNotificationUseAi;
+            var model = useAi ? _mainWindow?.ModelConfigService.Models.FirstOrDefault(m => m.IsActive) : null;
             if (model == null || _mainWindow == null)
             {
-                Log.Debug("[更新] 未接入 AI 模型，通知正文使用固定文案");
+                Log.Debug(useAi ? "[更新] 未接入 AI 模型，通知正文使用固定文案" : "[更新] 节省模式已开启，通知正文使用固定文案");
                 return fallbackText;
             }
 

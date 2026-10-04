@@ -2,9 +2,22 @@ using System.Text.Json;
 
 namespace KfuPet.Services
 {
+    /// <summary>模型功能节省模式：控制触摸反应与更新通知文案是否改用内置文案。</summary>
+    internal enum SavingMode
+    {
+        /// <summary>关闭：不启用节省，各功能保持现状（由 AI 生成）。</summary>
+        Off,
+
+        /// <summary>节省：触摸反应与更新通知文案改用内置文案，不再消耗模型请求。</summary>
+        Saving,
+
+        /// <summary>自定义：两项功能分别控制是否使用 AI 生成。</summary>
+        Custom
+    }
+
     /// <summary>
     /// 应用通用设置，统一读写 %AppData%\KfuPet\Config\settings.json。
-    /// 目前包含主题偏好、开发者模式、骨骼调试线框与桌宠窗口位置；后续通用设置继续在此扩展字段。
+    /// 目前包含主题偏好、开发者模式、骨骼调试线框、桌宠窗口位置与模型功能节省模式；后续通用设置继续在此扩展字段。
     /// </summary>
     internal class SettingsService
     {
@@ -32,6 +45,31 @@ namespace KfuPet.Services
 
         /// <summary>桌宠窗口左上角 Y 坐标（逻辑像素）；null 表示尚未记录，启动时居中。</summary>
         public double? WindowTop { get; private set; }
+
+        /// <summary>模型功能节省模式。</summary>
+        public SavingMode ModelSavingMode { get; private set; }
+
+        /// <summary>自定义模式下触摸反应是否使用 AI 生成；false 表示改用内置文案。</summary>
+        public bool CustomTouchReactionUseAi { get; private set; } = true;
+
+        /// <summary>自定义模式下更新通知文案是否使用 AI 生成；false 表示改用内置文案。</summary>
+        public bool CustomUpdateNotificationUseAi { get; private set; } = true;
+
+        /// <summary>触摸反应是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
+        public bool TouchReactionUseAi => ModelSavingMode switch
+        {
+            SavingMode.Saving => false,
+            SavingMode.Custom => CustomTouchReactionUseAi,
+            _ => true
+        };
+
+        /// <summary>更新通知文案是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
+        public bool UpdateNotificationUseAi => ModelSavingMode switch
+        {
+            SavingMode.Saving => false,
+            SavingMode.Custom => CustomUpdateNotificationUseAi,
+            _ => true
+        };
 
         private SettingsService()
         {
@@ -64,6 +102,27 @@ namespace KfuPet.Services
         {
             WindowLeft = left;
             WindowTop = top;
+            Save();
+        }
+
+        /// <summary>保存模型功能节省模式。</summary>
+        public void SetModelSavingMode(SavingMode mode)
+        {
+            ModelSavingMode = mode;
+            Save();
+        }
+
+        /// <summary>保存自定义模式下触摸反应是否使用 AI 生成。</summary>
+        public void SetCustomTouchReactionUseAi(bool useAi)
+        {
+            CustomTouchReactionUseAi = useAi;
+            Save();
+        }
+
+        /// <summary>保存自定义模式下更新通知文案是否使用 AI 生成。</summary>
+        public void SetCustomUpdateNotificationUseAi(bool useAi)
+        {
+            CustomUpdateNotificationUseAi = useAi;
             Save();
         }
 
@@ -115,6 +174,26 @@ namespace KfuPet.Services
                 {
                     WindowTop = windowTopElement.GetDouble();
                 }
+
+                if (root.TryGetProperty("ModelSavingMode", out var savingModeElement) &&
+                    savingModeElement.ValueKind == JsonValueKind.String &&
+                    Enum.TryParse<SavingMode>(savingModeElement.GetString(), ignoreCase: true, out var savingMode) &&
+                    Enum.IsDefined(savingMode))
+                {
+                    ModelSavingMode = savingMode;
+                }
+
+                if (root.TryGetProperty("CustomTouchReactionUseAi", out var touchReactionElement) &&
+                    touchReactionElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    CustomTouchReactionUseAi = touchReactionElement.GetBoolean();
+                }
+
+                if (root.TryGetProperty("CustomUpdateNotificationUseAi", out var notificationElement) &&
+                    notificationElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    CustomUpdateNotificationUseAi = notificationElement.GetBoolean();
+                }
             }
             catch (Exception ex)
             {
@@ -134,7 +213,10 @@ namespace KfuPet.Services
                     DeveloperMode,
                     DebugBones,
                     WindowLeft,
-                    WindowTop
+                    WindowTop,
+                    ModelSavingMode = ModelSavingMode.ToString(),
+                    CustomTouchReactionUseAi,
+                    CustomUpdateNotificationUseAi
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

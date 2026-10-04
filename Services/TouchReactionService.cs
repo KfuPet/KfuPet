@@ -55,6 +55,19 @@ namespace KfuPet.Services
                 "请用符合你人设的一句话回应，只输出这一句话（30 字以内），不要引号、不要旁白、不要解释。"
         };
 
+        /// <summary>
+        /// 内置兜底台词：节省模式下角色包未提供备用台词时使用，保证关闭 AI 后触摸仍有回应。
+        /// </summary>
+        private static readonly Dictionary<string, List<string>> BuiltInLines = new()
+        {
+            [PartHead] = new() { "唔……好舒服～", "嘿嘿，被你摸头了呢。" },
+            [PartBody] = new() { "呀！别戳那里……", "嗯？找我有什么事吗？" },
+            [PartArmLeft] = new() { "你碰了碰我的手。", "嗯？要牵手吗？" },
+            [PartArmRight] = new() { "你碰了碰我的手。", "嗯？要牵手吗？" },
+            [PartLegLeft] = new() { "别碰腿啦，好痒。", "唔……腿不是用来戳的啦。" },
+            [PartLegRight] = new() { "别碰腿啦，好痒。", "唔……腿不是用来戳的啦。" }
+        };
+
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -153,7 +166,22 @@ namespace KfuPet.Services
         /// </summary>
         public string? PickLine(string partKey)
         {
-            if (!_lines.TryGetValue(partKey, out var lines) || lines.Count == 0)
+            return _lines.TryGetValue(partKey, out var lines) ? PickFrom(lines, partKey) : null;
+        }
+
+        /// <summary>
+        /// 取一条内置兜底台词：节省模式下角色包没有备用台词时使用，保证触摸仍有回应。
+        /// 与备用台词共用“上一句”记录，避免连续重复。
+        /// </summary>
+        public string? PickBuiltInLine(string partKey)
+        {
+            return BuiltInLines.TryGetValue(partKey, out var lines) ? PickFrom(lines, partKey) : null;
+        }
+
+        /// <summary>从台词表里随机取一条，同部位避免与上一句重复；表为空时返回 null。</summary>
+        private string? PickFrom(List<string> lines, string partKey)
+        {
+            if (lines.Count == 0)
                 return null;
 
             var line = lines.Count == 1 ? lines[0] : lines[Random.Shared.Next(lines.Count)];
