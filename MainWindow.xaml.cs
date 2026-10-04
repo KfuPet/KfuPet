@@ -217,9 +217,14 @@ namespace KfuPet
         public bool IsToolRunning => DeveloperModeService.IsToolRunning();
 
         /// <summary>
-        /// 开发者工具运行状态变化时触发，供设置界面同步显示。
+        /// 开发者工具是否已通过命名管道连上（近 5 秒内收到过工具请求），即真实连接状态。
         /// </summary>
-        public event EventHandler? ToolRunningChanged;
+        public bool IsToolConnected => _pipeServer?.IsClientConnected == true;
+
+        /// <summary>
+        /// 开发者工具状态变化（进程启动/退出、连接/断开）时触发，供设置界面同步显示。
+        /// </summary>
+        public event EventHandler? ToolStatusChanged;
 
         public MainWindow()
         {
@@ -270,6 +275,10 @@ namespace KfuPet
 
             _pipeServer = new NamedPipeServer(CommandDispatcher, Application.Current);
 
+            // 工具端连接/断开会从后台线程触发，统一切回 UI 线程后再通知设置界面刷新
+            _pipeServer.ClientStateChanged += (s, e) =>
+                Dispatcher.InvokeAsync(() => ToolStatusChanged?.Invoke(this, EventArgs.Empty));
+
             // 命令管道由开发者模式开关控制，默认关闭；日志管道常开，由 App 在启动时拉起
             DeveloperModeService.EnabledChanged += OnDeveloperModeChanged;
             ApplyDeveloperMode();
@@ -319,7 +328,7 @@ namespace KfuPet
         private void OnDeveloperModeChanged(object? sender, EventArgs e)
         {
             ApplyDeveloperMode();
-            ToolRunningChanged?.Invoke(this, EventArgs.Empty);
+            ToolStatusChanged?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
@@ -356,7 +365,7 @@ namespace KfuPet
                 {
                     _wasToolRunning = running;
                     Log.Info($"[IPC] 开发者工具{(running ? "已启动" : "已退出")}");
-                    ToolRunningChanged?.Invoke(this, EventArgs.Empty);
+                    ToolStatusChanged?.Invoke(this, EventArgs.Empty);
                 }
             };
             _toolMonitorTimer.Start();

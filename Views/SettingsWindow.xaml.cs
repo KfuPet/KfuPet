@@ -94,7 +94,7 @@ namespace KfuPet.Views
         {
             Log.Debug("[窗口] 设置窗口已关闭");
             _mainWindow.DeveloperModeService.EnabledChanged -= OnDeveloperModeChanged;
-            _mainWindow.ToolRunningChanged -= OnToolRunningChanged;
+            _mainWindow.ToolStatusChanged -= OnToolStatusChanged;
             _mainWindow.SkeletonService.DebugSkeletonChanged -= OnDebugSkeletonChanged;
         }
 
@@ -783,7 +783,7 @@ namespace KfuPet.Views
         private void LoadDeveloperState()
         {
             _mainWindow.DeveloperModeService.EnabledChanged += OnDeveloperModeChanged;
-            _mainWindow.ToolRunningChanged += OnToolRunningChanged;
+            _mainWindow.ToolStatusChanged += OnToolStatusChanged;
             _mainWindow.SkeletonService.DebugSkeletonChanged += OnDebugSkeletonChanged;
 
             _suppressToggleEvents = true;
@@ -879,7 +879,7 @@ namespace KfuPet.Views
             _mainWindow.SkeletonService.SetDebugSkeleton(DebugBonesToggle.IsChecked == true);
         }
 
-        private void OnToolRunningChanged(object? sender, EventArgs e)
+        private void OnToolStatusChanged(object? sender, EventArgs e)
         {
             UpdateToolStatus();
         }
@@ -890,11 +890,24 @@ namespace KfuPet.Views
             _mainWindow.DeveloperModeService.SetEnabled(DeveloperModeToggle.IsChecked == true);
         }
 
+        /// <summary>
+        /// 刷新开发者工具状态文案：优先按真实管道连接状态显示；
+        /// 进程在跑但未连接时给出中间提示；完全没启动时再提示去启动。
+        /// </summary>
         private void UpdateToolStatus()
         {
-            ToolStatusText.Text = _mainWindow.IsToolRunning
-                ? "开发者工具已经连上我啦，随时欢迎来研究～"
-                : "开发者工具还没连过来，想研究我的话记得启动它。";
+            if (_mainWindow.IsToolConnected)
+            {
+                ToolStatusText.Text = "开发者工具已经连上我啦，随时欢迎来研究～";
+            }
+            else if (_mainWindow.IsToolRunning)
+            {
+                ToolStatusText.Text = "开发者工具启动了，但还没连上我，看看开发者模式开关有没有打开～";
+            }
+            else
+            {
+                ToolStatusText.Text = "开发者工具还没连过来，想研究我的话记得启动它。";
+            }
         }
 
         /// <summary>
