@@ -1239,7 +1239,7 @@
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="模型功能" Style="{StaticResource SectionTitleStyle}"/>
 
-                            <!-- 节省消耗卡片：标签居左，关闭 / 开启 / 自定义滑块居右 -->
+                            <!-- 节省模型消耗卡片：标签居左（带说明问号），关闭 / 开启 / 自定义滑块居右 -->
                             <Border Margin="0,16,0,0"
                                     Padding="14,10"
                                     Background="{DynamicResource AppSurfaceBrush}"
@@ -1253,12 +1253,37 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0"
+                                                Orientation="Horizontal"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,16,0">
                                         <TextBlock Text="节省模型消耗"
                                                    FontFamily="{StaticResource FontFamilyBody}"
                                                    FontSize="{StaticResource FontSizeBody}"
-                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <!-- 说明问号：悬停显示各档位的含义 -->
+                                        <TextBlock Text="&#xE9CE;"
+                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                   Cursor="Help"
+                                                   Margin="6,1,0,0"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                            <TextBlock.ToolTip>
+                                                <ToolTip MaxWidth="320"
+                                                         Content="关闭：保持现状，触摸反应与更新通知文案由 AI 生成。&#x0a;开启：两项功能改用内置文案，不再消耗模型请求。&#x0a;自定义：分别设置每个功能是否使用 AI 生成。"/>
+                                            </TextBlock.ToolTip>
+                                        </TextBlock>
                                     </StackPanel>
 
                                     <!-- 分段滑块：关闭 / 开启 / 自定义，选中项由滑块承载 -->
@@ -1335,9 +1360,6 @@
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-                                            <TextBlock Text="戳一戳、摸摸头时的回应。"
-                                                       Style="{StaticResource HintTextStyle}"
-                                                       Margin="0,3,0,0"/>
                                         </StackPanel>
 
                                         <ComboBox x:Name="TouchReactionSavingComboBox"
@@ -1370,9 +1392,6 @@
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-                                            <TextBlock Text="启动检查发现新版本时的通知正文。"
-                                                       Style="{StaticResource HintTextStyle}"
-                                                       Margin="0,3,0,0"/>
                                         </StackPanel>
 
                                         <ComboBox x:Name="UpdateNotificationSavingComboBox"
