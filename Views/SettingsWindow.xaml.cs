@@ -79,6 +79,7 @@ namespace KfuPet.Views
             }).IsChecked = true;
             TouchReactionSavingComboBox.SelectedIndex = SettingsService.Instance.CustomTouchReactionUseAi ? 0 : 1;
             UpdateNotificationSavingComboBox.SelectedIndex = SettingsService.Instance.CustomUpdateNotificationUseAi ? 0 : 1;
+            SnapBackSavingComboBox.SelectedIndex = SettingsService.Instance.CustomSnapBackUseAi ? 0 : 1;
             _suppressSavingEvents = false;
             UpdateCustomSavingOptionsVisibility();
 
@@ -401,6 +402,19 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetCustomUpdateNotificationUseAi(UpdateNotificationSavingComboBox.SelectedIndex == 0);
+        }
+
+        /// <summary>
+        /// 自定义细分：越界回正文案是否使用 AI 生成（0 AI 生成 / 1 内置文案）。
+        /// </summary>
+        private void SnapBackSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressSavingEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetCustomSnapBackUseAi(SnapBackSavingComboBox.SelectedIndex == 0);
         }
 
         /// <summary>

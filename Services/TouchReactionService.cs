@@ -4,11 +4,11 @@ using KfuPet.Models;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 触摸反应服务：汇总触摸事件所需的两类文案。
-    /// 一、事件提示：把"被触碰的部位 + 动作"整理成发给 AI 的用户消息（<see cref="BuildEventPrompt"/>），
-    ///     文案取自角色包 reactions.json 的 eventPrompt 段，缺省项用内置默认，触摸反应优先由 AI 现场生成回应；
-    /// 二、备用台词：从角色包 reactions.json 的 reactions 段读取，仅在未接入 AI 或 AI 请求失败时使用
-    ///     （台词只来自角色包：未提供该文件、或某个部位没写时，该角色/部位没有备用台词）。
+    /// 角色反应文案服务：为触摸反应与拖动越界回正（snapBack）提供两类文案。
+    /// 一、事件提示：把"发生了什么"整理成发给 AI 的用户消息（<see cref="BuildEventPrompt"/>、<see cref="BuildSnapBackEventPrompt"/>），
+    ///     文案取自角色包 reactions.json 的 eventPrompt 段，缺省项用内置默认；
+    /// 二、备用台词：从角色包 reactions.json 的 reactions 段读取，未接入 AI 或 AI 请求失败时使用；
+    ///     角色包未提供时，触摸由 <see cref="PickBuiltInLine"/> 在未使用 AI 时兜底，拖动越界回正始终兜底。
     /// 左右与骨骼命名一致，指画面上的左右（Left 为画面左侧）。
     /// </summary>
     internal class TouchReactionService
@@ -30,6 +30,11 @@ namespace KfuPet.Services
 
         public const string PartBody = "body";
 
+        // ── 事件键（与 reactions.json 中 eventPrompt / reactions 的键一致）────
+
+        /// <summary>拖动越界回正（差点被拖出屏幕）的事件键：eventPrompt 与 reactions 两段通用。</summary>
+        public const string EventSnapBack = "snapBack";
+
         // ── 事件提示键（与 reactions.json 里 eventPrompt 的键一致）────
 
         /// <summary>抚摸头部（按住头部来回滑动）的事件键。</summary>
@@ -41,6 +46,9 @@ namespace KfuPet.Services
         /// <summary>部位键无法识别时使用的事件描述。</summary>
         private const string GenericEventAction = "主人碰了碰你";
 
+        /// <summary>拖动越界回正事件描述缺失时的兜底文案（内置默认已提供该项，正常不会用到）。</summary>
+        private const string GenericSnapBackAction = "主人拖动你时差点把你拖出屏幕，你及时靠边站稳了";
+
         /// <summary>内置事件提示：角色包 eventPrompt 未提供或某项缺省时使用这一套。</summary>
         private static readonly Dictionary<string, string> BuiltInEventPrompt = new()
         {
@@ -51,12 +59,13 @@ namespace KfuPet.Services
             [PartLegLeft] = "主人戳了戳你的右腿",
             [PartLegRight] = "主人戳了戳你的左腿",
             [PartBody] = "主人戳了戳你的身体",
+            [EventSnapBack] = "主人拖动你的时候手滑，你差点掉出屏幕，还好你及时靠边站稳了",
             [EventInstructionKey] =
                 "请用符合你人设的一句话回应，只输出这一句话（30 字以内），不要引号、不要旁白、不要解释。"
         };
 
         /// <summary>
-        /// 内置兜底台词：节省模式下角色包未提供备用台词时使用，保证关闭 AI 后触摸仍有回应。
+        /// 内置兜底台词：角色包未提供备用台词时使用（触摸在未使用 AI 时兜底，拖动越界回正始终兜底）。
         /// </summary>
         private static readonly Dictionary<string, List<string>> BuiltInLines = new()
         {
@@ -65,7 +74,8 @@ namespace KfuPet.Services
             [PartArmLeft] = new() { "你碰了碰我的手。", "嗯？要牵手吗？" },
             [PartArmRight] = new() { "你碰了碰我的手。", "嗯？要牵手吗？" },
             [PartLegLeft] = new() { "别碰腿啦，好痒。", "唔……腿不是用来戳的啦。" },
-            [PartLegRight] = new() { "别碰腿啦，好痒。", "唔……腿不是用来戳的啦。" }
+            [PartLegRight] = new() { "别碰腿啦，好痒。", "唔……腿不是用来戳的啦。" },
+            [EventSnapBack] = new() { "呜哇！差点掉出屏幕啦，我先靠边站好～" }
         };
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -170,7 +180,7 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 取一条内置兜底台词：节省模式下角色包没有备用台词时使用，保证触摸仍有回应。
+        /// 取一条内置兜底台词：角色包未提供备用台词时使用（触摸在未使用 AI 时兜底，拖动越界回正始终兜底）。
         /// 与备用台词共用“上一句”记录，避免连续重复。
         /// </summary>
         public string? PickBuiltInLine(string partKey)
@@ -227,6 +237,18 @@ namespace KfuPet.Services
             return $"（触摸事件）{action}。{instruction}";
         }
 
+        /// <summary>
+        /// 构造拖动越界事件给 AI 的用户消息：说明主人拖动时差点把你拖出屏幕、你已及时靠边站稳，
+        /// 并要求一句符合人设的短回应。文案优先取角色包 eventPrompt 的 snapBack 覆盖项，缺省用内置默认。
+        /// </summary>
+        public string BuildSnapBackEventPrompt()
+        {
+            var action = ResolveEventText(EventSnapBack, GenericSnapBackAction);
+            var instruction = ResolveEventText(EventInstructionKey, string.Empty);
+
+            return $"（拖动事件）{action}。{instruction}";
+        }
+
         /// <summary>取事件提示文案：角色包覆盖项优先，其次内置默认，最后用调用方给的兜底文案。</summary>
         private string ResolveEventText(string eventKey, string fallback)
         {
@@ -251,7 +273,7 @@ namespace KfuPet.Services
             };
         }
 
-        /// <summary>把配置里的键统一到标准部位键（忽略大小写与首尾空白）。</summary>
+        /// <summary>把配置里的键统一到标准部位键或事件键（忽略大小写与首尾空白）。</summary>
         private static string? ResolveConfiguredKey(string key)
         {
             if (string.IsNullOrWhiteSpace(key)) return null;
@@ -264,6 +286,7 @@ namespace KfuPet.Services
                 "armright" => PartArmRight,
                 "legleft" => PartLegLeft,
                 "legright" => PartLegRight,
+                "snapback" => EventSnapBack,
                 _ => null
             };
         }

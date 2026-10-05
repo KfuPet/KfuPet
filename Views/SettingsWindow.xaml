@@ -1285,7 +1285,7 @@
                                             </TextBlock.Style>
                                             <TextBlock.ToolTip>
                                                 <ToolTip MaxWidth="320"
-                                                         Content="关闭：保持现状，触摸反应与更新通知文案由 AI 生成。&#x0a;开启：两项功能改用内置文案，不再消耗模型请求。&#x0a;自定义：分别设置每个功能是否使用 AI 生成。"/>
+                                                         Content="关闭：保持现状，触摸反应、更新通知文案与越界回正文案由 AI 生成。&#x0a;开启：这些功能改用内置文案，不再消耗模型请求。&#x0a;自定义：分别设置每个功能是否使用 AI 生成。"/>
                                             </TextBlock.ToolTip>
                                         </TextBlock>
                                     </StackPanel>
@@ -1337,7 +1337,7 @@
                                 </Grid>
                             </Border>
 
-                            <!-- 自定义细分：仅自定义模式显示，两项功能分别选择是否使用 AI 生成 -->
+                            <!-- 自定义细分：仅自定义模式显示，三项功能分别选择是否使用 AI 生成 -->
                             <StackPanel x:Name="CustomSavingOptionsPanel"
                                         Visibility="Collapsed"
                                         Opacity="0">
@@ -1403,6 +1403,38 @@
                                                   Style="{StaticResource AppearanceComboStyle}"
                                                   VerticalAlignment="Center"
                                                   SelectionChanged="UpdateNotificationSavingComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="内置文案" Tag="&#xE8A5;"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,16,0">
+                                            <TextBlock Text="越界回正文案"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                        </StackPanel>
+
+                                        <ComboBox x:Name="SnapBackSavingComboBox"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource AppearanceComboStyle}"
+                                                  VerticalAlignment="Center"
+                                                  SelectionChanged="SnapBackSavingComboBox_SelectionChanged">
                                             <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
                                             <ComboBoxItem Content="内置文案" Tag="&#xE8A5;"/>
                                         </ComboBox>

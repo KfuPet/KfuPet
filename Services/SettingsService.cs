@@ -2,16 +2,16 @@ using System.Text.Json;
 
 namespace KfuPet.Services
 {
-    /// <summary>模型功能节省模式：控制触摸反应与更新通知文案是否改用内置文案。</summary>
+    /// <summary>模型功能节省模式：控制触摸反应、更新通知文案与越界回正文案是否改用内置文案。</summary>
     internal enum SavingMode
     {
         /// <summary>关闭：不启用节省，各功能保持现状（由 AI 生成）。</summary>
         Off,
 
-        /// <summary>节省：触摸反应与更新通知文案改用内置文案，不再消耗模型请求。</summary>
+        /// <summary>节省：各功能改用内置文案，不再消耗模型请求。</summary>
         Saving,
 
-        /// <summary>自定义：两项功能分别控制是否使用 AI 生成。</summary>
+        /// <summary>自定义：各功能分别控制是否使用 AI 生成。</summary>
         Custom
     }
 
@@ -55,6 +55,9 @@ namespace KfuPet.Services
         /// <summary>自定义模式下更新通知文案是否使用 AI 生成；false 表示改用内置文案。</summary>
         public bool CustomUpdateNotificationUseAi { get; private set; } = true;
 
+        /// <summary>自定义模式下越界回正文案是否使用 AI 生成；false 表示改用内置文案。</summary>
+        public bool CustomSnapBackUseAi { get; private set; } = true;
+
         /// <summary>触摸反应是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
         public bool TouchReactionUseAi => ModelSavingMode switch
         {
@@ -68,6 +71,14 @@ namespace KfuPet.Services
         {
             SavingMode.Saving => false,
             SavingMode.Custom => CustomUpdateNotificationUseAi,
+            _ => true
+        };
+
+        /// <summary>越界回正文案是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
+        public bool SnapBackUseAi => ModelSavingMode switch
+        {
+            SavingMode.Saving => false,
+            SavingMode.Custom => CustomSnapBackUseAi,
             _ => true
         };
 
@@ -123,6 +134,13 @@ namespace KfuPet.Services
         public void SetCustomUpdateNotificationUseAi(bool useAi)
         {
             CustomUpdateNotificationUseAi = useAi;
+            Save();
+        }
+
+        /// <summary>保存自定义模式下越界回正文案是否使用 AI 生成。</summary>
+        public void SetCustomSnapBackUseAi(bool useAi)
+        {
+            CustomSnapBackUseAi = useAi;
             Save();
         }
 
@@ -194,6 +212,12 @@ namespace KfuPet.Services
                 {
                     CustomUpdateNotificationUseAi = notificationElement.GetBoolean();
                 }
+
+                if (root.TryGetProperty("CustomSnapBackUseAi", out var snapBackElement) &&
+                    snapBackElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    CustomSnapBackUseAi = snapBackElement.GetBoolean();
+                }
             }
             catch (Exception ex)
             {
@@ -216,7 +240,8 @@ namespace KfuPet.Services
                     WindowTop,
                     ModelSavingMode = ModelSavingMode.ToString(),
                     CustomTouchReactionUseAi,
-                    CustomUpdateNotificationUseAi
+                    CustomUpdateNotificationUseAi,
+                    CustomSnapBackUseAi
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

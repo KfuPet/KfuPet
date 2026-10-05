@@ -808,7 +808,7 @@ namespace KfuPet
                     var (targetLeft, targetTop) = snapTarget.Value;
                     SettingsService.Instance.SetWindowPosition(targetLeft, targetTop);
                     SlideWindowTo(targetLeft, targetTop, RestoreChatInputAfterDrag);
-                    ShowBubbleBatches(new List<string> { "呜哇！差点掉出屏幕啦，我先靠边站好～" });
+                    _ = RunSnapBackReactionAsync();
                     Log.Debug($"[窗口] 拖动越界，已回正到 ({targetLeft:F0}, {targetTop:F0})");
                 }
                 else
@@ -821,6 +821,57 @@ namespace KfuPet
 
             ResetTouchGesture();
             Mouse.Capture(null);
+        }
+
+        /// <summary>
+        /// 拖动越界回正反应：AI 优先，未接入 AI、请求失败或节省模式时退回角色包备用台词，
+        /// 角色包未提供（无 reactions.json 或没写 snapBack）时再用内置文案兜底，保证回正时始终有回应。
+        /// </summary>
+        private async Task RunSnapBackReactionAsync()
+        {
+            // 节省模式：不请求 AI，直接走下方的文案兜底
+            var useAi = SettingsService.Instance.SnapBackUseAi;
+            var model = useAi ? ModelConfigService.Models.FirstOrDefault(m => m.IsActive) : null;
+            string? line = null;
+            var source = string.Empty;
+
+            if (model != null)
+            {
+                try
+                {
+                    var reply = await _chatService.SendAsync(
+                        model, _memorySystem.BuildBaseSystemPrompt(),
+                        Array.Empty<ChatMessage>(), _touchReactions.BuildSnapBackEventPrompt());
+                    line = NormalizeReactionLine(reply);
+                    source = "AI";
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning($"[窗口] 越界回正 AI 反应失败，改用备用台词：{ex.Message}");
+                }
+            }
+
+            if (string.IsNullOrEmpty(line))
+            {
+                // 未接入 AI、AI 回复为空、请求失败或节省模式：用角色包的备用台词
+                line = _touchReactions.PickLine(TouchReactionService.EventSnapBack);
+                source = "备用台词";
+            }
+
+            if (string.IsNullOrEmpty(line))
+            {
+                // 角色包没有备用台词（无 reactions.json 或没写 snapBack）：用内置文案兜底
+                line = _touchReactions.PickBuiltInLine(TouchReactionService.EventSnapBack);
+                source = "内置文案";
+            }
+
+            if (string.IsNullOrEmpty(line))
+            {
+                return;
+            }
+
+            ShowBubbleBatches(new List<string> { line });
+            Log.Info($"[窗口] 拖动越界回正（{source}）：{line}");
         }
 
         // ── 触摸反应：双击与头部抚摸 ─────────────────
