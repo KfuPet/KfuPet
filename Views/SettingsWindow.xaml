@@ -1024,7 +1024,11 @@
                                 <TextBlock Text="记忆" VerticalAlignment="Center"/>
                             </StackPanel>
                         </ListBoxItem>
-                        <ListBoxItem>
+                        <!-- 开发者模式入口：默认隐藏，通过“关于”页版本徽章连续点击 5 次唤出 -->
+                        <ListBoxItem x:Name="DeveloperNavItem" Visibility="Collapsed">
+                            <ListBoxItem.RenderTransform>
+                                <TranslateTransform/>
+                            </ListBoxItem.RenderTransform>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xEC7A;"
                                            FontFamily="{StaticResource FontFamilyIcon}"
@@ -2286,12 +2290,13 @@
                                                    FontWeight="{StaticResource FontWeightSemiBold}"
                                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
                                                    VerticalAlignment="Center"/>
-                                        <!-- 版本徽章：底色用边框色，比卡片面深一档以便区分 -->
+                                        <!-- 版本徽章：底色用边框色，比卡片面深一档以便区分；连续点击 5 次可唤出开发者模式入口 -->
                                         <Border Margin="10,0,0,0"
                                                 Padding="8,3"
                                                 VerticalAlignment="Center"
                                                 Background="{DynamicResource AppBorderBrush}"
-                                                CornerRadius="6">
+                                                CornerRadius="6"
+                                                MouseLeftButtonUp="VersionBadge_MouseLeftButtonUp">
                                             <TextBlock x:Name="VersionText"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeCaption}"
@@ -2472,6 +2477,41 @@
                     </ScrollViewer>
                 </Grid>
             </Grid>
+
+            <!-- 飘窗提示：页面下方居中浮出，由代码控制显隐动画，不拦截鼠标 -->
+            <Border x:Name="ToastCard"
+                    Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,0,28"
+                    Padding="16,10"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Opacity="0"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.3" Color="Black"/>
+                </Border.Effect>
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="ToastTranslate" Y="16"/>
+                </Border.RenderTransform>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE73E;"
+                               FontFamily="{StaticResource FontFamilyIcon}"
+                               FontSize="{StaticResource FontSizeIconSmall}"
+                               Foreground="{DynamicResource AppAccentBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                    <TextBlock x:Name="ToastText"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{DynamicResource AppTextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
 
             <!-- 主题切换遮罩：先以旧背景色盖住卡片，换色后淡出，避免透明窗口闪透明 -->
             <Border x:Name="ThemeTransitionOverlay"

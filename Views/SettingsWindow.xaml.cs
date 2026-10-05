@@ -8,6 +8,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using KfuPet.Helpers;
 using KfuPet.Models;
 using KfuPet.Services;
@@ -19,6 +20,12 @@ namespace KfuPet.Views
     /// </summary>
     public partial class SettingsWindow : Window
     {
+        /// <summary>“关于”页版本徽章连续点击多少次后唤出开发者模式入口。</summary>
+        private const int VersionBadgeRevealClickCount = 5;
+
+        /// <summary>版本徽章相邻两次点击的最大间隔，超过则从 1 重新计数。</summary>
+        private static readonly TimeSpan VersionBadgeClickInterval = TimeSpan.FromSeconds(2);
+
         private readonly MainWindow _mainWindow;
         private readonly UpdateService _updateService = new();
         private readonly StartupService _startupService = new();
@@ -33,6 +40,9 @@ namespace KfuPet.Views
         private bool _suppressAutoStartEvents;
         private bool _suppressSavingEvents;
         private AddModelProviderDialog? _addModelProviderDialog;
+        private int _versionBadgeClickCount;
+        private DateTime _lastVersionBadgeClickTime;
+        private DispatcherTimer? _toastHideTimer;
 
         private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
 
@@ -93,6 +103,7 @@ namespace KfuPet.Views
         private void SettingsWindow_Closed(object? sender, EventArgs e)
         {
             Log.Debug("[窗口] 设置窗口已关闭");
+            _toastHideTimer?.Stop();
             _mainWindow.DeveloperModeService.EnabledChanged -= OnDeveloperModeChanged;
             _mainWindow.ToolStatusChanged -= OnToolStatusChanged;
             _mainWindow.SkeletonService.DebugSkeletonChanged -= OnDebugSkeletonChanged;
@@ -791,6 +802,7 @@ namespace KfuPet.Views
             _suppressToggleEvents = false;
 
             UpdateDebugBonesPanel();
+            UpdateDeveloperNavVisibility();
         }
 
         private void OnDeveloperModeChanged(object? sender, EventArgs e)
@@ -806,6 +818,86 @@ namespace KfuPet.Views
             }
 
             UpdateDebugBonesPanel();
+        }
+
+        /// <summary>
+        /// 同步“开发者模式”导航入口的显隐：仅当开发者模式处于开启状态时显示。
+        /// 关闭开关后不立即隐藏，等设置窗口关闭、下次再打开时按开关状态重新判定；
+        /// 入口平时默认隐藏，只能通过“关于”页版本徽章连续点击 5 次唤出。
+        /// </summary>
+        private void UpdateDeveloperNavVisibility()
+        {
+            DeveloperNavItem.Visibility = _mainWindow.DeveloperModeService.IsEnabled
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// 显示左侧导航的“开发者模式”入口
+        /// </summary>
+        private void ShowDeveloperNavItem()
+        {
+            if (DeveloperNavItem.Visibility == Visibility.Visible)
+            {
+                return;
+            }
+
+            DeveloperNavItem.Visibility = Visibility.Visible;
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var duration = TimeSpan.FromMilliseconds(240);
+            DeveloperNavItem.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+
+            if (DeveloperNavItem.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.XProperty,
+                    new DoubleAnimation(-10, 0, duration) { EasingFunction = ease });
+            }
+        }
+
+        /// <summary>
+        /// 在页面下方居中弹出飘窗提示
+        /// 重复调用会重置停留计时，不会叠加多个提示。
+        /// </summary>
+        private void ShowToast(string message)
+        {
+            ToastText.Text = message;
+            ToastCard.Visibility = Visibility.Visible;
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var duration = TimeSpan.FromMilliseconds(220);
+            ToastCard.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+            ToastTranslate.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(16, 0, duration) { EasingFunction = ease });
+
+            _toastHideTimer ??= CreateToastHideTimer();
+            _toastHideTimer.Stop();
+            _toastHideTimer.Start();
+        }
+
+        /// <summary>创建飘窗自动隐藏计时器，到时淡出并折叠。</summary>
+        private DispatcherTimer CreateToastHideTimer()
+        {
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.6) };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+                HideToast();
+            };
+            return timer;
+        }
+
+        /// <summary>飘窗淡出动画结束后折叠，避免残留元素挡住下方内容。</summary>
+        private void HideToast()
+        {
+            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(280))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            fade.Completed += (s, e) => ToastCard.Visibility = Visibility.Collapsed;
+            ToastCard.BeginAnimation(OpacityProperty, fade);
         }
 
         /// <summary>
@@ -908,6 +1000,32 @@ namespace KfuPet.Views
             {
                 ToolStatusText.Text = "开发者工具还没连过来，想研究我的话记得启动它。";
             }
+        }
+
+        /// <summary>
+        /// “关于”页版本徽章点击：2 秒内连续点击 5 次唤出开发者模式入口，并默认开启开发者模式。
+        /// </summary>
+        private void VersionBadge_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            var now = DateTime.UtcNow;
+            if (now - _lastVersionBadgeClickTime > VersionBadgeClickInterval)
+            {
+                _versionBadgeClickCount = 0;
+            }
+
+            _lastVersionBadgeClickTime = now;
+            _versionBadgeClickCount++;
+
+            if (_versionBadgeClickCount < VersionBadgeRevealClickCount)
+            {
+                return;
+            }
+
+            _versionBadgeClickCount = 0;
+            Log.Info("[开发者模式] 关于页版本徽章连续点击达标，显示开发者入口并默认开启开发者模式");
+            ShowDeveloperNavItem();
+            _mainWindow.DeveloperModeService.SetEnabled(true);
+            ShowToast("开发者模式已开启，入口已显示在左侧啦～");
         }
 
         /// <summary>
