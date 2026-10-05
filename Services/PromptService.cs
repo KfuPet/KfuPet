@@ -3,7 +3,7 @@ using System.Text;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 组装 AI 系统提示词：全局提示词（硬编码，与 docs/global-prompt.md 同步）为底线规则，
+    /// 组装 AI 系统提示词：全局提示词（硬编码，与角色包下的 prompt.md 同步）为底线规则，
     /// 再叠加角色包附带的 prompt.md（检索 Characters 目录下各角色包，找到即用）。
     /// 角色包没有 prompt.md 时只使用全局提示词。
     /// </summary>
