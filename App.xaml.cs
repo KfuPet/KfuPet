@@ -100,6 +100,9 @@ namespace KfuPet
                 _mainWindow.Show();
                 Log.Info("[启动] 开机自启动，已跳过启动画面与淡入动画");
 
+                // 主窗口已初始化，若角色包反应配置不完整则发出警告通知
+                ShowCharacterPackageWarningIfNeeded();
+
                 // 静默检查更新：不阻塞启动流程，检查失败或已是最新都不打扰用户
                 _ = CheckUpdateOnStartupAsync();
                 return;
@@ -121,6 +124,9 @@ namespace KfuPet
                 _mainWindow.Show();
                 _mainWindow.PlayFadeInAnimation();
                 Log.Info("[启动] 启动画面已结束，主窗口已显示");
+
+                // 主窗口初始化已在启动画面期间完成，若角色包反应配置不完整则发出警告通知
+                ShowCharacterPackageWarningIfNeeded();
 
                 // 静默检查更新：不阻塞启动流程，检查失败或已是最新都不打扰用户
                 _ = CheckUpdateOnStartupAsync();
@@ -290,6 +296,32 @@ namespace KfuPet
             }
 
             Dispatcher.Invoke(() => UpdatePrompt.Show(_mainWindow, result));
+        }
+
+        /// <summary>
+        /// 启动时主窗口检测到角色包反应配置不完整（reactions.json 缺少必填键）时，
+        /// 用托盘图标发出警告通知（黄色感叹号）。配置完整时不打扰用户。
+        /// </summary>
+        private void ShowCharacterPackageWarningIfNeeded()
+        {
+            if (_notifyIcon == null || _mainWindow == null)
+            {
+                return;
+            }
+
+            var missing = _mainWindow.MissingReactionConfigKeys;
+            if (missing.Count == 0)
+            {
+                return;
+            }
+
+            _notifyIcon.BalloonTipTitle = "角色包配置不完整";
+            _notifyIcon.BalloonTipText =
+                $"当前角色包的 reactions.json 缺少 {missing.Count} 项必填内容：{string.Join("、", missing)}。" +
+                "补全方法见 docs/角色包制作指南.md。";
+            _notifyIcon.BalloonTipIcon = System.Windows.Forms.ToolTipIcon.Warning;
+            _notifyIcon.ShowBalloonTip(NotificationDisplayMilliseconds);
+            Log.Info($"[触摸] 已就角色包反应配置不完整发出系统通知：缺少 {missing.Count} 项");
         }
 
         /// <summary>

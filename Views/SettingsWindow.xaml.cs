@@ -69,7 +69,7 @@ namespace KfuPet.Views
             AutoStartToggle.IsChecked = _startupService.IsEnabled();
             _suppressAutoStartEvents = false;
 
-            // 节省消耗档位：按已保存的设置选中对应滑块项，并同步自定义细分选项（0 AI 生成 / 1 内置文案）
+            // 节省消耗档位：按已保存的设置选中对应滑块项，并同步自定义细分选项（0 AI 生成 / 1 本地文案）
             _suppressSavingEvents = true;
             (SettingsService.Instance.ModelSavingMode switch
             {
@@ -379,7 +379,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 自定义细分：触摸反应是否使用 AI 生成（0 AI 生成 / 1 内置文案）。
+        /// 自定义细分：触摸反应是否使用 AI 生成（0 AI 生成 / 1 角色台词）。
         /// </summary>
         private void TouchReactionSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -392,7 +392,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 自定义细分：更新通知文案是否使用 AI 生成（0 AI 生成 / 1 内置文案）。
+        /// 自定义细分：更新通知文案是否使用 AI 生成（0 AI 生成 / 1 固定文案）。
         /// </summary>
         private void UpdateNotificationSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -405,7 +405,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 自定义细分：越界回正文案是否使用 AI 生成（0 AI 生成 / 1 内置文案）。
+        /// 自定义细分：越界回正文案是否使用 AI 生成（0 AI 生成 / 1 角色台词）。
         /// </summary>
         private void SnapBackSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {

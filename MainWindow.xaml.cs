@@ -111,6 +111,9 @@ namespace KfuPet
         /// <summary>触摸反应服务：构造发给 AI 的触摸事件提示，并提供角色包 reactions.json 里的备用台词。</summary>
         private readonly TouchReactionService _touchReactions = new();
 
+        /// <summary>当前角色包反应配置缺失的必填键；为空表示配置完整或尚未检测。供启动时发出系统通知。</summary>
+        internal IReadOnlyList<string> MissingReactionConfigKeys => _touchReactions.MissingConfigKeys;
+
         /// <summary>上一次触摸反应的时间，用于冷却判定。</summary>
         private DateTime _lastTouchReactionTime = DateTime.MinValue;
 
@@ -824,8 +827,8 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 拖动越界回正反应：AI 优先，未接入 AI、请求失败或节省模式时退回角色包备用台词，
-        /// 角色包未提供（无 reactions.json 或没写 snapBack）时再用内置文案兜底，保证回正时始终有回应。
+        /// 拖动越界回正反应：AI 优先，未接入 AI、请求失败或节省模式时退回角色包备用台词；
+        /// 角色包未提供备用台词时则不作声（配置完整性由启动检测记录日志）。
         /// </summary>
         private async Task RunSnapBackReactionAsync()
         {
@@ -837,32 +840,29 @@ namespace KfuPet
 
             if (model != null)
             {
-                try
+                var eventPrompt = _touchReactions.BuildSnapBackEventPrompt();
+                if (!string.IsNullOrEmpty(eventPrompt))
                 {
-                    var reply = await _chatService.SendAsync(
-                        model, _memorySystem.BuildBaseSystemPrompt(),
-                        Array.Empty<ChatMessage>(), _touchReactions.BuildSnapBackEventPrompt());
-                    line = NormalizeReactionLine(reply);
-                    source = "AI";
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning($"[窗口] 越界回正 AI 反应失败，改用备用台词：{ex.Message}");
+                    try
+                    {
+                        var reply = await _chatService.SendAsync(
+                            model, _memorySystem.BuildBaseSystemPrompt(),
+                            Array.Empty<ChatMessage>(), eventPrompt);
+                        line = NormalizeReactionLine(reply);
+                        source = "AI";
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning($"[窗口] 越界回正 AI 反应失败，改用备用台词：{ex.Message}");
+                    }
                 }
             }
 
             if (string.IsNullOrEmpty(line))
             {
-                // 未接入 AI、AI 回复为空、请求失败或节省模式：用角色包的备用台词
+                // 未接入 AI、角色包未提供事件描述、AI 回复为空、请求失败或节省模式：用角色包的备用台词
                 line = _touchReactions.PickLine(TouchReactionService.EventSnapBack);
                 source = "备用台词";
-            }
-
-            if (string.IsNullOrEmpty(line))
-            {
-                // 角色包没有备用台词（无 reactions.json 或没写 snapBack）：用内置文案兜底
-                line = _touchReactions.PickBuiltInLine(TouchReactionService.EventSnapBack);
-                source = "内置文案";
             }
 
             if (string.IsNullOrEmpty(line))
@@ -964,8 +964,8 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 执行触摸反应：AI 优先，未接入 AI、请求失败或节省模式时退回角色包备用台词，
-        /// 节省模式下角色包没有备用台词时再用内置文案兜底，保证关闭 AI 后仍有回应。
+        /// 执行触摸反应：AI 优先，未接入 AI、请求失败或节省模式时退回角色包备用台词；
+        /// 角色包未提供备用台词时则不作声（配置完整性由启动检测记录日志）。
         /// </summary>
         private async Task RunTouchReactionAsync(string boneId, string partKey, bool isPetting)
         {
@@ -975,14 +975,15 @@ namespace KfuPet
             string? line = null;
             var source = string.Empty;
 
-            if (model != null)
+            var eventPrompt = model != null ? _touchReactions.BuildEventPrompt(partKey, isPetting) : string.Empty;
+            if (model != null && !string.IsNullOrEmpty(eventPrompt))
             {
                 _touchReactionPending = true;
                 try
                 {
                     var reply = await _chatService.SendAsync(
                         model, _memorySystem.BuildBaseSystemPrompt(),
-                        Array.Empty<ChatMessage>(), _touchReactions.BuildEventPrompt(partKey, isPetting));
+                        Array.Empty<ChatMessage>(), eventPrompt);
                     line = NormalizeReactionLine(reply);
                     source = "AI";
                 }
@@ -998,16 +999,9 @@ namespace KfuPet
 
             if (string.IsNullOrEmpty(line))
             {
-                // 未接入 AI、AI 回复为空、请求失败或节省模式：用角色包的备用台词
+                // 未接入 AI、角色包未提供事件描述、AI 回复为空、请求失败或节省模式：用角色包的备用台词
                 line = _touchReactions.PickLine(partKey);
                 source = "备用台词";
-            }
-
-            if (string.IsNullOrEmpty(line) && !useAi)
-            {
-                // 节省模式：角色包没有备用台词时用内置文案
-                line = _touchReactions.PickBuiltInLine(partKey);
-                source = "内置文案";
             }
 
             if (string.IsNullOrEmpty(line))

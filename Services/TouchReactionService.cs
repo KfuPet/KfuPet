@@ -6,9 +6,9 @@ namespace KfuPet.Services
     /// <summary>
     /// 角色反应文案服务：为触摸反应与拖动越界回正（snapBack）提供两类文案。
     /// 一、事件提示：把"发生了什么"整理成发给 AI 的用户消息（<see cref="BuildEventPrompt"/>、<see cref="BuildSnapBackEventPrompt"/>），
-    ///     文案取自角色包 reactions.json 的 eventPrompt 段，缺省项用内置默认；
-    /// 二、备用台词：从角色包 reactions.json 的 reactions 段读取，未接入 AI 或 AI 请求失败时使用；
-    ///     角色包未提供时，触摸由 <see cref="PickBuiltInLine"/> 在未使用 AI 时兜底，拖动越界回正始终兜底。
+    ///     文案取自角色包 reactions.json 的 eventPrompt 段；
+    /// 二、备用台词：从角色包 reactions.json 的 reactions 段读取，未接入 AI 或 AI 请求失败时使用。
+    /// 两类文案均完全由角色包提供，代码不再内置默认；启动时 <see cref="Load"/> 会检测配置完整性并记录日志。
     /// 左右与骨骼命名一致，指画面上的左右（Left 为画面左侧）。
     /// </summary>
     internal class TouchReactionService
@@ -43,39 +43,19 @@ namespace KfuPet.Services
         /// <summary>应答要求的事件键：整条提示共用的尾部指令。</summary>
         private const string EventInstructionKey = "instruction";
 
-        /// <summary>部位键无法识别时使用的事件描述。</summary>
-        private const string GenericEventAction = "主人碰了碰你";
+        // ── 完整性检测：reactions.json 必须提供的键（代码不再内置默认文案）────
 
-        /// <summary>拖动越界回正事件描述缺失时的兜底文案（内置默认已提供该项，正常不会用到）。</summary>
-        private const string GenericSnapBackAction = "主人拖动你时差点把你拖出屏幕，你及时靠边站稳了";
-
-        /// <summary>内置事件提示：角色包 eventPrompt 未提供或某项缺省时使用这一套。</summary>
-        private static readonly Dictionary<string, string> BuiltInEventPrompt = new()
+        /// <summary>eventPrompt 段必须提供的键。</summary>
+        private static readonly string[] RequiredEventPromptKeys =
         {
-            [EventHeadPet] = "主人按住你的头，轻轻来回抚摸了几下",
-            [PartHead] = "主人戳了戳你的头",
-            [PartArmLeft] = "主人戳了戳你的右手",
-            [PartArmRight] = "主人戳了戳你的左手",
-            [PartLegLeft] = "主人戳了戳你的右腿",
-            [PartLegRight] = "主人戳了戳你的左腿",
-            [PartBody] = "主人戳了戳你的身体",
-            [EventSnapBack] = "主人拖动你的时候手滑，你差点掉出屏幕，还好你及时靠边站稳了",
-            [EventInstructionKey] =
-                "请用符合你人设的一句话回应，只输出这一句话（30 字以内），不要引号、不要旁白、不要解释。"
+            EventHeadPet, PartHead, PartArmLeft, PartArmRight, PartLegLeft, PartLegRight, PartBody,
+            EventSnapBack, EventInstructionKey
         };
 
-        /// <summary>
-        /// 内置兜底台词：角色包未提供备用台词时使用（触摸在未使用 AI 时兜底，拖动越界回正始终兜底）。
-        /// </summary>
-        private static readonly Dictionary<string, List<string>> BuiltInLines = new()
+        /// <summary>reactions 段必须提供的键（每个键至少一条非空台词）。</summary>
+        private static readonly string[] RequiredReactionKeys =
         {
-            [PartHead] = new() { "唔……好舒服～", "嘿嘿，被你摸头了呢。" },
-            [PartBody] = new() { "呀！别戳那里……", "嗯？找我有什么事吗？" },
-            [PartArmLeft] = new() { "你碰了碰我的手。", "嗯？要牵手吗？" },
-            [PartArmRight] = new() { "你碰了碰我的手。", "嗯？要牵手吗？" },
-            [PartLegLeft] = new() { "别碰腿啦，好痒。", "唔……腿不是用来戳的啦。" },
-            [PartLegRight] = new() { "别碰腿啦，好痒。", "唔……腿不是用来戳的啦。" },
-            [EventSnapBack] = new() { "呜哇！差点掉出屏幕啦，我先靠边站好～" }
+            PartHead, PartArmLeft, PartArmRight, PartLegLeft, PartLegRight, PartBody, EventSnapBack
         };
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -93,19 +73,26 @@ namespace KfuPet.Services
         /// <summary>各部位上一句说过的台词，用于避免连续两次触发说同一句。</summary>
         private readonly Dictionary<string, string> _lastLines = new();
 
-        /// <summary>角色包提供的事件提示覆盖项（键同 eventPrompt），构建时优先于内置默认。</summary>
+        /// <summary>角色包提供的事件提示（键同 eventPrompt），构建触摸/拖动事件消息时取用。</summary>
         private readonly Dictionary<string, string> _eventPromptOverrides = new();
 
+        /// <summary>最近一次加载检测出的缺失必填键；为空表示配置完整或尚未检测。</summary>
+        private IReadOnlyList<string> _missingConfigKeys = Array.Empty<string>();
+
+        /// <summary>最近一次加载检测出的缺失必填键（eventPrompt.* / reactions.*）；为空表示配置完整。</summary>
+        public IReadOnlyList<string> MissingConfigKeys => _missingConfigKeys;
+
         /// <summary>
-        /// 从角色包目录加载 reactions.json：eventPrompt 段作为事件提示的覆盖项、reactions 段作为备用台词。
-        /// 未提供该文件或解析失败时，事件提示全用内置默认，且没有备用台词。
+        /// 从角色包目录加载 reactions.json：eventPrompt 段作为事件提示、reactions 段作为备用台词。
+        /// 加载完成后检测配置完整性，缺失的必填键会记录日志警告。
         /// </summary>
         public void Load(string packageDir)
         {
             var manifestPath = Path.Combine(packageDir, ManifestFileName);
             if (!File.Exists(manifestPath))
             {
-                Log.Info($"[触摸] 未找到 {ManifestFileName}，事件提示用内置默认，且该角色没有备用台词");
+                Log.Warning($"[触摸] 未找到 {ManifestFileName}：{Path.GetFileName(packageDir)}");
+                CheckCompleteness(packageDir);
                 return;
             }
 
@@ -117,17 +104,19 @@ namespace KfuPet.Services
             }
             catch (Exception ex)
             {
-                Log.Warning($"[触摸] {ManifestFileName} 解析失败，事件提示用内置默认，且该角色没有备用台词：{ex.Message}");
+                Log.Warning($"[触摸] {ManifestFileName} 解析失败：{ex.Message}");
+                CheckCompleteness(packageDir);
                 return;
             }
 
             if (manifest == null)
             {
-                Log.Warning($"[触摸] {ManifestFileName} 内容为空，事件提示用内置默认，且该角色没有备用台词");
+                Log.Warning($"[触摸] {ManifestFileName} 内容为空");
+                CheckCompleteness(packageDir);
                 return;
             }
 
-            // 事件提示：只记录角色包的覆盖项，缺省项在构建时回退到内置默认
+            // 事件提示：仅记录角色包提供的项
             var overridden = 0;
             if (manifest.EventPrompt != null)
             {
@@ -168,7 +157,44 @@ namespace KfuPet.Services
                 loaded++;
             }
 
-            Log.Info($"[触摸] 已加载 {loaded} 类备用台词、{overridden} 项事件提示覆盖：{Path.GetFileName(packageDir)}");
+            Log.Info($"[触摸] 已加载 {loaded} 类备用台词、{overridden} 项事件提示：{Path.GetFileName(packageDir)}");
+            CheckCompleteness(packageDir);
+        }
+
+        /// <summary>
+        /// 检测当前角色包反应配置是否完整：列出缺失的必填键并记录到 <see cref="MissingConfigKeys"/>，
+        /// 缺失时记录日志警告，完整时记录 Info。必填键见 <see cref="RequiredEventPromptKeys"/>、<see cref="RequiredReactionKeys"/>。
+        /// </summary>
+        private void CheckCompleteness(string packageDir)
+        {
+            var missing = new List<string>();
+            foreach (var key in RequiredEventPromptKeys)
+            {
+                if (!_eventPromptOverrides.ContainsKey(key))
+                {
+                    missing.Add($"eventPrompt.{key}");
+                }
+            }
+
+            foreach (var key in RequiredReactionKeys)
+            {
+                if (!_lines.TryGetValue(key, out var lines) || lines.Count == 0)
+                {
+                    missing.Add($"reactions.{key}");
+                }
+            }
+
+            _missingConfigKeys = missing;
+
+            var name = Path.GetFileName(packageDir);
+            if (missing.Count == 0)
+            {
+                Log.Info($"[触摸] 角色包反应配置完整：{name}");
+                return;
+            }
+
+            Log.Warning($"[触摸] 角色包反应配置不完整，缺少 {missing.Count} 项：{string.Join("、", missing)}" +
+                        $"（{name}，补全方法见 docs/角色包制作指南.md）");
         }
 
         /// <summary>
@@ -177,15 +203,6 @@ namespace KfuPet.Services
         public string? PickLine(string partKey)
         {
             return _lines.TryGetValue(partKey, out var lines) ? PickFrom(lines, partKey) : null;
-        }
-
-        /// <summary>
-        /// 取一条内置兜底台词：角色包未提供备用台词时使用（触摸在未使用 AI 时兜底，拖动越界回正始终兜底）。
-        /// 与备用台词共用“上一句”记录，避免连续重复。
-        /// </summary>
-        public string? PickBuiltInLine(string partKey)
-        {
-            return BuiltInLines.TryGetValue(partKey, out var lines) ? PickFrom(lines, partKey) : null;
         }
 
         /// <summary>从台词表里随机取一条，同部位避免与上一句重复；表为空时返回 null。</summary>
@@ -223,7 +240,7 @@ namespace KfuPet.Services
 
         /// <summary>
         /// 构造触摸事件给 AI 的用户消息：说明被触碰的部位与动作，并要求一句符合人设的短回应。
-        /// 文案优先取角色包 eventPrompt 的覆盖项，缺省项用内置默认；
+        /// 文案取自角色包 eventPrompt；未提供该事件描述时返回空串（调用方应跳过 AI 请求）。
         /// 部位按角色自身视角描述（画面左侧的手脚是角色的右手/右腿），与备用台词写法一致。
         /// </summary>
         /// <param name="partKey">反应部位键（head / armLeft / armRight / legLeft / legRight / body）。</param>
@@ -231,30 +248,36 @@ namespace KfuPet.Services
         public string BuildEventPrompt(string partKey, bool isPetting)
         {
             var eventKey = partKey == PartHead && isPetting ? EventHeadPet : partKey;
-            var action = ResolveEventText(eventKey, GenericEventAction);
-            var instruction = ResolveEventText(EventInstructionKey, string.Empty);
-
-            return $"（触摸事件）{action}。{instruction}";
+            return BuildEventMessage("触摸事件", eventKey);
         }
 
         /// <summary>
         /// 构造拖动越界事件给 AI 的用户消息：说明主人拖动时差点把你拖出屏幕、你已及时靠边站稳，
-        /// 并要求一句符合人设的短回应。文案优先取角色包 eventPrompt 的 snapBack 覆盖项，缺省用内置默认。
+        /// 并要求一句符合人设的短回应。文案取自角色包 eventPrompt 的 snapBack；未提供时返回空串。
         /// </summary>
         public string BuildSnapBackEventPrompt()
         {
-            var action = ResolveEventText(EventSnapBack, GenericSnapBackAction);
-            var instruction = ResolveEventText(EventInstructionKey, string.Empty);
-
-            return $"（拖动事件）{action}。{instruction}";
+            return BuildEventMessage("拖动事件", EventSnapBack);
         }
 
-        /// <summary>取事件提示文案：角色包覆盖项优先，其次内置默认，最后用调用方给的兜底文案。</summary>
-        private string ResolveEventText(string eventKey, string fallback)
+        /// <summary>拼接事件给 AI 的用户消息；角色包未提供该事件描述时返回空串。</summary>
+        private string BuildEventMessage(string eventLabel, string eventKey)
         {
-            if (_eventPromptOverrides.TryGetValue(eventKey, out var text)) return text;
-            if (BuiltInEventPrompt.TryGetValue(eventKey, out var builtIn)) return builtIn;
-            return fallback;
+            var action = ResolveEventText(eventKey);
+            if (string.IsNullOrWhiteSpace(action))
+            {
+                return string.Empty;
+            }
+
+            var instruction = ResolveEventText(EventInstructionKey);
+            var text = string.IsNullOrWhiteSpace(instruction) ? action : $"{action}。{instruction}";
+            return $"（{eventLabel}）{text}";
+        }
+
+        /// <summary>取事件提示文案：仅在角色包提供时返回，未提供返回 null。</summary>
+        private string? ResolveEventText(string eventKey)
+        {
+            return _eventPromptOverrides.TryGetValue(eventKey, out var text) ? text : null;
         }
 
         /// <summary>把配置里的键统一到标准事件键（部位键 + headPet + instruction，忽略大小写与首尾空白）。</summary>

@@ -1284,8 +1284,10 @@
                                                 </Style>
                                             </TextBlock.Style>
                                             <TextBlock.ToolTip>
-                                                <ToolTip MaxWidth="320"
-                                                         Content="关闭：保持现状，触摸反应、更新通知文案与越界回正文案由 AI 生成。&#x0a;开启：这些功能改用内置文案，不再消耗模型请求。&#x0a;自定义：分别设置每个功能是否使用 AI 生成。"/>
+                                                <ToolTip MaxWidth="320">
+                                                    <TextBlock TextWrapping="Wrap"
+                                                               Text="关闭：保持现状，触摸反应、更新通知文案与越界回正文案由 AI 生成。&#x0a;开启：这些功能改用本地文案，不再消耗模型请求。&#x0a;自定义：分别设置每个功能是否使用 AI 生成。"/>
+                                                </ToolTip>
                                             </TextBlock.ToolTip>
                                         </TextBlock>
                                     </StackPanel>
@@ -1372,7 +1374,7 @@
                                                   VerticalAlignment="Center"
                                                   SelectionChanged="TouchReactionSavingComboBox_SelectionChanged">
                                             <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
-                                            <ComboBoxItem Content="内置文案" Tag="&#xE8A5;"/>
+                                            <ComboBoxItem Content="角色台词" Tag="&#xE8A5;"/>
                                         </ComboBox>
                                     </Grid>
                                 </Border>
@@ -1436,7 +1438,7 @@
                                                   VerticalAlignment="Center"
                                                   SelectionChanged="SnapBackSavingComboBox_SelectionChanged">
                                             <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
-                                            <ComboBoxItem Content="内置文案" Tag="&#xE8A5;"/>
+                                            <ComboBoxItem Content="角色台词" Tag="&#xE8A5;"/>
                                         </ComboBox>
                                     </Grid>
                                 </Border>
