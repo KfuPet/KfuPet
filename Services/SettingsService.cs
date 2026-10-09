@@ -101,10 +101,13 @@ namespace KfuPet.Services
         /// <summary>主动搭话频度档位（默认中频）。</summary>
         public ProactiveFrequency ProactiveChatFrequency { get; private set; } = ProactiveFrequency.Medium;
 
+        /// <summary>是否启用安静时段（默认开启）。</summary>
+        public bool QuietHoursEnabled { get; private set; } = true;
+
         /// <summary>安静时段开始小时（0–23），默认 23 点。</summary>
         public int QuietHoursStart { get; private set; } = 23;
 
-        /// <summary>安静时段结束小时（0–23），默认次日 8 点；与开始小时相同表示不启用安静时段。</summary>
+        /// <summary>安静时段结束小时（0–23），默认次日 8 点；起止相同视为未设置（该设置不生效）。</summary>
         public int QuietHoursEnd { get; private set; } = 8;
 
         /// <summary>是否启用独处搭话（在电脑前但久未互动）。</summary>
@@ -208,6 +211,13 @@ namespace KfuPet.Services
         {
             QuietHoursStart = Math.Clamp(startHour, 0, 23);
             QuietHoursEnd = Math.Clamp(endHour, 0, 23);
+            Save();
+        }
+
+        /// <summary>保存安静时段开关状态。</summary>
+        public void SetQuietHoursEnabled(bool enabled)
+        {
+            QuietHoursEnabled = enabled;
             Save();
         }
 
@@ -328,6 +338,12 @@ namespace KfuPet.Services
                     ProactiveChatFrequency = proactiveFrequency;
                 }
 
+                if (root.TryGetProperty("QuietHoursEnabled", out var quietEnabledElement) &&
+                    quietEnabledElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    QuietHoursEnabled = quietEnabledElement.GetBoolean();
+                }
+
                 if (root.TryGetProperty("QuietHoursStart", out var quietStartElement) &&
                     quietStartElement.ValueKind == JsonValueKind.Number)
                 {
@@ -389,6 +405,7 @@ namespace KfuPet.Services
                     CustomSnapBackUseAi,
                     ProactiveChatEnabled,
                     ProactiveChatFrequency = ProactiveChatFrequency.ToString(),
+                    QuietHoursEnabled,
                     QuietHoursStart,
                     QuietHoursEnd,
                     ProactiveIdleEnabled,

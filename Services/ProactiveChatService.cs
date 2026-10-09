@@ -157,9 +157,11 @@ namespace KfuPet.Services
 
             // 启动摘要：把生效中的设置记进日志，便于对照排查
             var settings = SettingsService.Instance;
-            var quietText = settings.QuietHoursStart == settings.QuietHoursEnd
-                ? "未启用"
-                : $"{settings.QuietHoursStart:00}:00–{settings.QuietHoursEnd:00}:00";
+            var quietText = !settings.QuietHoursEnabled
+                ? "关闭"
+                : settings.QuietHoursStart == settings.QuietHoursEnd
+                    ? "未设置"
+                    : $"{settings.QuietHoursStart:00}:00–{settings.QuietHoursEnd:00}:00";
             Log.Info($"[主动搭话] 心跳已启动：间隔 {HEARTBEAT_SECONDS} 秒｜" +
                      $"总开关{(settings.ProactiveChatEnabled ? "开" : "关")}｜频率 {settings.ProactiveChatFrequency}｜" +
                      $"安静时段 {quietText}｜触发类型 独处{(settings.ProactiveIdleEnabled ? "开" : "关")}/" +
@@ -491,9 +493,14 @@ namespace KfuPet.Services
             _ => TouchReactionService.EventIdleChat
         };
 
-        /// <summary>安静时段判定：支持跨午夜；开始与结束小时相同表示不启用。</summary>
+        /// <summary>安静时段判定：开关关闭或起止相同视为不启用；支持跨午夜。</summary>
         private static bool IsQuietHour(DateTime now, SettingsService settings)
         {
+            if (!settings.QuietHoursEnabled)
+            {
+                return false;
+            }
+
             var start = settings.QuietHoursStart;
             var end = settings.QuietHoursEnd;
             if (start == end)

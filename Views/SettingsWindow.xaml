@@ -1632,7 +1632,7 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- 安静时段：起止相同表示不启用，支持跨午夜 -->
+                                <!-- 安静时段：支持跨午夜，可用右侧开关随时关闭 -->
                                 <Border Margin="0,8,0,0"
                                         Padding="14,10"
                                         Background="{DynamicResource AppSurfaceBrush}"
@@ -1674,7 +1674,7 @@
                                                 <TextBlock.ToolTip>
                                                     <ToolTip MaxWidth="320">
                                                         <TextBlock TextWrapping="Wrap"
-                                                                   Text="这段时间内不会主动开口，默认 23:00 至次日 8:00，支持跨午夜。&#x0a;开始与结束选同一小时表示不启用（全天都可以开口）。"/>
+                                                                   Text="这段时间内不会主动开口，默认 23:00 至次日 8:00，支持跨午夜。&#x0a;不想用安静时段时，直接关掉右侧开关即可。"/>
                                                     </ToolTip>
                                                 </TextBlock.ToolTip>
                                             </TextBlock>
@@ -1683,20 +1683,38 @@
                                         <StackPanel Grid.Column="1"
                                                     Orientation="Horizontal"
                                                     VerticalAlignment="Center">
-                                            <ComboBox x:Name="QuietHoursStartComboBox"
-                                                      Style="{StaticResource AppearanceComboStyle}"
-                                                      VerticalAlignment="Center"
-                                                      SelectionChanged="QuietHoursComboBox_SelectionChanged"/>
-                                            <TextBlock Text="至"
-                                                       FontFamily="{StaticResource FontFamilyBody}"
-                                                       FontSize="{StaticResource FontSizeBody}"
-                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                                       Margin="8,0"
-                                                       VerticalAlignment="Center"/>
-                                            <ComboBox x:Name="QuietHoursEndComboBox"
-                                                      Style="{StaticResource AppearanceComboStyle}"
-                                                      VerticalAlignment="Center"
-                                                      SelectionChanged="QuietHoursComboBox_SelectionChanged"/>
+                                            <!-- 时间选择：仅开关开启时显示 -->
+                                            <StackPanel x:Name="QuietHoursOptionsPanel"
+                                                        Orientation="Horizontal"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="Collapsed"
+                                                        Opacity="0">
+                                                <StackPanel.RenderTransform>
+                                                    <TranslateTransform/>
+                                                </StackPanel.RenderTransform>
+
+                                                <ComboBox x:Name="QuietHoursStartComboBox"
+                                                          Style="{StaticResource AppearanceComboStyle}"
+                                                          VerticalAlignment="Center"
+                                                          SelectionChanged="QuietHoursComboBox_SelectionChanged"/>
+                                                <TextBlock Text="至"
+                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                           FontSize="{StaticResource FontSizeBody}"
+                                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                           Margin="8,0"
+                                                           VerticalAlignment="Center"/>
+                                                <ComboBox x:Name="QuietHoursEndComboBox"
+                                                          Style="{StaticResource AppearanceComboStyle}"
+                                                          VerticalAlignment="Center"
+                                                          SelectionChanged="QuietHoursComboBox_SelectionChanged"/>
+                                            </StackPanel>
+
+                                            <ToggleButton x:Name="QuietHoursToggle"
+                                                          Style="{StaticResource ToggleSwitchStyle}"
+                                                          Margin="12,0,0,0"
+                                                          VerticalAlignment="Center"
+                                                          Checked="QuietHoursToggle_Changed"
+                                                          Unchecked="QuietHoursToggle_Changed"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>

@@ -97,11 +97,13 @@ namespace KfuPet.Views
             PopulateQuietHourOptions();
             QuietHoursStartComboBox.SelectedIndex = SettingsService.Instance.QuietHoursStart;
             QuietHoursEndComboBox.SelectedIndex = SettingsService.Instance.QuietHoursEnd;
+            QuietHoursToggle.IsChecked = SettingsService.Instance.QuietHoursEnabled;
             ProactiveIdleToggle.IsChecked = SettingsService.Instance.ProactiveIdleEnabled;
             ProactiveWelcomeToggle.IsChecked = SettingsService.Instance.ProactiveWelcomeBackEnabled;
             ProactiveGreetingToggle.IsChecked = SettingsService.Instance.ProactiveGreetingEnabled;
             _suppressProactiveEvents = false;
             UpdateProactiveOptionsVisibility();
+            UpdateQuietHoursOptionsVisibility();
 
             VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
 
@@ -574,7 +576,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 安静时段起止变化：保存两个小时值（相同表示不启用，支持跨午夜）。
+        /// 安静时段起止变化：保存两个小时值（起止相同视为未设置，支持跨午夜）。
         /// </summary>
         private void QuietHoursComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -589,6 +591,49 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetQuietHours(QuietHoursStartComboBox.SelectedIndex, QuietHoursEndComboBox.SelectedIndex);
+        }
+
+        /// <summary>安静时段开关：保存状态并刷新时间选择的显隐。</summary>
+        private void QuietHoursToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressProactiveEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetQuietHoursEnabled(QuietHoursToggle.IsChecked == true);
+            UpdateQuietHoursOptionsVisibility();
+        }
+
+        /// <summary>
+        /// 按开关刷新安静时段时间选择的显隐：开启展开（淡入 + 上滑），关闭收起。
+        /// </summary>
+        private void UpdateQuietHoursOptionsVisibility()
+        {
+            if (QuietHoursToggle.IsChecked == true)
+            {
+                if (QuietHoursOptionsPanel.Visibility == Visibility.Visible)
+                {
+                    return;
+                }
+
+                QuietHoursOptionsPanel.Visibility = Visibility.Visible;
+
+                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                QuietHoursOptionsPanel.BeginAnimation(OpacityProperty,
+                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+
+                var translate = FindTranslateTransform(QuietHoursOptionsPanel);
+                if (translate != null)
+                {
+                    translate.BeginAnimation(TranslateTransform.YProperty,
+                        new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+                }
+            }
+            else if (QuietHoursOptionsPanel.Visibility == Visibility.Visible)
+            {
+                QuietHoursOptionsPanel.Visibility = Visibility.Collapsed;
+            }
         }
 
         /// <summary>独处搭话开关：保存状态。</summary>
