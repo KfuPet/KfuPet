@@ -94,9 +94,17 @@ namespace KfuPet.Views
                 ProactiveFrequency.High => ProactiveHighRadio,
                 _ => ProactiveMediumRadio
             }).IsChecked = true;
-            PopulateQuietHourOptions();
-            QuietHoursStartComboBox.SelectedIndex = SettingsService.Instance.QuietHoursStart;
-            QuietHoursEndComboBox.SelectedIndex = SettingsService.Instance.QuietHoursEnd;
+            // 安静时段：归一化历史上"起止相同"的配置（现已不允许），再各自排除对方选项
+            var quietStart = SettingsService.Instance.QuietHoursStart;
+            var quietEnd = SettingsService.Instance.QuietHoursEnd;
+            if (quietStart == quietEnd)
+            {
+                quietEnd = (quietStart + 1) % 24;
+                SettingsService.Instance.SetQuietHours(quietStart, quietEnd);
+            }
+
+            RebuildQuietHourOptions(QuietHoursStartComboBox, quietEnd, quietStart);
+            RebuildQuietHourOptions(QuietHoursEndComboBox, quietStart, quietEnd, markNextDayBeforeExcluded: true);
             QuietHoursToggle.IsChecked = SettingsService.Instance.QuietHoursEnabled;
             ProactiveIdleToggle.IsChecked = SettingsService.Instance.ProactiveIdleEnabled;
             ProactiveWelcomeToggle.IsChecked = SettingsService.Instance.ProactiveWelcomeBackEnabled;
@@ -564,19 +572,97 @@ namespace KfuPet.Views
             UpdateProactiveFrequencyThumb(animate: false);
         }
 
-        /// <summary>安静时段下拉：填充 0–23 时选项。</summary>
-        private void PopulateQuietHourOptions()
+        /// <summary>
+        /// 重建安静时段下拉：候选项为 0–23 时，排除另一个下拉当前选中的小时（避免起止相同），
+        /// 并用指定的小时恢复选中。markNextDayBeforeExcluded 为 true 时（结束下拉），
+        /// 比排除小时更早的候选项会标注"次日"，表示该选择跨午夜。
+        /// </summary>
+        private static void RebuildQuietHourOptions(ComboBox comboBox, int excludedHour, int selectedHour, bool markNextDayBeforeExcluded = false)
         {
+            comboBox.Items.Clear();
             for (var hour = 0; hour < 24; hour++)
             {
-                var label = $"{hour:00}:00";
-                QuietHoursStartComboBox.Items.Add(new ComboBoxItem { Content = label, Tag = "\uE823" });
-                QuietHoursEndComboBox.Items.Add(new ComboBoxItem { Content = label, Tag = "\uE823" });
+                if (hour == excludedHour)
+                {
+                    continue;
+                }
+
+                var isNextDay = markNextDayBeforeExcluded && hour < excludedHour;
+                comboBox.Items.Add(new ComboBoxItem
+                {
+                    Content = BuildQuietHourOptionLabel(hour, isNextDay),
+                    Tag = "\uE823"
+                });
             }
+
+            comboBox.SelectedIndex = selectedHour >= 0 ? FindQuietHourIndex(comboBox, selectedHour) : -1;
+        }
+
+        /// <summary>构造候选项显示：时间 + 缩小一号的 "(次日)" 标注（跨午夜时）。</summary>
+        private static FrameworkElement BuildQuietHourOptionLabel(int hour, bool isNextDay)
+        {
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"{hour:00}:00",
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            if (isNextDay)
+            {
+                var suffix = new TextBlock
+                {
+                    Text = "(次日)",
+                    Margin = new Thickness(4, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                suffix.SetResourceReference(TextBlock.FontSizeProperty, "FontSizeCaption");
+                panel.Children.Add(suffix);
+            }
+
+            return panel;
+        }
+
+        /// <summary>按小时值找下拉项下标；该小时被排除时返回 -1。标注"次日"的后缀不影响匹配。</summary>
+        private static int FindQuietHourIndex(ComboBox comboBox, int hour)
+        {
+            for (var i = 0; i < comboBox.Items.Count; i++)
+            {
+                if (comboBox.Items[i] is ComboBoxItem item && GetHourFromItem(item) == hour)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>从候选项内容（时间文本 + 可选 "(次日)" 标注）解析小时；解析失败返回 -1。</summary>
+        private static int GetHourFromItem(ComboBoxItem item)
+        {
+            if (item.Content is StackPanel panel &&
+                panel.Children.Count > 0 &&
+                panel.Children[0] is TextBlock timeText &&
+                int.TryParse(timeText.Text.Substring(0, 2), out var hour))
+            {
+                return hour;
+            }
+
+            return -1;
+        }
+
+        /// <summary>读取下拉当前选中的小时（忽略"次日"后缀）；未选择时返回 -1。</summary>
+        private static int GetSelectedQuietHour(ComboBox comboBox)
+        {
+            return comboBox.SelectedItem is ComboBoxItem item ? GetHourFromItem(item) : -1;
         }
 
         /// <summary>
-        /// 安静时段起止变化：保存两个小时值（起止相同视为未设置，支持跨午夜）。
+        /// 安静时段起止变化：保存两个小时值，并重建另一个下拉的候选项（排除刚选中的小时，避免起止相同）。
         /// </summary>
         private void QuietHoursComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -585,12 +671,27 @@ namespace KfuPet.Views
                 return;
             }
 
-            if (QuietHoursStartComboBox.SelectedIndex < 0 || QuietHoursEndComboBox.SelectedIndex < 0)
+            var startHour = GetSelectedQuietHour(QuietHoursStartComboBox);
+            var endHour = GetSelectedQuietHour(QuietHoursEndComboBox);
+            if (startHour < 0 || endHour < 0)
             {
                 return;
             }
 
-            SettingsService.Instance.SetQuietHours(QuietHoursStartComboBox.SelectedIndex, QuietHoursEndComboBox.SelectedIndex);
+            SettingsService.Instance.SetQuietHours(startHour, endHour);
+
+            // 只重建另一个下拉：它的候选项需要随本次选择变化（排除已选小时；结束列表还要标注跨午夜的"次日"）
+            var suppress = _suppressProactiveEvents;
+            _suppressProactiveEvents = true;
+            if (sender == QuietHoursStartComboBox)
+            {
+                RebuildQuietHourOptions(QuietHoursEndComboBox, startHour, endHour, markNextDayBeforeExcluded: true);
+            }
+            else
+            {
+                RebuildQuietHourOptions(QuietHoursStartComboBox, endHour, startHour);
+            }
+            _suppressProactiveEvents = suppress;
         }
 
         /// <summary>安静时段开关：保存状态并刷新时间选择的显隐。</summary>
