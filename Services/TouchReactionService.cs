@@ -4,8 +4,8 @@ using KfuPet.Models;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 角色反应文案服务：为触摸反应与拖动越界回正（snapBack）提供两类文案。
-    /// 一、事件提示：把"发生了什么"整理成发给 AI 的用户消息（<see cref="BuildEventPrompt"/>、<see cref="BuildSnapBackEventPrompt"/>），
+    /// 角色反应文案服务：为触摸反应、拖动越界回正（snapBack）与主动搭话提供两类文案。
+    /// 一、事件提示：把"发生了什么"整理成发给 AI 的用户消息（<see cref="BuildEventPrompt"/>、<see cref="BuildSnapBackEventPrompt"/>、<see cref="BuildProactiveEventPrompt"/>），
     ///     文案取自角色包 reactions.json 的 eventPrompt 段；
     /// 二、备用台词：从角色包 reactions.json 的 reactions 段读取，未接入 AI 或 AI 请求失败时使用。
     /// 两类文案均完全由角色包提供，代码不再内置默认；启动时 <see cref="Load"/> 会检测配置完整性并记录日志。
@@ -35,6 +35,18 @@ namespace KfuPet.Services
         /// <summary>拖动越界回正（差点被拖出屏幕）的事件键：eventPrompt 与 reactions 两段通用。</summary>
         public const string EventSnapBack = "snapBack";
 
+        /// <summary>独处搭话的事件键：在电脑前但有一阵子没和桌宠互动。</summary>
+        public const string EventIdleChat = "idleChat";
+
+        /// <summary>欢迎回来的事件键：离开较久后刚回到电脑前。</summary>
+        public const string EventWelcomeBack = "welcomeBack";
+
+        /// <summary>早上问候的事件键。</summary>
+        public const string EventMorningGreeting = "morningGreeting";
+
+        /// <summary>晚上问候的事件键。</summary>
+        public const string EventEveningGreeting = "eveningGreeting";
+
         // ── 事件提示键（与 reactions.json 里 eventPrompt 的键一致）────
 
         /// <summary>抚摸头部（按住头部来回滑动）的事件键。</summary>
@@ -49,13 +61,15 @@ namespace KfuPet.Services
         private static readonly string[] RequiredEventPromptKeys =
         {
             EventHeadPet, PartHead, PartArmLeft, PartArmRight, PartLegLeft, PartLegRight, PartBody,
-            EventSnapBack, EventInstructionKey
+            EventSnapBack, EventIdleChat, EventWelcomeBack, EventMorningGreeting, EventEveningGreeting,
+            EventInstructionKey
         };
 
         /// <summary>reactions 段必须提供的键（每个键至少一条非空台词）。</summary>
         private static readonly string[] RequiredReactionKeys =
         {
-            PartHead, PartArmLeft, PartArmRight, PartLegLeft, PartLegRight, PartBody, EventSnapBack
+            PartHead, PartArmLeft, PartArmRight, PartLegLeft, PartLegRight, PartBody, EventSnapBack,
+            EventIdleChat, EventWelcomeBack, EventMorningGreeting, EventEveningGreeting
         };
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -260,6 +274,26 @@ namespace KfuPet.Services
             return BuildEventMessage("拖动事件", EventSnapBack);
         }
 
+        /// <summary>
+        /// 构造主动搭话事件给 AI 的用户消息：把动态语境（当前时间、间隔时长）与角色包的场景描述拼成一段，
+        /// 并要求一句符合人设的短回应。文案取自角色包 eventPrompt；未提供该事件描述时返回空串（调用方应跳过 AI 请求）。
+        /// </summary>
+        /// <param name="eventKey">主动搭话事件键（idleChat / welcomeBack / morningGreeting / eveningGreeting）。</param>
+        /// <param name="contextNote">动态语境（当前时间、间隔时长等）；为空时不带语境。</param>
+        public string BuildProactiveEventPrompt(string eventKey, string contextNote)
+        {
+            var action = ResolveEventText(eventKey);
+            if (string.IsNullOrWhiteSpace(action))
+            {
+                return string.Empty;
+            }
+
+            var instruction = ResolveEventText(EventInstructionKey);
+            var text = string.IsNullOrWhiteSpace(instruction) ? action : $"{action}。{instruction}";
+            var context = string.IsNullOrWhiteSpace(contextNote) ? string.Empty : contextNote;
+            return $"（主动搭话）{context}{text}";
+        }
+
         /// <summary>拼接事件给 AI 的用户消息；角色包未提供该事件描述时返回空串。</summary>
         private string BuildEventMessage(string eventLabel, string eventKey)
         {
@@ -310,6 +344,10 @@ namespace KfuPet.Services
                 "legleft" => PartLegLeft,
                 "legright" => PartLegRight,
                 "snapback" => EventSnapBack,
+                "idlechat" => EventIdleChat,
+                "welcomeback" => EventWelcomeBack,
+                "morninggreeting" => EventMorningGreeting,
+                "eveninggreeting" => EventEveningGreeting,
                 _ => null
             };
         }

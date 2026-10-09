@@ -39,6 +39,7 @@ namespace KfuPet.Views
         private bool _suppressAppearanceEvents;
         private bool _suppressAutoStartEvents;
         private bool _suppressSavingEvents;
+        private bool _suppressProactiveEvents;
         private AddModelProviderDialog? _addModelProviderDialog;
         private int _versionBadgeClickCount;
         private DateTime _lastVersionBadgeClickTime;
@@ -80,8 +81,27 @@ namespace KfuPet.Views
             TouchReactionSavingComboBox.SelectedIndex = SettingsService.Instance.CustomTouchReactionUseAi ? 0 : 1;
             UpdateNotificationSavingComboBox.SelectedIndex = SettingsService.Instance.CustomUpdateNotificationUseAi ? 0 : 1;
             SnapBackSavingComboBox.SelectedIndex = SettingsService.Instance.CustomSnapBackUseAi ? 0 : 1;
+            ProactiveChatSavingComboBox.SelectedIndex = SettingsService.Instance.CustomProactiveChatUseAi ? 0 : 1;
             _suppressSavingEvents = false;
             UpdateCustomSavingOptionsVisibility();
+
+            // 主动搭话：读取总开关与各项参数（控件事件在此期间忽略）
+            _suppressProactiveEvents = true;
+            ProactiveChatToggle.IsChecked = SettingsService.Instance.ProactiveChatEnabled;
+            (SettingsService.Instance.ProactiveChatFrequency switch
+            {
+                ProactiveFrequency.Low => ProactiveLowRadio,
+                ProactiveFrequency.High => ProactiveHighRadio,
+                _ => ProactiveMediumRadio
+            }).IsChecked = true;
+            PopulateQuietHourOptions();
+            QuietHoursStartComboBox.SelectedIndex = SettingsService.Instance.QuietHoursStart;
+            QuietHoursEndComboBox.SelectedIndex = SettingsService.Instance.QuietHoursEnd;
+            ProactiveIdleToggle.IsChecked = SettingsService.Instance.ProactiveIdleEnabled;
+            ProactiveWelcomeToggle.IsChecked = SettingsService.Instance.ProactiveWelcomeBackEnabled;
+            ProactiveGreetingToggle.IsChecked = SettingsService.Instance.ProactiveGreetingEnabled;
+            _suppressProactiveEvents = false;
+            UpdateProactiveOptionsVisibility();
 
             VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
 
@@ -446,6 +466,175 @@ namespace KfuPet.Views
             {
                 CustomSavingOptionsPanel.Visibility = Visibility.Collapsed;
             }
+        }
+
+        /// <summary>
+        /// 主动搭话总开关：保存并刷新参数区显隐。
+        /// </summary>
+        private void ProactiveChatToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressProactiveEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetProactiveChatEnabled(ProactiveChatToggle.IsChecked == true);
+            UpdateProactiveOptionsVisibility();
+        }
+
+        /// <summary>
+        /// 按总开关刷新主动搭话参数区显隐：开启展开（淡入 + 上滑），关闭收起。
+        /// </summary>
+        private void UpdateProactiveOptionsVisibility()
+        {
+            if (ProactiveChatToggle.IsChecked == true)
+            {
+                if (ProactiveOptionsPanel.Visibility == Visibility.Visible)
+                {
+                    return;
+                }
+
+                ProactiveOptionsPanel.Visibility = Visibility.Visible;
+
+                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                ProactiveOptionsPanel.BeginAnimation(OpacityProperty,
+                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+
+                var translate = FindTranslateTransform(ProactiveOptionsPanel);
+                if (translate != null)
+                {
+                    translate.BeginAnimation(TranslateTransform.YProperty,
+                        new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+                }
+            }
+            else if (ProactiveOptionsPanel.Visibility == Visibility.Visible)
+            {
+                ProactiveOptionsPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>
+        /// 主动搭话触发频率：低 / 中 / 高，保存档位并滑动滑块。
+        /// </summary>
+        private void ProactiveFrequencyRadio_Checked(object sender, RoutedEventArgs e)
+        {
+            if (_suppressProactiveEvents)
+            {
+                return;
+            }
+
+            var frequency = sender == ProactiveLowRadio ? ProactiveFrequency.Low
+                : sender == ProactiveHighRadio ? ProactiveFrequency.High
+                : ProactiveFrequency.Medium;
+            SettingsService.Instance.SetProactiveChatFrequency(frequency);
+            UpdateProactiveFrequencyThumb(animate: true);
+        }
+
+        /// <summary>主动搭话频率滑块位置同步：播放滑动动画；首次布局或尺寸变化时直接落位。</summary>
+        private void UpdateProactiveFrequencyThumb(bool animate)
+        {
+            var index = ProactiveHighRadio.IsChecked == true ? 2 : ProactiveMediumRadio.IsChecked == true ? 1 : 0;
+            var translate = FindTranslateTransform(ProactiveFrequencyThumb);
+            if (translate == null || ProactiveFrequencyThumb.ActualWidth <= 0)
+            {
+                return;
+            }
+
+            var target = index * ProactiveFrequencyThumb.ActualWidth;
+            if (animate)
+            {
+                translate.BeginAnimation(TranslateTransform.XProperty,
+                    new DoubleAnimation(target, TimeSpan.FromMilliseconds(180))
+                    {
+                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                    });
+            }
+            else
+            {
+                translate.BeginAnimation(TranslateTransform.XProperty, null);
+                translate.X = target;
+            }
+        }
+
+        /// <summary>主动搭话频率滑块尺寸随窗口或 DPI 变化后重新落位，避免停在旧位置。</summary>
+        private void ProactiveFrequencyThumb_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateProactiveFrequencyThumb(animate: false);
+        }
+
+        /// <summary>安静时段下拉：填充 0–23 时选项。</summary>
+        private void PopulateQuietHourOptions()
+        {
+            for (var hour = 0; hour < 24; hour++)
+            {
+                var label = $"{hour:00}:00";
+                QuietHoursStartComboBox.Items.Add(new ComboBoxItem { Content = label, Tag = "\uE823" });
+                QuietHoursEndComboBox.Items.Add(new ComboBoxItem { Content = label, Tag = "\uE823" });
+            }
+        }
+
+        /// <summary>
+        /// 安静时段起止变化：保存两个小时值（相同表示不启用，支持跨午夜）。
+        /// </summary>
+        private void QuietHoursComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressProactiveEvents)
+            {
+                return;
+            }
+
+            if (QuietHoursStartComboBox.SelectedIndex < 0 || QuietHoursEndComboBox.SelectedIndex < 0)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetQuietHours(QuietHoursStartComboBox.SelectedIndex, QuietHoursEndComboBox.SelectedIndex);
+        }
+
+        /// <summary>独处搭话开关：保存状态。</summary>
+        private void ProactiveIdleToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressProactiveEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetProactiveIdleEnabled(ProactiveIdleToggle.IsChecked == true);
+        }
+
+        /// <summary>欢迎回来开关：保存状态。</summary>
+        private void ProactiveWelcomeToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressProactiveEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetProactiveWelcomeBackEnabled(ProactiveWelcomeToggle.IsChecked == true);
+        }
+
+        /// <summary>定时问候开关：保存状态。</summary>
+        private void ProactiveGreetingToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressProactiveEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetProactiveGreetingEnabled(ProactiveGreetingToggle.IsChecked == true);
+        }
+
+        /// <summary>
+        /// 自定义细分：主动搭话是否使用 AI 生成（0 AI 生成 / 1 角色台词）。
+        /// </summary>
+        private void ProactiveChatSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressSavingEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetCustomProactiveChatUseAi(ProactiveChatSavingComboBox.SelectedIndex == 0);
         }
 
         /// <summary>

@@ -298,9 +298,37 @@ namespace KfuPet.Services
         /// </summary>
         public void AddTurn(ModelConfig model, string user, string assistant)
         {
+            var (shortCount, archiveCount, overflowCount) = AppendEntry(user, assistant);
+
+            _logService.Debug($"[记忆] 记录一轮对话：短期 {shortCount}/{ShortMemoryLimit}" +
+                              (overflowCount > 0 ? $"，溢出 {overflowCount} 条到归档（归档 {archiveCount}/{ArchiveMemoryLimit}）" : string.Empty));
+
+            // 实时通道：核心信息（生日、姓名、重要偏好等）立即入库，不等归档批处理
+            _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant));
+
+            // 归档满 40 条，后台异步分析
+            if (_archiveEntries.Count >= ArchiveMemoryLimit && !_isAnalyzing)
+            {
+                _isAnalyzing = true;
+                _ = Task.Run(() => RunArchiveAnalysisAsync(model));
+            }
+        }
+
+        /// <summary>
+        /// 记录一句主动搭话：只写短期记忆（溢出仍归档），不触发实时提取与归档分析，避免为一句主动发言额外消耗模型请求。
+        /// </summary>
+        public void AddProactiveLine(string line)
+        {
+            var (shortCount, _, overflowCount) = AppendEntry("（主动搭话）", line);
+
+            _logService.Debug($"[记忆] 记录主动搭话：短期 {shortCount}/{ShortMemoryLimit}" +
+                              (overflowCount > 0 ? $"，溢出 {overflowCount} 条到归档" : string.Empty));
+        }
+
+        /// <summary>向短期记忆追加一条记录，满额时溢出到归档并落盘；返回记录后的数量统计。</summary>
+        private (int ShortCount, int ArchiveCount, int OverflowCount) AppendEntry(string user, string assistant)
+        {
             var overflowCount = 0;
-            var shortCount = 0;
-            var archiveCount = 0;
             lock (_archiveLock)
             {
                 _shortEntries.Add(new ShortMemoryEntry { User = user, Assistant = assistant });
@@ -320,23 +348,9 @@ namespace KfuPet.Services
                     overflowCount++;
                 }
 
-                shortCount = _shortEntries.Count;
-                archiveCount = _archiveEntries.Count;
                 _shortStore.Save(_shortEntries);
                 _archiveStore.Save(_archiveEntries);
-            }
-
-            _logService.Debug($"[记忆] 记录一轮对话：短期 {shortCount}/{ShortMemoryLimit}" +
-                              (overflowCount > 0 ? $"，溢出 {overflowCount} 条到归档（归档 {archiveCount}/{ArchiveMemoryLimit}）" : string.Empty));
-
-            // 实时通道：核心信息（生日、姓名、重要偏好等）立即入库，不等归档批处理
-            _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant));
-
-            // 归档满 40 条，后台异步分析
-            if (_archiveEntries.Count >= ArchiveMemoryLimit && !_isAnalyzing)
-            {
-                _isAnalyzing = true;
-                _ = Task.Run(() => RunArchiveAnalysisAsync(model));
+                return (_shortEntries.Count, _archiveEntries.Count, overflowCount);
             }
         }
 

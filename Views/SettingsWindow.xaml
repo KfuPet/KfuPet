@@ -1286,7 +1286,7 @@
                                             <TextBlock.ToolTip>
                                                 <ToolTip MaxWidth="320">
                                                     <TextBlock TextWrapping="Wrap"
-                                                               Text="关闭：保持现状，触摸反应、更新通知文案与越界回正文案由 AI 生成。&#x0a;开启：这些功能改用本地文案，不再消耗模型请求。&#x0a;自定义：分别设置每个功能是否使用 AI 生成。"/>
+                                                               Text="关闭：保持现状，触摸反应、更新通知文案、越界回正文案与主动搭话由 AI 生成。&#x0a;开启：这些功能改用本地文案，不再消耗模型请求。&#x0a;自定义：分别设置每个功能是否使用 AI 生成。"/>
                                                 </ToolTip>
                                             </TextBlock.ToolTip>
                                         </TextBlock>
@@ -1440,6 +1440,333 @@
                                             <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
                                             <ComboBoxItem Content="角色台词" Tag="&#xE8A5;"/>
                                         </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,16,0">
+                                            <TextBlock Text="主动搭话"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                        </StackPanel>
+
+                                        <ComboBox x:Name="ProactiveChatSavingComboBox"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource AppearanceComboStyle}"
+                                                  VerticalAlignment="Center"
+                                                  SelectionChanged="ProactiveChatSavingComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="角色台词" Tag="&#xE8A5;"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- 主动搭话：总开关默认开启，其余参数随总开关显隐 -->
+                            <TextBlock Text="主动搭话"
+                                       Style="{StaticResource SectionTitleStyle}"
+                                       Margin="0,24,0,0"/>
+
+                            <Border Margin="0,16,0,0"
+                                    Padding="14,10"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,16,0">
+                                        <TextBlock Text="允许主动找主人聊天"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <TextBlock Text="&#xE9CE;"
+                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                   Cursor="Help"
+                                                   Margin="6,1,0,0"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                            <TextBlock.ToolTip>
+                                                <ToolTip MaxWidth="320">
+                                                    <TextBlock TextWrapping="Wrap"
+                                                               Text="桌宠会在合适的时候主动开口：久未互动时找你说话、你离开后回来时欢迎你、早晚各问候一次。&#x0a;安静时段与冷却会自动避免打扰，你正在打字或聊天时绝不插话。"/>
+                                                </ToolTip>
+                                            </TextBlock.ToolTip>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <ToggleButton x:Name="ProactiveChatToggle"
+                                                  Style="{StaticResource ToggleSwitchStyle}"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center"
+                                                  Checked="ProactiveChatToggle_Changed"
+                                                  Unchecked="ProactiveChatToggle_Changed"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- 主动搭话参数：仅总开关开启时显示 -->
+                            <StackPanel x:Name="ProactiveOptionsPanel"
+                                        Visibility="Collapsed"
+                                        Opacity="0">
+                                <StackPanel.RenderTransform>
+                                    <TranslateTransform/>
+                                </StackPanel.RenderTransform>
+
+                                <!-- 触发频率：低 / 中 / 高，选中项由滑块承载 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,16,0">
+                                            <TextBlock Text="触发频率"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                       VerticalAlignment="Center"/>
+
+                                            <TextBlock Text="&#xE9CE;"
+                                                       FontFamily="{StaticResource FontFamilyIcon}"
+                                                       FontSize="{StaticResource FontSizeIconSmall}"
+                                                       Cursor="Help"
+                                                       Margin="6,1,0,0"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="决定久未互动多久后可能开口、两次开口至少间隔多久：&#x0a;低：约 2–3 小时一句；中：约 1–1.5 小时一句；高：约 30–40 分钟一句。&#x0a;实际是否开口还带随机概率，不会机械定时。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <Border x:Name="ProactiveFrequencySegmented"
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Background="{DynamicResource AppSurfaceBrush}"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="17"
+                                                Padding="3">
+                                            <Grid x:Name="ProactiveFrequencyTrack">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border x:Name="ProactiveFrequencyThumb"
+                                                        Grid.Column="0"
+                                                        Background="{DynamicResource AppBorderBrush}"
+                                                        CornerRadius="14"
+                                                        SizeChanged="ProactiveFrequencyThumb_SizeChanged">
+                                                    <Border.RenderTransform>
+                                                        <TranslateTransform/>
+                                                    </Border.RenderTransform>
+                                                </Border>
+
+                                                <RadioButton x:Name="ProactiveLowRadio"
+                                                             Grid.Column="0"
+                                                             Style="{StaticResource SegmentButtonStyle}"
+                                                             Content="低"
+                                                             Checked="ProactiveFrequencyRadio_Checked"/>
+                                                <RadioButton x:Name="ProactiveMediumRadio"
+                                                             Grid.Column="1"
+                                                             Style="{StaticResource SegmentButtonStyle}"
+                                                             Content="中"
+                                                             Checked="ProactiveFrequencyRadio_Checked"/>
+                                                <RadioButton x:Name="ProactiveHighRadio"
+                                                             Grid.Column="2"
+                                                             Style="{StaticResource SegmentButtonStyle}"
+                                                             Content="高"
+                                                             Checked="ProactiveFrequencyRadio_Checked"/>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 安静时段：起止相同表示不启用，支持跨午夜 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,16,0">
+                                            <TextBlock Text="安静时段"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                       VerticalAlignment="Center"/>
+
+                                            <TextBlock Text="&#xE9CE;"
+                                                       FontFamily="{StaticResource FontFamilyIcon}"
+                                                       FontSize="{StaticResource FontSizeIconSmall}"
+                                                       Cursor="Help"
+                                                       Margin="6,1,0,0"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="这段时间内不会主动开口，默认 23:00 至次日 8:00，支持跨午夜。&#x0a;开始与结束选同一小时表示不启用（全天都可以开口）。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center">
+                                            <ComboBox x:Name="QuietHoursStartComboBox"
+                                                      Style="{StaticResource AppearanceComboStyle}"
+                                                      VerticalAlignment="Center"
+                                                      SelectionChanged="QuietHoursComboBox_SelectionChanged"/>
+                                            <TextBlock Text="至"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       Margin="8,0"
+                                                       VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="QuietHoursEndComboBox"
+                                                      Style="{StaticResource AppearanceComboStyle}"
+                                                      VerticalAlignment="Center"
+                                                      SelectionChanged="QuietHoursComboBox_SelectionChanged"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 久未互动时主动搭话 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <TextBlock Text="久未互动时主动搭话"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <ToggleButton x:Name="ProactiveIdleToggle"
+                                                      Style="{StaticResource ToggleSwitchStyle}"
+                                                      HorizontalAlignment="Right"
+                                                      VerticalAlignment="Center"
+                                                      Checked="ProactiveIdleToggle_Changed"
+                                                      Unchecked="ProactiveIdleToggle_Changed"/>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 离开回来后欢迎 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <TextBlock Text="离开回来后欢迎"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <ToggleButton x:Name="ProactiveWelcomeToggle"
+                                                      Style="{StaticResource ToggleSwitchStyle}"
+                                                      HorizontalAlignment="Right"
+                                                      VerticalAlignment="Center"
+                                                      Checked="ProactiveWelcomeToggle_Changed"
+                                                      Unchecked="ProactiveWelcomeToggle_Changed"/>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 每天早晚问候 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <TextBlock Text="每天早晚问候"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <ToggleButton x:Name="ProactiveGreetingToggle"
+                                                      Style="{StaticResource ToggleSwitchStyle}"
+                                                      HorizontalAlignment="Right"
+                                                      VerticalAlignment="Center"
+                                                      Checked="ProactiveGreetingToggle_Changed"
+                                                      Unchecked="ProactiveGreetingToggle_Changed"/>
                                     </Grid>
                                 </Border>
                             </StackPanel>

@@ -15,9 +15,22 @@ namespace KfuPet.Services
         Custom
     }
 
+    /// <summary>主动搭话频度档位：决定独处判定阈值、冷却时长与触发概率。</summary>
+    internal enum ProactiveFrequency
+    {
+        /// <summary>低频：约 2–3 小时一句。</summary>
+        Low,
+
+        /// <summary>中频（默认）：约 1–1.5 小时一句。</summary>
+        Medium,
+
+        /// <summary>高频：约 30–40 分钟一句。</summary>
+        High
+    }
+
     /// <summary>
     /// 应用通用设置，统一读写 %AppData%\KfuPet\Config\settings.json。
-    /// 目前包含主题偏好、开发者模式、骨骼调试线框、桌宠窗口位置与模型功能节省模式；后续通用设置继续在此扩展字段。
+    /// 目前包含主题偏好、开发者模式、骨骼调试线框、桌宠窗口位置、模型功能节省模式与主动搭话；后续通用设置继续在此扩展字段。
     /// </summary>
     internal class SettingsService
     {
@@ -82,6 +95,38 @@ namespace KfuPet.Services
             _ => true
         };
 
+        /// <summary>是否启用主动搭话（总开关，默认开启）。</summary>
+        public bool ProactiveChatEnabled { get; private set; } = true;
+
+        /// <summary>主动搭话频度档位（默认中频）。</summary>
+        public ProactiveFrequency ProactiveChatFrequency { get; private set; } = ProactiveFrequency.Medium;
+
+        /// <summary>安静时段开始小时（0–23），默认 23 点。</summary>
+        public int QuietHoursStart { get; private set; } = 23;
+
+        /// <summary>安静时段结束小时（0–23），默认次日 8 点；与开始小时相同表示不启用安静时段。</summary>
+        public int QuietHoursEnd { get; private set; } = 8;
+
+        /// <summary>是否启用独处搭话（在电脑前但久未互动）。</summary>
+        public bool ProactiveIdleEnabled { get; private set; } = true;
+
+        /// <summary>是否启用欢迎回来（离开较久后回到电脑前）。</summary>
+        public bool ProactiveWelcomeBackEnabled { get; private set; } = true;
+
+        /// <summary>是否启用定时问候（早上 / 晚上各一次）。</summary>
+        public bool ProactiveGreetingEnabled { get; private set; } = true;
+
+        /// <summary>自定义模式下主动搭话是否使用 AI 生成；false 表示改用角色台词。</summary>
+        public bool CustomProactiveChatUseAi { get; private set; } = true;
+
+        /// <summary>主动搭话是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
+        public bool ProactiveChatUseAi => ModelSavingMode switch
+        {
+            SavingMode.Saving => false,
+            SavingMode.Custom => CustomProactiveChatUseAi,
+            _ => true
+        };
+
         private SettingsService()
         {
             Load();
@@ -141,6 +186,56 @@ namespace KfuPet.Services
         public void SetCustomSnapBackUseAi(bool useAi)
         {
             CustomSnapBackUseAi = useAi;
+            Save();
+        }
+
+        /// <summary>保存主动搭话总开关状态。</summary>
+        public void SetProactiveChatEnabled(bool enabled)
+        {
+            ProactiveChatEnabled = enabled;
+            Save();
+        }
+
+        /// <summary>保存主动搭话频度档位。</summary>
+        public void SetProactiveChatFrequency(ProactiveFrequency frequency)
+        {
+            ProactiveChatFrequency = frequency;
+            Save();
+        }
+
+        /// <summary>保存安静时段的开始与结束小时（0–23）。</summary>
+        public void SetQuietHours(int startHour, int endHour)
+        {
+            QuietHoursStart = Math.Clamp(startHour, 0, 23);
+            QuietHoursEnd = Math.Clamp(endHour, 0, 23);
+            Save();
+        }
+
+        /// <summary>保存独处搭话开关状态。</summary>
+        public void SetProactiveIdleEnabled(bool enabled)
+        {
+            ProactiveIdleEnabled = enabled;
+            Save();
+        }
+
+        /// <summary>保存欢迎回来开关状态。</summary>
+        public void SetProactiveWelcomeBackEnabled(bool enabled)
+        {
+            ProactiveWelcomeBackEnabled = enabled;
+            Save();
+        }
+
+        /// <summary>保存定时问候开关状态。</summary>
+        public void SetProactiveGreetingEnabled(bool enabled)
+        {
+            ProactiveGreetingEnabled = enabled;
+            Save();
+        }
+
+        /// <summary>保存自定义模式下主动搭话是否使用 AI 生成。</summary>
+        public void SetCustomProactiveChatUseAi(bool useAi)
+        {
+            CustomProactiveChatUseAi = useAi;
             Save();
         }
 
@@ -218,6 +313,56 @@ namespace KfuPet.Services
                 {
                     CustomSnapBackUseAi = snapBackElement.GetBoolean();
                 }
+
+                if (root.TryGetProperty("ProactiveChatEnabled", out var proactiveEnabledElement) &&
+                    proactiveEnabledElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    ProactiveChatEnabled = proactiveEnabledElement.GetBoolean();
+                }
+
+                if (root.TryGetProperty("ProactiveChatFrequency", out var proactiveFrequencyElement) &&
+                    proactiveFrequencyElement.ValueKind == JsonValueKind.String &&
+                    Enum.TryParse<ProactiveFrequency>(proactiveFrequencyElement.GetString(), ignoreCase: true, out var proactiveFrequency) &&
+                    Enum.IsDefined(proactiveFrequency))
+                {
+                    ProactiveChatFrequency = proactiveFrequency;
+                }
+
+                if (root.TryGetProperty("QuietHoursStart", out var quietStartElement) &&
+                    quietStartElement.ValueKind == JsonValueKind.Number)
+                {
+                    QuietHoursStart = Math.Clamp(quietStartElement.GetInt32(), 0, 23);
+                }
+
+                if (root.TryGetProperty("QuietHoursEnd", out var quietEndElement) &&
+                    quietEndElement.ValueKind == JsonValueKind.Number)
+                {
+                    QuietHoursEnd = Math.Clamp(quietEndElement.GetInt32(), 0, 23);
+                }
+
+                if (root.TryGetProperty("ProactiveIdleEnabled", out var proactiveIdleElement) &&
+                    proactiveIdleElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    ProactiveIdleEnabled = proactiveIdleElement.GetBoolean();
+                }
+
+                if (root.TryGetProperty("ProactiveWelcomeBackEnabled", out var proactiveWelcomeElement) &&
+                    proactiveWelcomeElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    ProactiveWelcomeBackEnabled = proactiveWelcomeElement.GetBoolean();
+                }
+
+                if (root.TryGetProperty("ProactiveGreetingEnabled", out var proactiveGreetingElement) &&
+                    proactiveGreetingElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    ProactiveGreetingEnabled = proactiveGreetingElement.GetBoolean();
+                }
+
+                if (root.TryGetProperty("CustomProactiveChatUseAi", out var proactiveAiElement) &&
+                    proactiveAiElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    CustomProactiveChatUseAi = proactiveAiElement.GetBoolean();
+                }
             }
             catch (Exception ex)
             {
@@ -241,7 +386,15 @@ namespace KfuPet.Services
                     ModelSavingMode = ModelSavingMode.ToString(),
                     CustomTouchReactionUseAi,
                     CustomUpdateNotificationUseAi,
-                    CustomSnapBackUseAi
+                    CustomSnapBackUseAi,
+                    ProactiveChatEnabled,
+                    ProactiveChatFrequency = ProactiveChatFrequency.ToString(),
+                    QuietHoursStart,
+                    QuietHoursEnd,
+                    ProactiveIdleEnabled,
+                    ProactiveWelcomeBackEnabled,
+                    ProactiveGreetingEnabled,
+                    CustomProactiveChatUseAi
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

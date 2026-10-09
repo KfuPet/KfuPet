@@ -111,6 +111,9 @@ namespace KfuPet
         /// <summary>触摸反应服务：构造发给 AI 的触摸事件提示，并提供角色包 reactions.json 里的备用台词。</summary>
         private readonly TouchReactionService _touchReactions = new();
 
+        /// <summary>主动搭话服务：心跳与闸门判定在服务内完成，触发后由主窗口生成台词并显示。</summary>
+        private readonly ProactiveChatService _proactiveChat = new();
+
         /// <summary>当前角色包反应配置缺失的必填键；为空表示配置完整或尚未检测。供启动时发出系统通知。</summary>
         internal IReadOnlyList<string> MissingReactionConfigKeys => _touchReactions.MissingConfigKeys;
 
@@ -214,6 +217,9 @@ namespace KfuPet
         private DispatcherTimer? _inputHideTimer;
         private CancellationTokenSource? _bubbleCts;
 
+        /// <summary>气泡是否正在播放（含停留与淡出），用于避免主动搭话在显示中途插话。</summary>
+        private bool _bubblePlaying;
+
         /// <summary>
         /// 开发者工具（KfuPet-Tool）进程是否正在运行。
         /// </summary>
@@ -287,12 +293,17 @@ namespace KfuPet
             ApplyDeveloperMode();
 
             StartToolMonitor();
+
+            // 主动搭话：心跳与闸门在服务内判定，触发后由主窗口生成台词并显示
+            _proactiveChat.Triggered += OnProactiveChatTriggered;
+            _proactiveChat.Start(DescribeProactiveBusyState);
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             Log.Info("[窗口] 主窗口正在关闭，停止命名管道");
             SaveCharacterAttachments();
+            _proactiveChat.Stop();
             _bubbleCts?.Cancel();
             _snapTimer?.Stop();
             _toolMonitorTimer?.Stop();
@@ -803,6 +814,7 @@ namespace KfuPet
             if (_isDragging)
             {
                 _isDragging = false;
+                _proactiveChat.NotifyPetInteraction();
 
                 var snapTarget = GetSnapBackTarget();
                 if (snapTarget.HasValue)
@@ -960,6 +972,7 @@ namespace KfuPet
             }
 
             _lastTouchReactionTime = DateTime.UtcNow;
+            _proactiveChat.NotifyPetInteraction();
             _ = RunTouchReactionAsync(boneId, partKey, isPetting);
         }
 
@@ -1252,6 +1265,8 @@ namespace KfuPet
             var text = ChatInputBox.Text.Trim();
             if (text.Length == 0) return;
 
+            _proactiveChat.NotifyPetInteraction();
+
             var model = ModelConfigService.Models.FirstOrDefault(m => m.IsActive);
             if (model == null)
             {
@@ -1330,12 +1345,14 @@ namespace KfuPet
             _bubbleCts?.Cancel();
             var cts = new CancellationTokenSource();
             _bubbleCts = cts;
+            _bubblePlaying = true;
 
-            _ = RunBubbleBatchesAsync(batches, cts.Token);
+            _ = RunBubbleBatchesAsync(batches, cts);
         }
 
-        private async Task RunBubbleBatchesAsync(List<string> batches, CancellationToken token)
+        private async Task RunBubbleBatchesAsync(List<string> batches, CancellationTokenSource cts)
         {
+            var token = cts.Token;
             try
             {
                 for (var i = 0; i < batches.Count; i++)
@@ -1379,6 +1396,14 @@ namespace KfuPet
             {
                 // 被新一轮显示打断，直接退出
             }
+            finally
+            {
+                // 被新一轮打断时新任务已把标志置回 true，只有当前轮结束才落回 false
+                if (ReferenceEquals(_bubbleCts, cts))
+                {
+                    _bubblePlaying = false;
+                }
+            }
         }
 
         private Task FadeBubbleAsync(double to, CancellationToken token)
@@ -1390,6 +1415,108 @@ namespace KfuPet
             fade.Completed += (s, args) => tcs.TrySetResult();
             ChatBubble.BeginAnimation(OpacityProperty, fade);
             return tcs.Task;
+        }
+
+        // ── 主动搭话 ─────────────────────────────────
+
+        /// <summary>主动搭话携带的短期对话条数上限：只带最近几轮，避免历史压过当前事件。</summary>
+        private const int PROACTIVE_HISTORY_LIMIT = 6;
+
+        /// <summary>主动搭话的界面忙闲查询：可以说话返回 null，否则返回不能说话的原因（用于日志）。</summary>
+        private string? DescribeProactiveBusyState()
+        {
+            if (_isSending) return "正在发送消息";
+            if (!string.IsNullOrWhiteSpace(ChatInputBox.Text)) return "输入框里有未发送的内容";
+            if (_bubblePlaying) return "气泡还在播放";
+            if (_touchReactionPending) return "触摸回应还没到";
+            if (_isHoveringPet) return "鼠标正停在桌宠上";
+            return null;
+        }
+
+        /// <summary>主动搭话触发：异步生成台词并显示。</summary>
+        private void OnProactiveChatTriggered(object? sender, ProactiveTriggerEventArgs e)
+        {
+            _ = RunProactiveChatAsync(e);
+        }
+
+        /// <summary>
+        /// 执行一次主动搭话：AI 优先（带最近几条短期对话当上下文），未接入 AI、请求失败或节省模式时
+        /// 退回角色包备用台词；角色包未提供备用台词时则不作声。说出口的话写入短期记忆。各步均记录日志。
+        /// </summary>
+        private async Task RunProactiveChatAsync(ProactiveTriggerEventArgs e)
+        {
+            // 节省模式：不请求 AI，直接走下方的文案兜底
+            var useAi = SettingsService.Instance.ProactiveChatUseAi;
+            var model = useAi ? ModelConfigService.Models.FirstOrDefault(m => m.IsActive) : null;
+            string? line = null;
+            var source = string.Empty;
+
+            Log.Debug($"[主动搭话] 开始生成台词：{e.Type}｜上下文：{e.ContextNote}");
+
+            if (!useAi)
+            {
+                Log.Debug($"[主动搭话] {e.Type}：节省模式，跳过 AI 生成");
+            }
+            else if (model == null)
+            {
+                Log.Debug($"[主动搭话] {e.Type}：没有启用中的模型，跳过 AI 生成");
+            }
+
+            if (model != null)
+            {
+                var eventPrompt = _touchReactions.BuildProactiveEventPrompt(e.EventKey, e.ContextNote);
+                if (string.IsNullOrEmpty(eventPrompt))
+                {
+                    Log.Debug($"[主动搭话] {e.Type}：角色包未提供事件描述（eventPrompt.{e.EventKey} 缺失），跳过 AI 生成");
+                }
+                else
+                {
+                    try
+                    {
+                        var history = _memorySystem.GetShortTermMessages();
+                        if (history.Count > PROACTIVE_HISTORY_LIMIT)
+                        {
+                            history = history.Skip(history.Count - PROACTIVE_HISTORY_LIMIT).ToList();
+                        }
+
+                        Log.Debug($"[主动搭话] {e.Type} 请求 AI：历史 {history.Count} 条，事件消息：{eventPrompt}");
+                        var stopwatch = Stopwatch.StartNew();
+                        var reply = await _chatService.SendAsync(
+                            model, _memorySystem.BuildBaseSystemPrompt(), history, eventPrompt);
+                        line = NormalizeReactionLine(reply);
+                        source = "AI";
+                        Log.Debug($"[主动搭话] {e.Type} AI 回复（{stopwatch.ElapsedMilliseconds} ms，{line.Length} 字）：{line}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning($"[主动搭话] {e.Type} AI 生成失败，改用备用台词：{ex.Message}");
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(line))
+            {
+                // 未接入 AI、角色包未提供事件描述、AI 回复为空、请求失败或节省模式：用角色包的备用台词
+                line = _touchReactions.PickLine(e.EventKey);
+                source = "备用台词";
+                if (!string.IsNullOrEmpty(line))
+                {
+                    Log.Debug($"[主动搭话] {e.Type} 备用台词选中：{line}");
+                }
+            }
+
+            if (string.IsNullOrEmpty(line))
+            {
+                Log.Debug($"[主动搭话] {e.Type} 既没有 AI 回应也没有备用台词，本次不作声" +
+                          $"（可在角色包 {TouchReactionService.ManifestFileName} 中补充）");
+                return;
+            }
+
+            ShowBubbleBatches(new List<string> { line });
+            Log.Info($"[主动搭话] {e.Type}（{source}）：{line}");
+
+            // 记录到短期记忆，让之后的对话里角色"记得"自己主动说过什么
+            _memorySystem.AddProactiveLine(line);
         }
     }
 }
