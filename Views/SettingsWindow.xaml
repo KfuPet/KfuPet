@@ -18,6 +18,14 @@
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
         </Style>
 
+        <!-- 页内子标题：同一页面里的功能分组标题，比页面标题（SectionTitleStyle）小一级 -->
+        <Style x:Key="SubSectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+        </Style>
+
         <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
             <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
@@ -1502,9 +1510,161 @@
                                 </Border>
                             </StackPanel>
 
-                            <!-- 主动搭话：总开关默认开启，其余参数随总开关显隐 -->
+                            <!-- 停用词设置卡片：关键词检索用，图标 + 预览 + 编辑按钮 -->
+                            <Border Margin="0,16,0,0"
+                                    Padding="14,12"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!-- 用 Grid 约束文字宽度：预览过长时按宽度省略号裁切 -->
+                                        <Grid Margin="0,0,12,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Width="26" Height="26"
+                                                    CornerRadius="8"
+                                                    VerticalAlignment="Top"
+                                                    Background="{DynamicResource AppBorderBrush}">
+                                                <TextBlock Text="&#xE721;"
+                                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                                           FontSize="{StaticResource FontSizeIconSmall}"
+                                                           Foreground="{DynamicResource AppAccentBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                <TextBlock Text="关键词检索停用词"
+                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                           FontSize="{StaticResource FontSizeBody}"
+                                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                                <TextBlock x:Name="StopWordsPreviewText"
+                                                           Margin="0,4,0,0"
+                                                           Style="{StaticResource HintTextStyle}"
+                                                           TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <!-- 编辑按钮：悬停描边光环淡入 + 图标变色，按压缩放、回弹松手 -->
+                                        <Button x:Name="EditStopWordsButton"
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Padding="14,7"
+                                                Background="{DynamicResource AppSurfaceBrush}"
+                                                Cursor="Hand"
+                                                FocusVisualStyle="{x:Null}"
+                                                Click="EditStopWordsButton_Click">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Grid RenderTransformOrigin="0.5,0.5">
+                                                        <Grid.RenderTransform>
+                                                            <ScaleTransform x:Name="BtnScale"/>
+                                                        </Grid.RenderTransform>
+                                                        <Border x:Name="BtnBg"
+                                                                Background="{TemplateBinding Background}"
+                                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="8"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock x:Name="BtnIcon"
+                                                                           Text="&#xE70F;"
+                                                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                                                           FontSize="{StaticResource FontSizeIconSmall}"
+                                                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                                           VerticalAlignment="Center"
+                                                                           Margin="0,0,6,0"/>
+                                                                <TextBlock Text="编辑"
+                                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                                           FontSize="{StaticResource FontSizeBody}"
+                                                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                                           VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <!-- 悬停描边光环：叠加在按钮外侧，不挤压内容 -->
+                                                        <Border x:Name="BtnRing"
+                                                                BorderBrush="{DynamicResource AppAccentBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="8"
+                                                                Opacity="0"
+                                                                IsHitTestVisible="False"/>
+                                                    </Grid>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="BtnIcon"
+                                                                    Property="Foreground"
+                                                                    Value="{DynamicResource AppAccentBrush}"/>
+                                                            <Trigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnRing"
+                                                                                         Storyboard.TargetProperty="Opacity"
+                                                                                         To="1" Duration="0:0:0.12"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.EnterActions>
+                                                            <Trigger.ExitActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnRing"
+                                                                                         Storyboard.TargetProperty="Opacity"
+                                                                                         To="0" Duration="0:0:0.2"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.ExitActions>
+                                                        </Trigger>
+                                                        <Trigger Property="IsPressed" Value="True">
+                                                            <Trigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                         Storyboard.TargetProperty="ScaleX"
+                                                                                         To="0.94" Duration="0:0:0.08"/>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                         Storyboard.TargetProperty="ScaleY"
+                                                                                         To="0.94" Duration="0:0:0.08"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.EnterActions>
+                                                            <Trigger.ExitActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                         Storyboard.TargetProperty="ScaleX"
+                                                                                         To="1" Duration="0:0:0.25">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                         Storyboard.TargetProperty="ScaleY"
+                                                                                         To="1" Duration="0:0:0.25">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.ExitActions>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- 主动搭话：总开关默认开启，其余参数随总开关显隐；作为“模型功能”页内的子标题 -->
                             <TextBlock Text="主动搭话"
-                                       Style="{StaticResource SectionTitleStyle}"
+                                       Style="{StaticResource SubSectionTitleStyle}"
                                        Margin="0,24,0,0"/>
 
                             <Border Margin="0,16,0,0"
@@ -2294,157 +2454,6 @@
                                                                            VerticalAlignment="Center"
                                                                            Margin="0,0,6,0"/>
                                                                 <TextBlock Text="查看"
-                                                                           FontFamily="{StaticResource FontFamilyBody}"
-                                                                           FontSize="{StaticResource FontSizeBody}"
-                                                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                                                           VerticalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Border>
-                                                        <!-- 悬停描边光环：叠加在按钮外侧，不挤压内容 -->
-                                                        <Border x:Name="BtnRing"
-                                                                BorderBrush="{DynamicResource AppAccentBrush}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="8"
-                                                                Opacity="0"
-                                                                IsHitTestVisible="False"/>
-                                                    </Grid>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="BtnIcon"
-                                                                    Property="Foreground"
-                                                                    Value="{DynamicResource AppAccentBrush}"/>
-                                                            <Trigger.EnterActions>
-                                                                <BeginStoryboard>
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation Storyboard.TargetName="BtnRing"
-                                                                                         Storyboard.TargetProperty="Opacity"
-                                                                                         To="1" Duration="0:0:0.12"/>
-                                                                    </Storyboard>
-                                                                </BeginStoryboard>
-                                                            </Trigger.EnterActions>
-                                                            <Trigger.ExitActions>
-                                                                <BeginStoryboard>
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation Storyboard.TargetName="BtnRing"
-                                                                                         Storyboard.TargetProperty="Opacity"
-                                                                                         To="0" Duration="0:0:0.2"/>
-                                                                    </Storyboard>
-                                                                </BeginStoryboard>
-                                                            </Trigger.ExitActions>
-                                                        </Trigger>
-                                                        <Trigger Property="IsPressed" Value="True">
-                                                            <Trigger.EnterActions>
-                                                                <BeginStoryboard>
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                         Storyboard.TargetProperty="ScaleX"
-                                                                                         To="0.94" Duration="0:0:0.08"/>
-                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                         Storyboard.TargetProperty="ScaleY"
-                                                                                         To="0.94" Duration="0:0:0.08"/>
-                                                                    </Storyboard>
-                                                                </BeginStoryboard>
-                                                            </Trigger.EnterActions>
-                                                            <Trigger.ExitActions>
-                                                                <BeginStoryboard>
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                         Storyboard.TargetProperty="ScaleX"
-                                                                                         To="1" Duration="0:0:0.25">
-                                                                            <DoubleAnimation.EasingFunction>
-                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
-                                                                            </DoubleAnimation.EasingFunction>
-                                                                        </DoubleAnimation>
-                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                         Storyboard.TargetProperty="ScaleY"
-                                                                                         To="1" Duration="0:0:0.25">
-                                                                            <DoubleAnimation.EasingFunction>
-                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
-                                                                            </DoubleAnimation.EasingFunction>
-                                                                        </DoubleAnimation>
-                                                                    </Storyboard>
-                                                                </BeginStoryboard>
-                                                            </Trigger.ExitActions>
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
-                                        </Button>
-                                    </Grid>
-                                </Grid>
-                            </Border>
-
-                            <!-- 停用词设置卡片：图标 + 预览 + 编辑按钮 -->
-                            <Border x:Name="StopWordsCard"
-                                    Margin="0,8,0,0"
-                                    Padding="14,12"
-                                    Background="{DynamicResource AppSurfaceBrush}"
-                                    BorderBrush="{DynamicResource AppBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="10"
-                                    RenderTransformOrigin="0.5,0.5">
-                                <Border.RenderTransform>
-                                    <TranslateTransform x:Name="StopWordsCardTransform"/>
-                                </Border.RenderTransform>
-                                <Grid>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
-                                            <Border Width="26" Height="26"
-                                                    CornerRadius="8"
-                                                    VerticalAlignment="Top"
-                                                    Background="{DynamicResource AppBorderBrush}">
-                                                <TextBlock Text="&#xE721;"
-                                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                                           FontSize="{StaticResource FontSizeIconSmall}"
-                                                           Foreground="{DynamicResource AppAccentBrush}"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
-                                            </Border>
-                                            <StackPanel Margin="10,0,0,0">
-                                                <TextBlock Text="关键词检索停用词"
-                                                           FontFamily="{StaticResource FontFamilyBody}"
-                                                           FontSize="{StaticResource FontSizeBody}"
-                                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-                                                <TextBlock x:Name="StopWordsPreviewText"
-                                                           Margin="0,4,0,0"
-                                                           Style="{StaticResource HintTextStyle}"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                        <!-- 编辑按钮：悬停描边光环淡入 + 图标变色，按压缩放、回弹松手 -->
-                                        <Button x:Name="EditStopWordsButton"
-                                                Grid.Column="1"
-                                                VerticalAlignment="Center"
-                                                Padding="14,7"
-                                                Background="{DynamicResource AppSurfaceBrush}"
-                                                Cursor="Hand"
-                                                FocusVisualStyle="{x:Null}"
-                                                Click="EditStopWordsButton_Click">
-                                            <Button.Template>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Grid RenderTransformOrigin="0.5,0.5">
-                                                        <Grid.RenderTransform>
-                                                            <ScaleTransform x:Name="BtnScale"/>
-                                                        </Grid.RenderTransform>
-                                                        <Border x:Name="BtnBg"
-                                                                Background="{TemplateBinding Background}"
-                                                                BorderBrush="{DynamicResource AppBorderBrush}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="8"
-                                                                Padding="{TemplateBinding Padding}">
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <TextBlock x:Name="BtnIcon"
-                                                                           Text="&#xE70F;"
-                                                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                                                           FontSize="{StaticResource FontSizeIconSmall}"
-                                                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                                                           VerticalAlignment="Center"
-                                                                           Margin="0,0,6,0"/>
-                                                                <TextBlock Text="编辑"
                                                                            FontFamily="{StaticResource FontFamilyBody}"
                                                                            FontSize="{StaticResource FontSizeBody}"
                                                                            Foreground="{DynamicResource AppTextPrimaryBrush}"

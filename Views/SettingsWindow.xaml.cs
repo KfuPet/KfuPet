@@ -26,6 +26,9 @@ namespace KfuPet.Views
         /// <summary>版本徽章相邻两次点击的最大间隔，超过则从 1 重新计数。</summary>
         private static readonly TimeSpan VersionBadgeClickInterval = TimeSpan.FromSeconds(2);
 
+        /// <summary>停用词卡片预览最多显示多少个词，其余用省略号代替。</summary>
+        private const int StopWordsPreviewMaxWords = 10;
+
         private readonly MainWindow _mainWindow;
         private readonly UpdateService _updateService = new();
         private readonly StartupService _startupService = new();
@@ -205,11 +208,14 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 把当前停用词以中文逗号拼接显示在卡片预览里。
+        /// 把当前停用词以中文逗号拼接显示在卡片预览里：最多显示前若干个词，其余用省略号代替。
         /// </summary>
         private void RefreshStopWordsPreview()
         {
-            StopWordsPreviewText.Text = string.Join("，", _mainWindow.StopWordsService.Words);
+            var words = _mainWindow.StopWordsService.Words;
+            var previewCount = Math.Min(words.Count, StopWordsPreviewMaxWords);
+            var preview = string.Join("，", words.Take(previewCount));
+            StopWordsPreviewText.Text = words.Count > previewCount ? preview + "…" : preview;
         }
 
         /// <summary>
@@ -845,7 +851,7 @@ namespace KfuPet.Views
 
             var cards = new FrameworkElement[]
             {
-                ShortMemoryCard, ArchiveMemoryCard, LongMemoryCard, ChatHistoryCard, LongTermMemoryCard, StopWordsCard
+                ShortMemoryCard, ArchiveMemoryCard, LongMemoryCard, ChatHistoryCard, LongTermMemoryCard
             };
 
             // 卡片错峰入场（每张比上一张晚 60ms）
