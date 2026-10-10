@@ -94,21 +94,6 @@
                 </StackPanel>
             </Button>
 
-            <Button x:Name="ModelConfigItem" Style="{StaticResource MenuItemStyle}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE8F1;"
-                               FontFamily="{StaticResource FontFamilyIcon}"
-                               FontSize="{StaticResource FontSizeIcon}" Width="26"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-                    <TextBlock Text="模型配置"
-                               FontFamily="{StaticResource FontFamilyBody}"
-                               FontSize="{StaticResource FontSizeBody}"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-                </StackPanel>
-            </Button>
-
             <Button x:Name="SettingsItem" Style="{StaticResource MenuItemStyle}">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE713;"

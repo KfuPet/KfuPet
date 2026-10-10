@@ -340,11 +340,6 @@ namespace KfuPet
                     _notifyIcon?.Dispose();
                     Shutdown();
                 };
-                _trayMenu.ModelConfigClicked += (s, e) =>
-                {
-                    OpenSettingsWindow();
-                    _settingsWindow?.ShowModelConfigPage();
-                };
             }
 
             _trayMenu.ShowNearCursor();
