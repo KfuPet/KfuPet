@@ -16,7 +16,7 @@ using KfuPet.Services;
 namespace KfuPet.Views
 {
     /// <summary>
-    /// 设置窗口，左侧导航在“模型配置”、“开发者模式”与“关于”之间切换。
+    /// 设置窗口，左侧导航在通用、模型、模型功能、记忆、开发者模式、关于与存储占用之间切换。
     /// </summary>
     public partial class SettingsWindow : Window
     {
@@ -40,6 +40,7 @@ namespace KfuPet.Views
         private bool _suppressAutoStartEvents;
         private bool _suppressSavingEvents;
         private bool _suppressProactiveEvents;
+        private bool _isLoadingStorageUsage;
         private AddModelProviderDialog? _addModelProviderDialog;
         private int _versionBadgeClickCount;
         private DateTime _lastVersionBadgeClickTime;
@@ -57,7 +58,32 @@ namespace KfuPet.Views
             LoadModels();
             RefreshStopWordsPreview();
             UpdateToolStatus();
+            LoadSettingsIntoControls();
 
+            VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
+
+            // 直接用真实日志目录当提示，避免路径写死在文案里
+            OpenLogButton.ToolTip = $"在资源管理器中打开日志目录：{LogFileWriter.LogDirectory}";
+
+            Loaded += (s, e) => PlayEntranceAnimation();
+            KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Escape)
+                {
+                    Close();
+                }
+            };
+            Closed += SettingsWindow_Closed;
+            Activated += SettingsWindow_Activated;
+            Log.Info("[窗口] 设置窗口已打开");
+        }
+
+        /// <summary>
+        /// 把已保存的设置读入各控件：外观下拉菜单、开机自启动开关、节省消耗档位与主动搭话参数。
+        /// 窗口构造时调用；“软件配置清理”把设置复位后再次调用，让界面同步到初始状态。
+        /// </summary>
+        private void LoadSettingsIntoControls()
+        {
             // 外观下拉菜单：按当前主题偏好选中对应项（0 系统 / 1 浅色 / 2 深色）
             _suppressAppearanceEvents = true;
             AppearanceComboBox.SelectedIndex = Application.Current is App app
@@ -112,23 +138,6 @@ namespace KfuPet.Views
             _suppressProactiveEvents = false;
             UpdateProactiveOptionsVisibility();
             UpdateQuietHoursOptionsVisibility();
-
-            VersionText.Text = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0)).ToString(3);
-
-            // 直接用真实日志目录当提示，避免路径写死在文案里
-            OpenLogButton.ToolTip = $"在资源管理器中打开日志目录：{LogFileWriter.LogDirectory}";
-
-            Loaded += (s, e) => PlayEntranceAnimation();
-            KeyDown += (s, e) =>
-            {
-                if (e.Key == Key.Escape)
-                {
-                    Close();
-                }
-            };
-            Closed += SettingsWindow_Closed;
-            Activated += SettingsWindow_Activated;
-            Log.Info("[窗口] 设置窗口已打开");
         }
 
         private void SettingsWindow_Closed(object? sender, EventArgs e)
@@ -229,15 +238,15 @@ namespace KfuPet.Views
 
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (GeneralPanel == null || ModelConfigPanel == null || ModelFeaturesPanel == null ||
-                MemoryPanel == null || DeveloperPanel == null || AboutPanel == null) return;
+            // 选中底部“存储占用”入口时会清空功能导航的选中，此处不再处理
+            if (NavList.SelectedIndex < 0) return;
 
-            GeneralPanel.Visibility = NavList.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
-            ModelConfigPanel.Visibility = NavList.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
-            ModelFeaturesPanel.Visibility = NavList.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
-            MemoryPanel.Visibility = NavList.SelectedIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
-            DeveloperPanel.Visibility = NavList.SelectedIndex == 4 ? Visibility.Visible : Visibility.Collapsed;
-            AboutPanel.Visibility = NavList.SelectedIndex == 5 ? Visibility.Visible : Visibility.Collapsed;
+            if (GeneralPanel == null || ModelConfigPanel == null || ModelFeaturesPanel == null ||
+                MemoryPanel == null || DeveloperPanel == null || AboutPanel == null ||
+                StoragePanel == null || StorageNavList == null) return;
+
+            // 功能导航与底部“存储占用”入口互斥选中
+            StorageNavList.SelectedIndex = -1;
 
             var currentPanel = NavList.SelectedIndex switch
             {
@@ -248,6 +257,7 @@ namespace KfuPet.Views
                 5 => AboutPanel,
                 _ => GeneralPanel
             };
+            ShowOnlyPanel(currentPanel);
             PlayPageEnterAnimation(currentPanel);
 
             if (NavList.SelectedIndex == 3)
@@ -259,6 +269,30 @@ namespace KfuPet.Views
             {
                 _ = LoadCurrentVersionInfoAsync();
             }
+        }
+
+        /// <summary>底部“存储占用”入口选中：清空功能导航选中并切到存储占用页。</summary>
+        private void StorageNavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (StorageNavList.SelectedIndex < 0) return;
+
+            NavList.SelectedIndex = -1;
+
+            ShowOnlyPanel(StoragePanel);
+            PlayPageEnterAnimation(StoragePanel);
+            _ = LoadStorageUsageAsync();
+        }
+
+        /// <summary>只显示指定页面，其余页面隐藏。</summary>
+        private void ShowOnlyPanel(FrameworkElement target)
+        {
+            GeneralPanel.Visibility = ReferenceEquals(target, GeneralPanel) ? Visibility.Visible : Visibility.Collapsed;
+            ModelConfigPanel.Visibility = ReferenceEquals(target, ModelConfigPanel) ? Visibility.Visible : Visibility.Collapsed;
+            ModelFeaturesPanel.Visibility = ReferenceEquals(target, ModelFeaturesPanel) ? Visibility.Visible : Visibility.Collapsed;
+            MemoryPanel.Visibility = ReferenceEquals(target, MemoryPanel) ? Visibility.Visible : Visibility.Collapsed;
+            DeveloperPanel.Visibility = ReferenceEquals(target, DeveloperPanel) ? Visibility.Visible : Visibility.Collapsed;
+            AboutPanel.Visibility = ReferenceEquals(target, AboutPanel) ? Visibility.Visible : Visibility.Collapsed;
+            StoragePanel.Visibility = ReferenceEquals(target, StoragePanel) ? Visibility.Visible : Visibility.Collapsed;
         }
 
         /// <summary>
@@ -896,35 +930,82 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 点击“删除记忆”：弹出勾选对话框，确认后按选择清空对应记忆并刷新统计卡片。
+        /// 点击“缓存清理”：弹出勾选对话框，确认后清理所选资源（历史日志、软件配置、记忆）。
         /// </summary>
-        private void DeleteMemoryButton_Click(object sender, RoutedEventArgs e)
+        private void CleanupCacheButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new DeleteMemoryDialog();
-            dialog.DeleteConfirmed += kinds =>
+            var dialog = new CleanupCacheDialog();
+            dialog.CleanupConfirmed += kinds =>
             {
-                var memory = _mainWindow.MemorySystem;
-                if (kinds.HasFlag(DeleteMemoryDialog.MemoryKinds.ShortTerm))
+                var cleanedParts = new List<string>();
+
+                if (kinds.HasFlag(CleanupCacheDialog.CacheKinds.Logs))
                 {
-                    memory.ClearShortTerm();
-                }
-                if (kinds.HasFlag(DeleteMemoryDialog.MemoryKinds.Archive))
-                {
-                    memory.ClearArchive();
-                }
-                if (kinds.HasFlag(DeleteMemoryDialog.MemoryKinds.LongTerm))
-                {
-                    memory.ClearLongTerm();
+                    // 正在写入的那一份日志保留，只删历史日志
+                    var currentLogPath = (Application.Current as App)?.CurrentLogFilePath;
+                    var deletedCount = CacheCleanupService.DeleteLogFiles(currentLogPath);
+                    cleanedParts.Add($"日志 {deletedCount} 份");
                 }
 
-                // 重新播放入场动画，让清零后的数字与进度条重新滚动
-                PlayMemoryPageEntrance();
+                if (kinds.HasFlag(CleanupCacheDialog.CacheKinds.Config))
+                {
+                    CacheCleanupService.DeleteConfigFiles();
+                    ResetSoftwareConfig();
+                    cleanedParts.Add("软件配置");
+                }
+
+                if (kinds.HasFlag(CleanupCacheDialog.CacheKinds.Memory))
+                {
+                    var memory = _mainWindow.MemorySystem;
+                    memory.ClearShortTerm();
+                    memory.ClearArchive();
+                    memory.ClearLongTerm();
+                    cleanedParts.Add("记忆");
+                }
+
+                ShowToast($"缓存清理完成：{string.Join("、", cleanedParts)}");
+
+                // 重新统计占用，让页面上的数字滚动到清理后的大小
+                _ = LoadStorageUsageAsync();
             };
             dialog.ShowDialog();
         }
 
-        /// <summary>统计数字从 0 滚动到目标值（TextBlock 没有可动画的数字属性，用定时器驱动插值）。</summary>
+        /// <summary>
+        /// 软件配置清理后的复位：内存中的设置、模型与停用词回到初始值，
+        /// 并让窗口控件、主题与开发者模式同步到复位后的状态。
+        /// </summary>
+        private void ResetSoftwareConfig()
+        {
+            SettingsService.Instance.ResetToDefaults();
+            ModelConfigService.ResetToDefaults();
+            _mainWindow.StopWordsService.ResetToDefaults();
+
+            // 开发者模式与调试线框属于软件配置，一并关闭（服务会通知界面同步开关）
+            _mainWindow.DeveloperModeService.SetEnabled(false);
+            _mainWindow.SkeletonService.SetDebugSkeleton(false);
+
+            LoadSettingsIntoControls();
+            LoadModels();
+            RefreshStopWordsPreview();
+
+            // 外观已回到“跟随系统”，立即把运行中的主题同步过去
+            if (Application.Current is App app)
+            {
+                app.SetThemePreference(SettingsService.Instance.Theme);
+            }
+
+            Log.Info("[清理] 软件配置已复位：设置、模型、停用词与开发者模式恢复初始状态");
+        }
+
+        /// <summary>统计数字从 0 滚动到目标整数值（TextBlock 没有可动画的数字属性，用定时器驱动插值）。</summary>
         private static void PlayCountUpAnimation(TextBlock text, int target, TimeSpan beginTime)
+            => PlayCountUpAnimation(text, target, beginTime, value => ((long)Math.Round(value)).ToString());
+
+        /// <summary>
+        /// 统计数字从 0 滚动到目标值，每帧显示文本由格式化函数决定（用于字节数等带单位的场景）。
+        /// </summary>
+        private static void PlayCountUpAnimation(TextBlock text, double target, TimeSpan beginTime, Func<double, string> format)
         {
             var start = DateTime.UtcNow + beginTime;
             var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
@@ -939,7 +1020,7 @@ namespace KfuPet.Views
                 var t = Math.Min(1.0, elapsed.TotalMilliseconds / 500.0);
                 // Cubic EaseOut
                 var eased = 1 - Math.Pow(1 - t, 3);
-                text.Text = ((int)Math.Round(target * eased)).ToString();
+                text.Text = format(target * eased);
 
                 if (t >= 1.0)
                 {
@@ -949,16 +1030,142 @@ namespace KfuPet.Views
             timer.Start();
         }
 
-        /// <summary>进度条从 0 缓动填充到当前占比。</summary>
+        /// <summary>进度条从 0 缓动填充到当前数量占比。</summary>
         private static void PlayProgressAnimation(ScaleTransform fill, int count, int capacity, TimeSpan beginTime)
+            => PlayRatioAnimation(fill, capacity > 0 ? Math.Clamp((double)count / capacity, 0, 1) : 0, beginTime);
+
+        /// <summary>进度条从 0 缓动填充到指定比例（0~1）。</summary>
+        private static void PlayRatioAnimation(ScaleTransform fill, double ratio, TimeSpan beginTime)
         {
-            var ratio = capacity > 0 ? Math.Clamp((double)count / capacity, 0, 1) : 0;
             fill.BeginAnimation(ScaleTransform.ScaleXProperty,
-                new DoubleAnimation(0, ratio, TimeSpan.FromMilliseconds(600))
+                new DoubleAnimation(0, Math.Clamp(ratio, 0, 1), TimeSpan.FromMilliseconds(600))
                 {
                     BeginTime = beginTime,
                     EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
                 });
+        }
+
+        /// <summary>
+        /// 统计并展示存储占用（软件本体、缓存目录、模型包）。
+        /// 每次进入页面重新统计，目录遍历在后台线程完成，不阻塞界面。
+        /// </summary>
+        private async Task LoadStorageUsageAsync()
+        {
+            if (_isLoadingStorageUsage) return;
+
+            _isLoadingStorageUsage = true;
+            try
+            {
+                StorageInstallSizeText.Text = "统计中…";
+                StorageCacheSizeText.Text = "统计中…";
+                StorageModelsSizeText.Text = "统计中…";
+
+                var usage = await StorageUsageService.LoadUsageAsync();
+                ApplyStorageUsage(usage);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[存储] 占用统计失败：{ex.Message}");
+                StorageInstallSizeText.Text = "统计失败";
+                StorageCacheSizeText.Text = "统计失败";
+                StorageModelsSizeText.Text = "统计失败";
+            }
+            finally
+            {
+                _isLoadingStorageUsage = false;
+            }
+        }
+
+        /// <summary>把统计结果填入存储占用页。</summary>
+        private void ApplyStorageUsage(StorageUsageInfo usage)
+        {
+            // 模型包：合计占用；多于一个时再展示占用最大的 3 个
+            StorageModelsCountText.Text = usage.ModelsPath.Length > 0
+                ? $"共 {usage.Packages.Count} 个模型包"
+                : "未找到模型包目录";
+
+            FillStoragePackageRows(usage);
+
+            PlayStoragePageEntrance(usage);
+        }
+
+        /// <summary>填入模型包明细行（最多 3 行，不足的行隐藏）；只有一个模型包时不展示明细。</summary>
+        private void FillStoragePackageRows(StorageUsageInfo usage)
+        {
+            StoragePackagesCard.Visibility = usage.Packages.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+
+            var rows = StoragePackageRowControls();
+            var top = usage.Packages.Take(rows.Length).ToList();
+            for (var i = 0; i < rows.Length; i++)
+            {
+                var visible = i < top.Count;
+                rows[i].Row.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+                if (!visible) continue;
+
+                rows[i].Name.Text = top[i].Name;
+                rows[i].Size.Text = StorageUsageService.FormatBytes(top[i].Bytes);
+            }
+        }
+
+        /// <summary>取出页面上预置的 3 行模型包明细控件（行容器、名称、大小、占比条）。</summary>
+        private (StackPanel Row, TextBlock Name, TextBlock Size, ScaleTransform Fill)[] StoragePackageRowControls()
+        {
+            return new (StackPanel Row, TextBlock Name, TextBlock Size, ScaleTransform Fill)[]
+            {
+                (StoragePackageRow1, StoragePackageRow1Name, StoragePackageRow1Size, StoragePackageRow1Fill),
+                (StoragePackageRow2, StoragePackageRow2Name, StoragePackageRow2Size, StoragePackageRow2Fill),
+                (StoragePackageRow3, StoragePackageRow3Name, StoragePackageRow3Size, StoragePackageRow3Fill)
+            };
+        }
+
+        /// <summary>
+        /// 存储占用页入场：卡片错峰淡入上滑，数字从 0 滚动到实际大小，
+        /// 明细行占比条以占用最大的模型包为满格缓动填充。
+        /// </summary>
+        private void PlayStoragePageEntrance(StorageUsageInfo usage)
+        {
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var cards = new List<FrameworkElement> { StorageInstallCard, StorageCacheCard, StorageModelsCard };
+            if (StoragePackagesCard.Visibility == Visibility.Visible)
+            {
+                cards.Add(StoragePackagesCard);
+            }
+
+            // 卡片错峰入场（每张比上一张晚 60ms）
+            for (var i = 0; i < cards.Count; i++)
+            {
+                var begin = TimeSpan.FromMilliseconds(60 * i);
+                var duration = TimeSpan.FromMilliseconds(260);
+
+                cards[i].BeginAnimation(OpacityProperty,
+                    new DoubleAnimation(0, 1, duration) { BeginTime = begin, EasingFunction = ease });
+
+                var translate = FindTranslateTransform(cards[i]);
+                if (translate != null)
+                {
+                    translate.BeginAnimation(TranslateTransform.YProperty,
+                        new DoubleAnimation(14, 0, duration) { BeginTime = begin, EasingFunction = ease });
+                }
+            }
+
+            // 数字滚动：字节数按人类可读单位逐帧换算
+            PlayCountUpAnimation(StorageInstallSizeText, usage.InstallBytes, TimeSpan.FromMilliseconds(120),
+                value => StorageUsageService.FormatBytes((long)Math.Round(value)));
+            PlayCountUpAnimation(StorageCacheSizeText, usage.CacheBytes, TimeSpan.FromMilliseconds(180),
+                value => StorageUsageService.FormatBytes((long)Math.Round(value)));
+            PlayCountUpAnimation(StorageModelsSizeText, usage.ModelsBytes, TimeSpan.FromMilliseconds(240),
+                value => StorageUsageService.FormatBytes((long)Math.Round(value)));
+
+            // 明细行占比条：以占用最大的模型包为满格，其余按比例
+            var rows = StoragePackageRowControls();
+            var top = usage.Packages.Take(rows.Length).ToList();
+            var maxBytes = top.Count > 0 ? top[0].Bytes : 0;
+            for (var i = 0; i < top.Count; i++)
+            {
+                var ratio = maxBytes > 0 ? (double)top[i].Bytes / maxBytes : 0;
+                PlayRatioAnimation(rows[i].Fill, ratio, TimeSpan.FromMilliseconds(160 + 60 * i));
+            }
         }
 
         /// <summary>

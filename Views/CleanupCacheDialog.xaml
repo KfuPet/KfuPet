@@ -1,7 +1,7 @@
-<Window x:Class="KfuPet.Views.DeleteMemoryDialog"
+<Window x:Class="KfuPet.Views.CleanupCacheDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="删除记忆"
+        Title="缓存清理"
         Width="480"
         SizeToContent="Height"
         WindowStartupLocation="CenterScreen"
@@ -128,8 +128,8 @@
             </Setter>
         </Style>
 
-        <!-- 记忆类型勾选项：整行可点，右侧对勾缩放弹入 -->
-        <Style x:Key="MemoryCheckStyle" TargetType="CheckBox">
+        <!-- 清理项勾选框：整行可点，右侧对勾缩放弹入 -->
+        <Style x:Key="CleanupCheckStyle" TargetType="CheckBox">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
@@ -280,7 +280,7 @@
                                FontSize="{StaticResource FontSizeIcon}"
                                Foreground="#E81123"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="删除记忆"
+                    <TextBlock Text="缓存清理"
                                Margin="10,0,0,0"
                                FontFamily="{StaticResource FontFamilyBody}"
                                FontSize="{StaticResource FontSizeBody}"
@@ -292,58 +292,61 @@
 
             <!-- 内容区：选择页与警告页在同一窗口内切换 -->
             <Grid Grid.Row="1" Margin="20,20,20,0">
-                <!-- 选择页：勾选要删除的记忆类型 -->
+                <!-- 选择页：勾选要清理的内容 -->
                 <StackPanel x:Name="SelectPage">
-                    <TextBlock Text="想让我忘掉哪些内容？勾选后点“继续”。"
+                    <StackPanel.RenderTransform>
+                        <TranslateTransform/>
+                    </StackPanel.RenderTransform>
+                    <TextBlock Text="想清理哪些内容？勾选后点“继续”。"
                                FontFamily="{StaticResource FontFamilyBody}"
                                FontSize="{StaticResource FontSizeCaption}"
                                Foreground="{DynamicResource AppTextSecondaryBrush}"
                                TextWrapping="Wrap"/>
                     <StackPanel Margin="0,14,0,0">
-                        <CheckBox x:Name="ShortCheck"
-                                  Style="{StaticResource MemoryCheckStyle}"
+                        <CheckBox x:Name="LogCheck"
+                                  Style="{StaticResource CleanupCheckStyle}"
                                   Margin="0,0,0,8"
                                   Checked="AnyCheck_Changed"
                                   Unchecked="AnyCheck_Changed">
                             <StackPanel>
-                                <TextBlock Text="短期记忆"
+                                <TextBlock Text="日志"
                                            FontFamily="{StaticResource FontFamilyBody}"
                                            FontSize="{StaticResource FontSizeBody}"
                                            Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-                                <TextBlock Text="最近对话的即时上下文"
+                                <TextBlock Text="历史运行日志（正在写入的这一份会保留）"
                                            Margin="0,2,0,0"
                                            FontFamily="{StaticResource FontFamilyBody}"
                                            FontSize="{StaticResource FontSizeCaption}"
                                            Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                             </StackPanel>
                         </CheckBox>
-                        <CheckBox x:Name="ArchiveCheck"
-                                  Style="{StaticResource MemoryCheckStyle}"
+                        <CheckBox x:Name="ConfigCheck"
+                                  Style="{StaticResource CleanupCheckStyle}"
                                   Margin="0,0,0,8"
                                   Checked="AnyCheck_Changed"
                                   Unchecked="AnyCheck_Changed">
                             <StackPanel>
-                                <TextBlock Text="归档记忆"
+                                <TextBlock Text="软件配置"
                                            FontFamily="{StaticResource FontFamilyBody}"
                                            FontSize="{StaticResource FontSizeBody}"
                                            Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-                                <TextBlock Text="等待筛选的过往对话与总结"
+                                <TextBlock Text="模型、通用设置与停用词"
                                            Margin="0,2,0,0"
                                            FontFamily="{StaticResource FontFamilyBody}"
                                            FontSize="{StaticResource FontSizeCaption}"
                                            Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                             </StackPanel>
                         </CheckBox>
-                        <CheckBox x:Name="LongCheck"
-                                  Style="{StaticResource MemoryCheckStyle}"
+                        <CheckBox x:Name="MemoryCheck"
+                                  Style="{StaticResource CleanupCheckStyle}"
                                   Checked="AnyCheck_Changed"
                                   Unchecked="AnyCheck_Changed">
                             <StackPanel>
-                                <TextBlock Text="长期记忆"
+                                <TextBlock Text="记忆"
                                            FontFamily="{StaticResource FontFamilyBody}"
                                            FontSize="{StaticResource FontSizeBody}"
                                            Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-                                <TextBlock Text="我牢牢记住的关于你的事"
+                                <TextBlock Text="短期记忆、归档记忆与长期记忆"
                                            Margin="0,2,0,0"
                                            FontFamily="{StaticResource FontFamilyBody}"
                                            FontSize="{StaticResource FontSizeCaption}"
@@ -371,7 +374,7 @@
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="删除后就找不回来了"
+                    <TextBlock Text="清理后就找不回来了"
                                Margin="0,14,0,6"
                                HorizontalAlignment="Center"
                                FontFamily="{StaticResource FontFamilyDisplay}"
@@ -420,18 +423,19 @@
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Right"
                                 Visibility="Collapsed">
+                        <!-- 取消：返回选择页继续调整，而不是关闭窗口 -->
                         <Button Style="{StaticResource DialogButtonStyle}"
                                 Margin="0,0,8,0"
                                 Background="Transparent"
                                 Foreground="{DynamicResource AppTextPrimaryBrush}"
                                 BorderBrush="{DynamicResource AppBorderBrush}"
                                 Content="取消"
-                                Click="CancelButton_Click"/>
-                        <Button x:Name="ConfirmDeleteButton"
+                                Click="BackButton_Click"/>
+                        <Button x:Name="ConfirmCleanupButton"
                                 Style="{StaticResource DangerButtonStyle}"
                                 Foreground="White"
                                 IsEnabled="False"
-                                Click="ConfirmDeleteButton_Click"/>
+                                Click="ConfirmCleanupButton_Click"/>
                     </StackPanel>
                 </Grid>
             </Border>

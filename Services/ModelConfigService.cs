@@ -24,6 +24,16 @@ namespace KfuPet.Services
         }
 
         /// <summary>
+        /// 恢复初始状态：清空内存中的全部模型配置（当前使用模型随之取消）。
+        /// 磁盘上的配置文件由“缓存清理”删除，之后新增模型会重新生成。
+        /// </summary>
+        public void ResetToDefaults()
+        {
+            _models.Clear();
+            Log.Info("[配置] 模型配置已清空，恢复初始状态");
+        }
+
+        /// <summary>
         /// 新增一条模型配置。若当前没有任何模型，则新模型默认设为当前使用。
         /// </summary>
         public ModelConfig Add(string baseUrl, string apiKey, string modelName, string modelId)

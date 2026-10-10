@@ -882,12 +882,9 @@
                         BorderBrush="{DynamicResource AppBorderBrush}"
                         BorderThickness="0,0,1,0"
                         CornerRadius="0,0,0,11">
-                    <ListBox x:Name="NavList"
-                             Margin="0,12,0,0"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             SelectionChanged="NavList_SelectionChanged">
-                        <ListBox.Resources>
+                    <DockPanel LastChildFill="True">
+                        <!-- 导航项样式：上方功能导航与底部“存储占用”入口共用 -->
+                        <DockPanel.Resources>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="Margin" Value="12,2"/>
                                 <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
@@ -991,67 +988,91 @@
                                     </Setter.Value>
                                 </Setter>
                             </Style>
-                        </ListBox.Resources>
+                        </DockPanel.Resources>
 
-                        <ListBoxItem>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE713;"
-                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="通用" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE753;"
-                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="模型" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE945;"
-                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="模型功能" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE823;"
-                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="记忆" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </ListBoxItem>
-                        <!-- 开发者模式入口：默认隐藏，通过“关于”页版本徽章连续点击 5 次唤出 -->
-                        <ListBoxItem x:Name="DeveloperNavItem" Visibility="Collapsed">
-                            <ListBoxItem.RenderTransform>
-                                <TranslateTransform/>
-                            </ListBoxItem.RenderTransform>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xEC7A;"
-                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="开发者模式" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE946;"
-                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                           FontSize="{StaticResource FontSizeIcon}" Width="26"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="关于" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </ListBoxItem>
-                    </ListBox>
+                        <!-- 存储占用入口：固定在侧栏底部，不参与上方功能导航排序 -->
+                        <ListBox x:Name="StorageNavList"
+                                 DockPanel.Dock="Bottom"
+                                 Margin="0,0,0,6"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 SelectionChanged="StorageNavList_SelectionChanged">
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8B7;"
+                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                               FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="存储占用" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
+                        </ListBox>
+
+                        <ListBox x:Name="NavList"
+                                 Margin="0,12,0,0"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 SelectionChanged="NavList_SelectionChanged">
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE713;"
+                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                               FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="通用" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE753;"
+                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                               FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="模型" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE945;"
+                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                               FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="模型功能" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE823;"
+                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                               FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="记忆" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
+                            <!-- 开发者模式入口：默认隐藏，通过“关于”页版本徽章连续点击 5 次唤出 -->
+                            <ListBoxItem x:Name="DeveloperNavItem" Visibility="Collapsed">
+                                <ListBoxItem.RenderTransform>
+                                    <TranslateTransform/>
+                                </ListBoxItem.RenderTransform>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xEC7A;"
+                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                               FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="开发者模式" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE946;"
+                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                               FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="关于" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
+                        </ListBox>
+                    </DockPanel>
                 </Border>
 
                 <!-- 右侧内容区 -->
@@ -1836,102 +1857,7 @@
                         </ScrollViewer.RenderTransform>
 
                         <StackPanel Margin="0,0,12,0">
-                            <Grid>
-                                <TextBlock Text="记忆"
-                                           Style="{StaticResource SectionTitleStyle}"
-                                           VerticalAlignment="Center"/>
-                                <!-- 删除记忆按钮：红色危险操作，位于标题行右侧 -->
-                                <Button x:Name="DeleteMemoryButton"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        Padding="12,7"
-                                        Cursor="Hand"
-                                        FocusVisualStyle="{x:Null}"
-                                        Click="DeleteMemoryButton_Click">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="Bd"
-                                                    Background="#E81123"
-                                                    CornerRadius="8"
-                                                    Padding="{TemplateBinding Padding}"
-                                                    RenderTransformOrigin="0.5,0.5">
-                                                <Border.RenderTransform>
-                                                    <ScaleTransform x:Name="BtnScale"/>
-                                                </Border.RenderTransform>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE74D;"
-                                                               FontFamily="{StaticResource FontFamilyIcon}"
-                                                               FontSize="{StaticResource FontSizeIconSmall}"
-                                                               Foreground="White"
-                                                               VerticalAlignment="Center"
-                                                               Margin="0,0,6,0"/>
-                                                    <TextBlock Text="删除记忆"
-                                                               FontFamily="{StaticResource FontFamilyBody}"
-                                                               FontSize="{StaticResource FontSizeBody}"
-                                                               Foreground="White"
-                                                               VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Trigger.EnterActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <ColorAnimation Storyboard.TargetName="Bd"
-                                                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                                                To="#F32F41" Duration="0:0:0.12"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.EnterActions>
-                                                    <Trigger.ExitActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <ColorAnimation Storyboard.TargetName="Bd"
-                                                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                                                To="#E81123" Duration="0:0:0.18"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.ExitActions>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Trigger.EnterActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                 Storyboard.TargetProperty="ScaleX"
-                                                                                 To="0.95" Duration="0:0:0.08"/>
-                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                 Storyboard.TargetProperty="ScaleY"
-                                                                                 To="0.95" Duration="0:0:0.08"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.EnterActions>
-                                                    <Trigger.ExitActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                 Storyboard.TargetProperty="ScaleX"
-                                                                                 To="1" Duration="0:0:0.25">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                 Storyboard.TargetProperty="ScaleY"
-                                                                                 To="1" Duration="0:0:0.25">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.ExitActions>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
-                            </Grid>
+                            <TextBlock Text="记忆" Style="{StaticResource SectionTitleStyle}"/>
 
                             <!-- 记忆概览：三级记忆状态卡片（数字滚动 + 进度条缓动填充） -->
                             <Grid Margin="0,16,0,0">
@@ -2884,6 +2810,398 @@
                                                FontSize="{StaticResource FontSizeBody}"
                                                Foreground="{DynamicResource AppTextSecondaryBrush}"
                                                TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- 存储占用页 -->
+                    <ScrollViewer x:Name="StoragePanel"
+                                  Style="{StaticResource OverlayScrollViewerStyle}"
+                                  Visibility="Collapsed"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer.RenderTransform>
+                            <TranslateTransform/>
+                        </ScrollViewer.RenderTransform>
+
+                        <StackPanel Margin="0,0,12,0">
+                            <Grid>
+                                <TextBlock Text="存储占用"
+                                           Style="{StaticResource SectionTitleStyle}"
+                                           VerticalAlignment="Center"/>
+                                <!-- 缓存清理按钮：红色危险操作，位于标题行右侧 -->
+                                <Button x:Name="CleanupCacheButton"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Padding="12,7"
+                                        Cursor="Hand"
+                                        FocusVisualStyle="{x:Null}"
+                                        Click="CleanupCacheButton_Click">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="Bd"
+                                                    Background="#E81123"
+                                                    CornerRadius="8"
+                                                    Padding="{TemplateBinding Padding}"
+                                                    RenderTransformOrigin="0.5,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform x:Name="BtnScale"/>
+                                                </Border.RenderTransform>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE74D;"
+                                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                                               FontSize="{StaticResource FontSizeIconSmall}"
+                                                               Foreground="White"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,6,0"/>
+                                                    <TextBlock Text="缓存清理"
+                                                               FontFamily="{StaticResource FontFamilyBody}"
+                                                               FontSize="{StaticResource FontSizeBody}"
+                                                               Foreground="White"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Trigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <ColorAnimation Storyboard.TargetName="Bd"
+                                                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                                                To="#F32F41" Duration="0:0:0.12"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.EnterActions>
+                                                    <Trigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <ColorAnimation Storyboard.TargetName="Bd"
+                                                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                                                To="#E81123" Duration="0:0:0.18"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.ExitActions>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Trigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                 Storyboard.TargetProperty="ScaleX"
+                                                                                 To="0.95" Duration="0:0:0.08"/>
+                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                 Storyboard.TargetProperty="ScaleY"
+                                                                                 To="0.95" Duration="0:0:0.08"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.EnterActions>
+                                                    <Trigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                 Storyboard.TargetProperty="ScaleX"
+                                                                                 To="1" Duration="0:0:0.25">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                 Storyboard.TargetProperty="ScaleY"
+                                                                                 To="1" Duration="0:0:0.25">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </Trigger.ExitActions>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+
+                            <!-- 概览卡片：软件本体 / 缓存数据 / 模型包 -->
+                            <Grid Margin="0,16,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 软件本体卡片 -->
+                                <Border x:Name="StorageInstallCard"
+                                        Grid.Column="0"
+                                        Padding="14,12"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10"
+                                        RenderTransformOrigin="0.5,0.5">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="StorageInstallCardTransform"/>
+                                    </Border.RenderTransform>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="26" Height="26"
+                                                    CornerRadius="8"
+                                                    Background="{DynamicResource AppBorderBrush}">
+                                                <TextBlock Text="&#xE7C3;"
+                                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                                           FontSize="{StaticResource FontSizeIconSmall}"
+                                                           Foreground="{DynamicResource AppAccentBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="软件本体"
+                                                       Margin="8,0,0,0"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="StorageInstallSizeText"
+                                                   Text="—"
+                                                   Margin="0,10,0,0"
+                                                   FontFamily="{StaticResource FontFamilyDisplay}"
+                                                   FontSize="{StaticResource FontSizeTitle}"
+                                                   FontWeight="{StaticResource FontWeightSemiBold}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                        <TextBlock Text="程序文件、运行依赖与资源"
+                                                   Margin="0,2,0,0"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 缓存数据卡片 -->
+                                <Border x:Name="StorageCacheCard"
+                                        Grid.Column="1"
+                                        Margin="8,0,0,0"
+                                        Padding="14,12"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10"
+                                        RenderTransformOrigin="0.5,0.5">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="StorageCacheCardTransform"/>
+                                    </Border.RenderTransform>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="26" Height="26"
+                                                    CornerRadius="8"
+                                                    Background="{DynamicResource AppBorderBrush}">
+                                                <TextBlock Text="&#xE8B7;"
+                                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                                           FontSize="{StaticResource FontSizeIconSmall}"
+                                                           Foreground="{DynamicResource AppAccentBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="缓存数据"
+                                                       Margin="8,0,0,0"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="StorageCacheSizeText"
+                                                   Text="—"
+                                                   Margin="0,10,0,0"
+                                                   FontFamily="{StaticResource FontFamilyDisplay}"
+                                                   FontSize="{StaticResource FontSizeTitle}"
+                                                   FontWeight="{StaticResource FontWeightSemiBold}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                        <TextBlock Text="软件配置、记忆与日志"
+                                                   Margin="0,2,0,0"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 模型包卡片：Characters 下全部模型包的合计占用 -->
+                                <Border x:Name="StorageModelsCard"
+                                        Grid.Column="2"
+                                        Margin="8,0,0,0"
+                                        Padding="14,12"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10"
+                                        RenderTransformOrigin="0.5,0.5">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="StorageModelsCardTransform"/>
+                                    </Border.RenderTransform>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="26" Height="26"
+                                                    CornerRadius="8"
+                                                    Background="{DynamicResource AppBorderBrush}">
+                                                <TextBlock Text="&#xE753;"
+                                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                                           FontSize="{StaticResource FontSizeIconSmall}"
+                                                           Foreground="{DynamicResource AppAccentBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="模型包"
+                                                       Margin="8,0,0,0"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="StorageModelsSizeText"
+                                                   Text="—"
+                                                   Margin="0,10,0,0"
+                                                   FontFamily="{StaticResource FontFamilyDisplay}"
+                                                   FontSize="{StaticResource FontSizeTitle}"
+                                                   FontWeight="{StaticResource FontWeightSemiBold}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                        <TextBlock x:Name="StorageModelsCountText"
+                                                   Margin="0,2,0,0"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- 模型包明细：多于一个模型包时显示占用最大的 3 个 -->
+                            <Border x:Name="StoragePackagesCard"
+                                    Visibility="Collapsed"
+                                    Margin="0,12,0,0"
+                                    Padding="16,14"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <TranslateTransform x:Name="StoragePackagesCardTransform"/>
+                                </Border.RenderTransform>
+                                <StackPanel>
+                                    <TextBlock Text="模型包占用明细"
+                                               FontFamily="{StaticResource FontFamilyDisplay}"
+                                               FontSize="{StaticResource FontSizeSubtitle}"
+                                               FontWeight="{StaticResource FontWeightBold}"
+                                               Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                    <TextBlock Text="按占用大小排序，最多显示 3 个。"
+                                               Margin="0,4,0,0"
+                                               FontFamily="{StaticResource FontFamilyBody}"
+                                               FontSize="{StaticResource FontSizeCaption}"
+                                               Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+
+                                    <!-- 明细行 1：名称 + 大小 + 相对占比条 -->
+                                    <StackPanel x:Name="StoragePackageRow1" Margin="0,12,0,0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="StoragePackageRow1Name"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="StoragePackageRow1Size"
+                                                       Grid.Column="1"
+                                                       Margin="12,0,0,0"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Border Height="4"
+                                                CornerRadius="2"
+                                                Margin="0,6,0,0"
+                                                Background="{DynamicResource AppBorderBrush}">
+                                            <Border CornerRadius="2"
+                                                    Background="{DynamicResource AppAccentBrush}"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform x:Name="StoragePackageRow1Fill" ScaleX="0"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- 明细行 2 -->
+                                    <StackPanel x:Name="StoragePackageRow2" Margin="0,12,0,0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="StoragePackageRow2Name"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="StoragePackageRow2Size"
+                                                       Grid.Column="1"
+                                                       Margin="12,0,0,0"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Border Height="4"
+                                                CornerRadius="2"
+                                                Margin="0,6,0,0"
+                                                Background="{DynamicResource AppBorderBrush}">
+                                            <Border CornerRadius="2"
+                                                    Background="{DynamicResource AppAccentBrush}"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform x:Name="StoragePackageRow2Fill" ScaleX="0"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- 明细行 3 -->
+                                    <StackPanel x:Name="StoragePackageRow3" Margin="0,12,0,0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="StoragePackageRow3Name"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="StoragePackageRow3Size"
+                                                       Grid.Column="1"
+                                                       Margin="12,0,0,0"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Border Height="4"
+                                                CornerRadius="2"
+                                                Margin="0,6,0,0"
+                                                Background="{DynamicResource AppBorderBrush}">
+                                            <Border CornerRadius="2"
+                                                    Background="{DynamicResource AppAccentBrush}"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform x:Name="StoragePackageRow3Fill" ScaleX="0"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

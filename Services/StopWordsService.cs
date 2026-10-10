@@ -20,6 +20,16 @@ namespace KfuPet.Services
             _words = Load();
         }
 
+        /// <summary>
+        /// 恢复初始状态：改用内置默认停用词。
+        /// 磁盘上的配置文件由“缓存清理”删除，之后保存会重新生成。
+        /// </summary>
+        public void ResetToDefaults()
+        {
+            _words = new List<string>(DefaultWords);
+            Log.Info("[配置] 停用词已恢复内置默认");
+        }
+
         /// <summary>当前停用词列表（只读视图）。</summary>
         public IReadOnlyList<string> Words => _words;
 

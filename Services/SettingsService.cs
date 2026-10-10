@@ -63,13 +63,13 @@ namespace KfuPet.Services
         public SavingMode ModelSavingMode { get; private set; }
 
         /// <summary>自定义模式下触摸反应是否使用 AI 生成；false 表示改用角色台词。</summary>
-        public bool CustomTouchReactionUseAi { get; private set; } = true;
+        public bool CustomTouchReactionUseAi { get; private set; }
 
         /// <summary>自定义模式下更新通知文案是否使用 AI 生成；false 表示改用固定文案。</summary>
-        public bool CustomUpdateNotificationUseAi { get; private set; } = true;
+        public bool CustomUpdateNotificationUseAi { get; private set; }
 
         /// <summary>自定义模式下越界回正文案是否使用 AI 生成；false 表示改用角色台词。</summary>
-        public bool CustomSnapBackUseAi { get; private set; } = true;
+        public bool CustomSnapBackUseAi { get; private set; }
 
         /// <summary>触摸反应是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
         public bool TouchReactionUseAi => ModelSavingMode switch
@@ -96,31 +96,31 @@ namespace KfuPet.Services
         };
 
         /// <summary>是否启用主动搭话（总开关，默认开启）。</summary>
-        public bool ProactiveChatEnabled { get; private set; } = true;
+        public bool ProactiveChatEnabled { get; private set; }
 
         /// <summary>主动搭话频度档位（默认中频）。</summary>
-        public ProactiveFrequency ProactiveChatFrequency { get; private set; } = ProactiveFrequency.Medium;
+        public ProactiveFrequency ProactiveChatFrequency { get; private set; }
 
         /// <summary>是否启用安静时段（默认开启）。</summary>
-        public bool QuietHoursEnabled { get; private set; } = true;
+        public bool QuietHoursEnabled { get; private set; }
 
         /// <summary>安静时段开始小时（0–23），默认 23 点。</summary>
-        public int QuietHoursStart { get; private set; } = 23;
+        public int QuietHoursStart { get; private set; }
 
         /// <summary>安静时段结束小时（0–23），默认次日 8 点；起止相同视为未设置（该设置不生效）。</summary>
-        public int QuietHoursEnd { get; private set; } = 8;
+        public int QuietHoursEnd { get; private set; }
 
         /// <summary>是否启用独处搭话（在电脑前但久未互动）。</summary>
-        public bool ProactiveIdleEnabled { get; private set; } = true;
+        public bool ProactiveIdleEnabled { get; private set; }
 
         /// <summary>是否启用欢迎回来（离开较久后回到电脑前）。</summary>
-        public bool ProactiveWelcomeBackEnabled { get; private set; } = true;
+        public bool ProactiveWelcomeBackEnabled { get; private set; }
 
         /// <summary>是否启用定时问候（早上 / 晚上各一次）。</summary>
-        public bool ProactiveGreetingEnabled { get; private set; } = true;
+        public bool ProactiveGreetingEnabled { get; private set; }
 
         /// <summary>自定义模式下主动搭话是否使用 AI 生成；false 表示改用角色台词。</summary>
-        public bool CustomProactiveChatUseAi { get; private set; } = true;
+        public bool CustomProactiveChatUseAi { get; private set; }
 
         /// <summary>主动搭话是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
         public bool ProactiveChatUseAi => ModelSavingMode switch
@@ -132,7 +132,55 @@ namespace KfuPet.Services
 
         private SettingsService()
         {
+            ApplyDefaults();
             Load();
+        }
+
+        /// <summary>
+        /// 恢复初始状态：各项设置回到默认值，并删除磁盘上的配置文件；
+        /// 之后的新改动会重新生成配置文件。
+        /// </summary>
+        public void ResetToDefaults()
+        {
+            ApplyDefaults();
+
+            try
+            {
+                if (File.Exists(ConfigFilePath))
+                {
+                    File.Delete(ConfigFilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                // 删除失败不影响内存中的复位
+                Log.Warning($"[设置] 配置文件删除失败：{ex.Message}");
+            }
+
+            Log.Info("[设置] 已恢复初始设置");
+        }
+
+        /// <summary>把各项设置还原为默认值（构造与“恢复初始状态”共用，默认值只在此处维护）。</summary>
+        private void ApplyDefaults()
+        {
+            Theme = null;
+            DeveloperMode = false;
+            DebugBones = false;
+            WindowLeft = null;
+            WindowTop = null;
+            ModelSavingMode = SavingMode.Off;
+            CustomTouchReactionUseAi = true;
+            CustomUpdateNotificationUseAi = true;
+            CustomSnapBackUseAi = true;
+            ProactiveChatEnabled = true;
+            ProactiveChatFrequency = ProactiveFrequency.Medium;
+            QuietHoursEnabled = true;
+            QuietHoursStart = 23;
+            QuietHoursEnd = 8;
+            ProactiveIdleEnabled = true;
+            ProactiveWelcomeBackEnabled = true;
+            ProactiveGreetingEnabled = true;
+            CustomProactiveChatUseAi = true;
         }
 
         /// <summary>保存用户的外观选择：true 深色，false 浅色，null 跟随系统。</summary>
