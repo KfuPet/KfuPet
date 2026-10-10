@@ -39,6 +39,9 @@ namespace KfuPet
         /// <summary>本次运行的日志文件路径，供“打开日志”按钮定位；未启用落盘时为 null。</summary>
         internal string? CurrentLogFilePath => _logFileWriter?.FilePath;
 
+        /// <summary>重启拉起参数：由“清理后自动重启”传入，启动时先等上一实例退出再抢单实例锁。</summary>
+        internal const string RestartArgument = "--restart";
+
         protected override void OnStartup(StartupEventArgs e)
         {
             // 日志落盘最先启动，启动阶段的日志也要写进文件
@@ -55,8 +58,22 @@ namespace KfuPet
                 Log.Info($"[日志] 本次运行日志文件：{_logFileWriter.FilePath}");
             }
 
-            // 检测多开：只允许运行一个实例
-            _mutex = new Mutex(true, "KfuPet_SingleInstance", out bool createdNew);
+            // 检测多开：只允许运行一个实例。
+            // 带重启参数的启动来自“清理后自动重启”：上一实例可能还在收尾（单实例锁尚未释放），
+            // 先短暂等待它退出再抢锁，避免重启被单实例检查误判为多开而直接退出。
+            const string mutexName = "KfuPet_SingleInstance";
+            var isRestartLaunch = e.Args.Contains(RestartArgument, StringComparer.OrdinalIgnoreCase);
+            _mutex = new Mutex(true, mutexName, out bool createdNew);
+            if (!createdNew && isRestartLaunch)
+            {
+                for (var attempt = 0; attempt < 25 && !createdNew; attempt++)
+                {
+                    Thread.Sleep(200);
+                    _mutex.Dispose();
+                    _mutex = new Mutex(true, mutexName, out createdNew);
+                }
+            }
+
             if (!createdNew)
             {
                 Log.Warning("[启动] 检测到已有实例在运行，本次启动已退出");

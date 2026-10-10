@@ -145,7 +145,7 @@ namespace KfuPet.Views
 
             if (ConfigCheck.IsChecked == true)
             {
-                parts.Append("清理软件配置会使软件恢复初始状态。\n");
+                parts.Append("清理软件配置会使软件恢复初始状态，软件会在清理后自动重启。\n");
             }
             if (MemoryCheck.IsChecked == true)
             {

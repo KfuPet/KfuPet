@@ -81,7 +81,7 @@ namespace KfuPet.Views
 
         /// <summary>
         /// 把已保存的设置读入各控件：外观下拉菜单、开机自启动开关、节省消耗档位与主动搭话参数。
-        /// 窗口构造时调用；“软件配置清理”把设置复位后再次调用，让界面同步到初始状态。
+        /// 窗口构造时调用一次。
         /// </summary>
         private void LoadSettingsIntoControls()
         {
@@ -964,7 +964,7 @@ namespace KfuPet.Views
                 if (kinds.HasFlag(CleanupCacheDialog.CacheKinds.Config))
                 {
                     CacheCleanupService.DeleteConfigFiles();
-                    ResetSoftwareConfig();
+                    ResetSoftwareConfigValues();
                     cleanedParts.Add("软件配置");
                 }
 
@@ -977,6 +977,14 @@ namespace KfuPet.Views
                     cleanedParts.Add("记忆");
                 }
 
+                // 软件配置复位后，运行中的界面与实时状态必然和新配置不一致，直接重启软件最干净
+                if (kinds.HasFlag(CleanupCacheDialog.CacheKinds.Config))
+                {
+                    Log.Info($"[清理] 缓存清理完成：{string.Join("、", cleanedParts)}，3 秒后自动重启软件");
+                    ScheduleRestart(cleanedParts);
+                    return;
+                }
+
                 ShowToast($"缓存清理完成：{string.Join("、", cleanedParts)}");
 
                 // 重新统计占用，让页面上的数字滚动到清理后的大小
@@ -986,30 +994,60 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 软件配置清理后的复位：内存中的设置、模型与停用词回到初始值，
-        /// 并让窗口控件、主题与开发者模式同步到复位后的状态。
+        /// 软件配置清理后的值复位：内存中的设置、模型与停用词回到初始值。
+        /// 只做值复位——等待重启的这段时间里，任何一次保存都会把当前值写回配置文件，
+        /// 若不复位就会把旧值写回去；界面与实时状态（主题、开发者模式等）交给重启自然恢复。
         /// </summary>
-        private void ResetSoftwareConfig()
+        private void ResetSoftwareConfigValues()
         {
             SettingsService.Instance.ResetToDefaults();
             ModelConfigService.ResetToDefaults();
             _mainWindow.StopWordsService.ResetToDefaults();
 
-            // 开发者模式与调试线框属于软件配置，一并关闭（服务会通知界面同步开关）
-            _mainWindow.DeveloperModeService.SetEnabled(false);
-            _mainWindow.SkeletonService.SetDebugSkeleton(false);
+            Log.Info("[清理] 软件配置已复位为初始值，等待重启生效");
+        }
 
-            LoadSettingsIntoControls();
-            LoadModels();
-            RefreshStopWordsPreview();
+        /// <summary>提示清理结果并在 3 秒后自动重启软件（等待期间禁用清理按钮，避免重复触发）。</summary>
+        private void ScheduleRestart(IReadOnlyList<string> cleanedParts)
+        {
+            CleanupCacheButton.IsEnabled = false;
+            ShowToast($"已清理：{string.Join("、", cleanedParts)}，3 秒后自动重启软件…");
 
-            // 外观已回到“跟随系统”，立即把运行中的主题同步过去
-            if (Application.Current is App app)
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            timer.Tick += (s, e) =>
             {
-                app.SetThemePreference(SettingsService.Instance.Theme);
+                timer.Stop();
+                RelaunchAndExit();
+            };
+            timer.Start();
+        }
+
+        /// <summary>
+        /// 拉起新的软件实例并退出当前进程。
+        /// 新实例带重启参数：启动时会先等本进程释放单实例锁，避免被单实例检查当成多开而退出。
+        /// </summary>
+        private static void RelaunchAndExit()
+        {
+            var exePath = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exePath))
+            {
+                Log.Warning("[清理] 未能获取程序路径，自动重启失败，请手动重新打开软件");
+                return;
             }
 
-            Log.Info("[清理] 软件配置已复位：设置、模型、停用词与开发者模式恢复初始状态");
+            try
+            {
+                Process.Start(new ProcessStartInfo(exePath, App.RestartArgument) { UseShellExecute = true });
+                Log.Info("[清理] 已拉起新的软件实例，当前进程退出以完成重启");
+            }
+            catch (Exception ex)
+            {
+                // 拉起失败时保持当前进程存活，避免用户既没重启成功又丢了软件
+                Log.Error($"[清理] 自动重启失败：{ex.Message}");
+                return;
+            }
+
+            Application.Current.Shutdown();
         }
 
         /// <summary>模型包卡片“前往清理”：打开角色模型窗口。</summary>
