@@ -2827,12 +2827,48 @@
 
                         <StackPanel Margin="0,0,12,0">
                             <Grid>
-                                <TextBlock Text="存储占用"
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0"
+                                           Text="存储占用"
                                            Style="{StaticResource SectionTitleStyle}"
                                            VerticalAlignment="Center"/>
+                                <!-- 刷新按钮：手动重新统计占用（统计中图标持续旋转） -->
+                                <Button x:Name="StorageRefreshButton"
+                                        Grid.Column="2"
+                                        Style="{StaticResource AboutActionButtonStyle}"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,8,0"
+                                        Padding="12,7"
+                                        ToolTip="重新统计存储占用"
+                                        Click="StorageRefreshButton_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="StorageRefreshIcon"
+                                                   Text="&#xE72C;"
+                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"
+                                                   RenderTransformOrigin="0.5,0.5">
+                                            <TextBlock.RenderTransform>
+                                                <RotateTransform/>
+                                            </TextBlock.RenderTransform>
+                                        </TextBlock>
+                                        <TextBlock Text="刷新"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                                 <!-- 缓存清理按钮：红色危险操作，位于标题行右侧 -->
                                 <Button x:Name="CleanupCacheButton"
-                                        HorizontalAlignment="Right"
+                                        Grid.Column="3"
                                         VerticalAlignment="Center"
                                         Padding="12,7"
                                         Cursor="Hand"

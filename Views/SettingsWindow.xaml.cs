@@ -41,6 +41,7 @@ namespace KfuPet.Views
         private bool _suppressSavingEvents;
         private bool _suppressProactiveEvents;
         private bool _isLoadingStorageUsage;
+        private bool _hasLoadedStorageUsage;
         private AddModelProviderDialog? _addModelProviderDialog;
         private int _versionBadgeClickCount;
         private DateTime _lastVersionBadgeClickTime;
@@ -271,7 +272,10 @@ namespace KfuPet.Views
             }
         }
 
-        /// <summary>底部“存储占用”入口选中：清空功能导航选中并切到存储占用页。</summary>
+        /// <summary>
+        /// 底部“存储占用”入口选中：清空功能导航选中并切到存储占用页。
+        /// 占用统计每个窗口会话只自动跑一次，重开设置窗口或点“刷新”时才会再统计。
+        /// </summary>
         private void StorageNavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (StorageNavList.SelectedIndex < 0) return;
@@ -280,6 +284,16 @@ namespace KfuPet.Views
 
             ShowOnlyPanel(StoragePanel);
             PlayPageEnterAnimation(StoragePanel);
+
+            if (!_hasLoadedStorageUsage)
+            {
+                _ = LoadStorageUsageAsync();
+            }
+        }
+
+        /// <summary>点击“刷新”：重新统计一次存储占用。</summary>
+        private void StorageRefreshButton_Click(object sender, RoutedEventArgs e)
+        {
             _ = LoadStorageUsageAsync();
         }
 
@@ -1053,13 +1067,15 @@ namespace KfuPet.Views
 
         /// <summary>
         /// 统计并展示存储占用（软件本体、缓存目录、模型包）。
-        /// 每次进入页面重新统计，目录遍历在后台线程完成，不阻塞界面。
+        /// 目录遍历在后台线程完成，不阻塞界面；统计期间刷新按钮禁用并旋转，避免重复统计。
         /// </summary>
         private async Task LoadStorageUsageAsync()
         {
             if (_isLoadingStorageUsage) return;
 
             _isLoadingStorageUsage = true;
+            StorageRefreshButton.IsEnabled = false;
+            PlayStorageRefreshSpin();
             try
             {
                 StorageInstallSizeText.Text = "统计中…";
@@ -1079,6 +1095,9 @@ namespace KfuPet.Views
             finally
             {
                 _isLoadingStorageUsage = false;
+                _hasLoadedStorageUsage = true;
+                StorageRefreshButton.IsEnabled = true;
+                StopStorageRefreshSpin();
             }
         }
 
@@ -1093,6 +1112,28 @@ namespace KfuPet.Views
             FillStoragePackageRows(usage);
 
             PlayStoragePageEntrance(usage);
+        }
+
+        /// <summary>刷新按钮图标持续旋转，表示正在统计占用。</summary>
+        private void PlayStorageRefreshSpin()
+        {
+            if (StorageRefreshIcon.RenderTransform is RotateTransform rotate)
+            {
+                rotate.BeginAnimation(RotateTransform.AngleProperty,
+                    new DoubleAnimation(0, 360, TimeSpan.FromMilliseconds(900))
+                    {
+                        RepeatBehavior = RepeatBehavior.Forever
+                    });
+            }
+        }
+
+        /// <summary>停止刷新按钮旋转并复位。</summary>
+        private void StopStorageRefreshSpin()
+        {
+            if (StorageRefreshIcon.RenderTransform is RotateTransform rotate)
+            {
+                rotate.BeginAnimation(RotateTransform.AngleProperty, null);
+            }
         }
 
         /// <summary>填入模型包明细行（最多 3 行，不足的行隐藏）；只有一个模型包时不展示明细。</summary>
