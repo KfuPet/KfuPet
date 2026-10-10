@@ -210,6 +210,91 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- 卡片悬停操作按钮：深色遮罩上的半透明描边按钮，悬停提亮、按压缩放回弹 -->
+        <Style x:Key="HoverActionButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="104"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="BtnScale"/>
+                            </Grid.RenderTransform>
+                            <Border x:Name="Bd"
+                                    Background="#33FFFFFF"
+                                    BorderBrush="#59FFFFFF"
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="Bd"
+                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                            To="#4DFFFFFF" Duration="0:0:0.12"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="Bd"
+                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                            To="#33FFFFFF" Duration="0:0:0.18"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="0.94" Duration="0:0:0.08"/>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="0.94" Duration="0:0:0.08"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1" Duration="0:0:0.25">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1" Duration="0:0:0.25">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border x:Name="DialogRoot"
@@ -372,7 +457,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <!-- 一张模型卡片：预览图 + 名称 + 作者（头像） + 描述 + 标签，悬停时轻微上浮 -->
+                                <!-- 一张模型卡片：预览图 + 名称 + 作者（头像） + 描述 + 标签；悬停时轻微上浮、内容模糊并显示操作按钮 -->
                                 <Border x:Name="CardRoot"
                                         Width="184"
                                         Margin="8"
@@ -385,145 +470,164 @@
                                         <TranslateTransform/>
                                     </Border.RenderTransform>
                                     <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="246"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
+                                        <!-- 卡片内容：悬停时整体模糊（模糊半径由悬停触发器动画驱动） -->
+                                        <Grid x:Name="CardContent">
+                                            <Grid.Effect>
+                                                <BlurEffect x:Name="CardBlur" Radius="0" RenderingBias="Performance"/>
+                                            </Grid.Effect>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="246"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
 
-                                        <!-- 预览图 -->
-                                        <Grid Grid.Row="0">
-                                            <Border Background="{DynamicResource AppBackgroundBrush}"
-                                                    CornerRadius="11,11,0,0"/>
-                                            <Rectangle RadiusX="11" RadiusY="11">
-                                                <Rectangle.Fill>
-                                                    <ImageBrush ImageSource="{Binding PreviewImage}"
-                                                                Stretch="UniformToFill"/>
-                                                </Rectangle.Fill>
-                                            </Rectangle>
+                                            <!-- 预览图 -->
+                                            <Grid Grid.Row="0">
+                                                <Border Background="{DynamicResource AppBackgroundBrush}"
+                                                        CornerRadius="11,11,0,0"/>
+                                                <Rectangle RadiusX="11" RadiusY="11">
+                                                    <Rectangle.Fill>
+                                                        <ImageBrush ImageSource="{Binding PreviewImage}"
+                                                                    Stretch="UniformToFill"/>
+                                                    </Rectangle.Fill>
+                                                </Rectangle>
 
-                                            <StackPanel x:Name="PreviewPlaceholder"
-                                                        Visibility="Collapsed"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center">
-                                                <TextBlock Text="&#xE91B;"
-                                                           HorizontalAlignment="Center"
-                                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                                           FontSize="28"
-                                                           Foreground="{DynamicResource AppTextDisabledBrush}"/>
-                                                <TextBlock Text="暂无预览图"
-                                                           Margin="0,6,0,0"
-                                                           HorizontalAlignment="Center"
-                                                           FontFamily="{StaticResource FontFamilyBody}"
-                                                           FontSize="{StaticResource FontSizeIconSmall}"
-                                                           Foreground="{DynamicResource AppTextDisabledBrush}"/>
-                                            </StackPanel>
-
-                                            <Border x:Name="InvalidBadge"
-                                                    Visibility="Collapsed"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Top"
-                                                    Margin="8"
-                                                    Padding="7,2"
-                                                    Background="{DynamicResource AppPinkBrush}"
-                                                    CornerRadius="4">
-                                                <TextBlock Text="无效"
-                                                           FontFamily="{StaticResource FontFamilyBody}"
-                                                           FontSize="{StaticResource FontSizeIconSmall}"
-                                                           Foreground="White"/>
-                                            </Border>
-                                        </Grid>
-
-                                        <!-- 信息区 -->
-                                        <StackPanel Grid.Row="1" Margin="12,10,12,12">
-                                            <TextBlock Text="{Binding Name}"
-                                                       FontFamily="{StaticResource FontFamilyBody}"
-                                                       FontSize="{StaticResource FontSizeCaption}"
-                                                       FontWeight="{StaticResource FontWeightSemiBold}"
-                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                                       TextTrimming="CharacterEllipsis"/>
-
-                                            <StackPanel x:Name="ValidPanel">
-                                                <!-- 作者行：头像 + 作者名 + 版本号（用 Grid 列约束宽度，长名字自动省略） -->
-                                                <Grid Margin="0,7,0,0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid Width="18" Height="18" VerticalAlignment="Center">
-                                                        <Ellipse Fill="{DynamicResource AppBorderBrush}"/>
-                                                        <Ellipse>
-                                                            <Ellipse.Fill>
-                                                                <ImageBrush ImageSource="{Binding AuthorAvatar}"
-                                                                            Stretch="UniformToFill"/>
-                                                            </Ellipse.Fill>
-                                                        </Ellipse>
-                                                        <TextBlock x:Name="AvatarInitial"
-                                                                   Visibility="Collapsed"
-                                                                   Text="{Binding AuthorInitial}"
-                                                                   FontFamily="{StaticResource FontFamilyBody}"
-                                                                   FontSize="{StaticResource FontSizeIconTiny}"
-                                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center"/>
-                                                    </Grid>
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding Author}"
-                                                               Margin="6,0,0,0"
+                                                <StackPanel x:Name="PreviewPlaceholder"
+                                                            Visibility="Collapsed"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="&#xE91B;"
+                                                               HorizontalAlignment="Center"
+                                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                                               FontSize="28"
+                                                               Foreground="{DynamicResource AppTextDisabledBrush}"/>
+                                                    <TextBlock Text="暂无预览图"
+                                                               Margin="0,6,0,0"
+                                                               HorizontalAlignment="Center"
                                                                FontFamily="{StaticResource FontFamilyBody}"
                                                                FontSize="{StaticResource FontSizeIconSmall}"
-                                                               Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Grid.Column="2"
-                                                               x:Name="VersionText"
-                                                               Text="{Binding VersionText}"
-                                                               Margin="6,0,0,0"
+                                                               Foreground="{DynamicResource AppTextDisabledBrush}"/>
+                                                </StackPanel>
+
+                                                <Border x:Name="InvalidBadge"
+                                                        Visibility="Collapsed"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        Margin="8"
+                                                        Padding="7,2"
+                                                        Background="{DynamicResource AppPinkBrush}"
+                                                        CornerRadius="4">
+                                                    <TextBlock Text="无效"
+                                                               FontFamily="{StaticResource FontFamilyBody}"
+                                                               FontSize="{StaticResource FontSizeIconSmall}"
+                                                               Foreground="White"/>
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- 信息区 -->
+                                            <StackPanel Grid.Row="1" Margin="12,10,12,12">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           FontWeight="{StaticResource FontWeightSemiBold}"
+                                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                           TextTrimming="CharacterEllipsis"/>
+
+                                                <StackPanel x:Name="ValidPanel">
+                                                    <!-- 作者行：头像 + 作者名 + 版本号（用 Grid 列约束宽度，长名字自动省略） -->
+                                                    <Grid Margin="0,7,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid Width="18" Height="18" VerticalAlignment="Center">
+                                                            <Ellipse Fill="{DynamicResource AppBorderBrush}"/>
+                                                            <Ellipse>
+                                                                <Ellipse.Fill>
+                                                                    <ImageBrush ImageSource="{Binding AuthorAvatar}"
+                                                                                Stretch="UniformToFill"/>
+                                                                </Ellipse.Fill>
+                                                            </Ellipse>
+                                                            <TextBlock x:Name="AvatarInitial"
+                                                                       Visibility="Collapsed"
+                                                                       Text="{Binding AuthorInitial}"
+                                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                                       FontSize="{StaticResource FontSizeIconTiny}"
+                                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{Binding Author}"
+                                                                   Margin="6,0,0,0"
+                                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Column="2"
+                                                                   x:Name="VersionText"
+                                                                   Text="{Binding VersionText}"
+                                                                   Margin="6,0,0,0"
+                                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                                   FontSize="{StaticResource FontSizeIconTiny}"
+                                                                   Foreground="{DynamicResource AppTextDisabledBrush}"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Grid>
+
+                                                    <!-- 描述：固定三行高度，超出裁切 -->
+                                                    <Grid Height="51" Margin="0,8,0,0" ClipToBounds="True">
+                                                        <TextBlock Text="{Binding Description}"
+                                                                   TextWrapping="Wrap"
+                                                                   LineHeight="17"
+                                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                                   VerticalAlignment="Top"/>
+                                                    </Grid>
+
+                                                    <TextBlock x:Name="TagsText"
+                                                               Text="{Binding TagsText}"
+                                                               Margin="0,6,0,0"
                                                                FontFamily="{StaticResource FontFamilyBody}"
                                                                FontSize="{StaticResource FontSizeIconTiny}"
                                                                Foreground="{DynamicResource AppTextDisabledBrush}"
-                                                               VerticalAlignment="Center"/>
-                                                </Grid>
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
 
-                                                <!-- 描述：固定三行高度，超出裁切 -->
-                                                <Grid Height="51" Margin="0,8,0,0" ClipToBounds="True">
-                                                    <TextBlock Text="{Binding Description}"
-                                                               TextWrapping="Wrap"
-                                                               LineHeight="17"
-                                                               FontFamily="{StaticResource FontFamilyBody}"
-                                                               FontSize="{StaticResource FontSizeIconSmall}"
-                                                               Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                                               VerticalAlignment="Top"/>
-                                                </Grid>
-
-                                                <TextBlock x:Name="TagsText"
-                                                           Text="{Binding TagsText}"
-                                                           Margin="0,6,0,0"
+                                                <!-- 无效模型：显示原因 -->
+                                                <TextBlock x:Name="InvalidReasonText"
+                                                           Visibility="Collapsed"
+                                                           Text="{Binding InvalidReason}"
+                                                           Margin="0,7,0,0"
+                                                           TextWrapping="Wrap"
                                                            FontFamily="{StaticResource FontFamilyBody}"
-                                                           FontSize="{StaticResource FontSizeIconTiny}"
-                                                           Foreground="{DynamicResource AppTextDisabledBrush}"
-                                                           TextTrimming="CharacterEllipsis"/>
+                                                           FontSize="{StaticResource FontSizeIconSmall}"
+                                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                                             </StackPanel>
+                                        </Grid>
 
-                                            <!-- 无效模型：显示原因 -->
-                                            <TextBlock x:Name="InvalidReasonText"
-                                                       Visibility="Collapsed"
-                                                       Text="{Binding InvalidReason}"
-                                                       Margin="0,7,0,0"
-                                                       TextWrapping="Wrap"
-                                                       FontFamily="{StaticResource FontFamilyBody}"
-                                                       FontSize="{StaticResource FontSizeIconSmall}"
-                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-                                        </StackPanel>
-
-                                        <!-- 悬停描边 -->
-                                        <Border x:Name="HoverRing"
-                                                Grid.RowSpan="2"
-                                                CornerRadius="12"
-                                                BorderThickness="1.5"
-                                                BorderBrush="{DynamicResource AppAccentBrush}"
-                                                Opacity="0"
-                                                IsHitTestVisible="False"/>
+                                        <!-- 悬停操作层：暗色遮罩 + 竖排按钮（使用 / 详情 / 删除）；未悬停时不拦截鼠标 -->
+                                        <Grid x:Name="HoverActions"
+                                              Grid.RowSpan="2"
+                                              Opacity="0"
+                                              IsHitTestVisible="{Binding IsMouseOver, ElementName=CardRoot}">
+                                            <Border Background="#66000000" CornerRadius="12"/>
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <StackPanel.RenderTransform>
+                                                    <TranslateTransform x:Name="HoverActionsSlide" Y="8"/>
+                                                </StackPanel.RenderTransform>
+                                                <Button Style="{StaticResource HoverActionButtonStyle}"
+                                                        Content="使用"/>
+                                                <Button Style="{StaticResource HoverActionButtonStyle}"
+                                                        Margin="0,8,0,0"
+                                                        Content="详情"/>
+                                                <Button Style="{StaticResource HoverActionButtonStyle}"
+                                                        Margin="0,8,0,0"
+                                                        Content="删除"
+                                                        Click="DeleteCharacterButton_Click"/>
+                                            </StackPanel>
+                                        </Grid>
                                     </Grid>
                                 </Border>
 
@@ -552,9 +656,23 @@
                                                     <DoubleAnimation Storyboard.TargetName="CardRoot"
                                                                      Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
                                                                      To="-4" Duration="0:0:0.15"/>
-                                                    <DoubleAnimation Storyboard.TargetName="HoverRing"
+                                                    <DoubleAnimation Storyboard.TargetName="HoverActions"
                                                                      Storyboard.TargetProperty="Opacity"
                                                                      To="1" Duration="0:0:0.15"/>
+                                                    <DoubleAnimation Storyboard.TargetName="HoverActionsSlide"
+                                                                     Storyboard.TargetProperty="Y"
+                                                                     To="0" Duration="0:0:0.18">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut"/>
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetName="CardBlur"
+                                                                     Storyboard.TargetProperty="Radius"
+                                                                     To="14" Duration="0:0:0.18">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut"/>
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
                                                 </Storyboard>
                                             </BeginStoryboard>
                                         </Trigger.EnterActions>
@@ -564,8 +682,14 @@
                                                     <DoubleAnimation Storyboard.TargetName="CardRoot"
                                                                      Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
                                                                      To="0" Duration="0:0:0.2"/>
-                                                    <DoubleAnimation Storyboard.TargetName="HoverRing"
+                                                    <DoubleAnimation Storyboard.TargetName="HoverActions"
                                                                      Storyboard.TargetProperty="Opacity"
+                                                                     To="0" Duration="0:0:0.2"/>
+                                                    <DoubleAnimation Storyboard.TargetName="HoverActionsSlide"
+                                                                     Storyboard.TargetProperty="Y"
+                                                                     To="8" Duration="0:0:0.2"/>
+                                                    <DoubleAnimation Storyboard.TargetName="CardBlur"
+                                                                     Storyboard.TargetProperty="Radius"
                                                                      To="0" Duration="0:0:0.2"/>
                                                 </Storyboard>
                                             </BeginStoryboard>

@@ -157,6 +157,54 @@ namespace KfuPet.Views
         }
 
         /// <summary>
+        /// 卡片“删除”：弹一次“是否删除”提醒，确认后删除角色包目录并刷新列表。
+        /// </summary>
+        private void DeleteCharacterButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is not CharacterPackageInfo package)
+            {
+                return;
+            }
+
+            var dialog = new DeleteCharacterDialog(package.Name);
+            dialog.DeleteConfirmed += () => DeleteCharacterPackage(package);
+            dialog.ShowDialog();
+        }
+
+        /// <summary>删除角色包目录（限定在 Characters 目录内），完成后重新扫描列表。</summary>
+        private void DeleteCharacterPackage(CharacterPackageInfo package)
+        {
+            // 只允许删除 Characters 目录内的模型包，避免异常路径误删其他位置
+            var charactersDir = PromptService.FindCharactersDirectory();
+            var root = charactersDir == null
+                ? string.Empty
+                : Path.GetFullPath(charactersDir).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var target = Path.GetFullPath(package.DirectoryPath);
+            if (root.Length == 0 || !target.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Warning($"[角色] 拒绝删除模型包：目录不在 Characters 内（{package.DirectoryPath}）");
+                MessageBox.Show(this, "该模型不在 Characters 目录内，已取消删除。", "角色模型",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                Directory.Delete(target, recursive: true);
+                Log.Info($"[角色] 已删除角色包：{package.Name}（{target}）");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[角色] 角色包删除失败：{ex.Message}");
+                MessageBox.Show(this, $"删除失败：{ex.Message}", "角色模型",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _ = ReloadAsync();
+        }
+
+        /// <summary>
         /// 刷新数量文案与空状态：区分“一个模型都没有”和“搜索无结果”。
         /// </summary>
         private void ApplyViewState()
