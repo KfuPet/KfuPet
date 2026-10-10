@@ -998,6 +998,12 @@ namespace KfuPet.Views
             Log.Info("[清理] 软件配置已复位：设置、模型、停用词与开发者模式恢复初始状态");
         }
 
+        /// <summary>模型包卡片“前往清理”：打开角色模型窗口。</summary>
+        private void OpenCharacterGalleryButton_Click(object sender, RoutedEventArgs e)
+        {
+            (Application.Current as App)?.OpenCharacterGalleryWindow();
+        }
+
         /// <summary>统计数字从 0 滚动到目标整数值（TextBlock 没有可动画的数字属性，用定时器驱动插值）。</summary>
         private static void PlayCountUpAnimation(TextBlock text, int target, TimeSpan beginTime)
             => PlayCountUpAnimation(text, target, beginTime, value => ((long)Math.Round(value)).ToString());

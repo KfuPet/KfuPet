@@ -364,9 +364,10 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 打开角色模型窗口（单例），再次点击时激活已有窗口。
+        /// 打开角色模型窗口（单例），再次调用时激活已有窗口。
+        /// 托盘菜单与设置页“模型包 → 前往清理”共用此入口。
         /// </summary>
-        private void OpenCharacterGalleryWindow()
+        internal void OpenCharacterGalleryWindow()
         {
             if (_characterGalleryWindow == null)
             {

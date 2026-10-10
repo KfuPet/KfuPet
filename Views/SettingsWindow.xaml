@@ -3038,24 +3038,38 @@
                                         <TranslateTransform x:Name="StorageModelsCardTransform"/>
                                     </Border.RenderTransform>
                                     <StackPanel>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Border Width="26" Height="26"
-                                                    CornerRadius="8"
-                                                    Background="{DynamicResource AppBorderBrush}">
-                                                <TextBlock Text="&#xE753;"
-                                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                                           FontSize="{StaticResource FontSizeIconSmall}"
-                                                           Foreground="{DynamicResource AppAccentBrush}"
-                                                           HorizontalAlignment="Center"
+                                        <!-- 标题行：左侧图标 + 名称，右侧“前往清理”入口 -->
+                                        <Grid>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="26" Height="26"
+                                                        CornerRadius="8"
+                                                        Background="{DynamicResource AppBorderBrush}">
+                                                    <TextBlock Text="&#xE753;"
+                                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                                               FontSize="{StaticResource FontSizeIconSmall}"
+                                                               Foreground="{DynamicResource AppAccentBrush}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="模型包"
+                                                           Margin="8,0,0,0"
+                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
                                                            VerticalAlignment="Center"/>
-                                            </Border>
-                                            <TextBlock Text="模型包"
-                                                       Margin="8,0,0,0"
-                                                       FontFamily="{StaticResource FontFamilyBody}"
-                                                       FontSize="{StaticResource FontSizeCaption}"
-                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                                       VerticalAlignment="Center"/>
-                                        </StackPanel>
+                                            </StackPanel>
+                                            <Button x:Name="OpenCharacterGalleryButton"
+                                                    Style="{StaticResource AboutActionButtonStyle}"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    Padding="10,5"
+                                                    Click="OpenCharacterGalleryButton_Click">
+                                                <TextBlock Text="前往清理"
+                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            </Button>
+                                        </Grid>
                                         <TextBlock x:Name="StorageModelsSizeText"
                                                    Text="—"
                                                    Margin="0,10,0,0"
