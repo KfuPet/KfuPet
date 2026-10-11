@@ -16,7 +16,7 @@ using KfuPet.Services;
 namespace KfuPet.Views
 {
     /// <summary>
-    /// 设置窗口，左侧导航在通用、模型、模型功能、记忆、开发者模式、关于与存储占用之间切换。
+    /// 设置窗口，左侧导航在通用、模型、桌宠功能、记忆、开发者模式、关于与存储占用之间切换。
     /// </summary>
     public partial class SettingsWindow : Window
     {

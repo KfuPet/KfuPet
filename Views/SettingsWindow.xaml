@@ -1054,7 +1054,7 @@
                                                FontFamily="{StaticResource FontFamilyIcon}"
                                                FontSize="{StaticResource FontSizeIcon}" Width="26"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock Text="模型功能" VerticalAlignment="Center"/>
+                                    <TextBlock Text="桌宠功能" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </ListBoxItem>
                             <!-- 开发者模式入口：默认隐藏，通过“关于”页版本徽章连续点击 5 次唤出 -->
@@ -1275,7 +1275,7 @@
                         </ScrollViewer.RenderTransform>
 
                         <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="模型功能" Style="{StaticResource SectionTitleStyle}"/>
+                            <TextBlock Text="桌宠功能" Style="{StaticResource SectionTitleStyle}"/>
 
                             <!-- 节省模型消耗卡片：标签居左（带说明问号），关闭 / 开启 / 自定义滑块居右 -->
                             <Border Margin="0,16,0,0"
