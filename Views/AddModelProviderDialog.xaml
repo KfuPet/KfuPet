@@ -190,10 +190,22 @@
                                         </ControlTemplate>
                                     </ToggleButton.Template>
                                 </ToggleButton>
-                                <ContentPresenter Margin="14,10,34,10"
+                                <ContentPresenter x:Name="ContentSite"
+                                                  Margin="14,10,34,10"
                                                   VerticalAlignment="Center"
                                                   IsHitTestVisible="False"
                                                   Content="{TemplateBinding SelectionBoxItem}"/>
+                                <!-- 可编辑模式下用于手动输入模型 ID -->
+                                <TextBox x:Name="PART_EditableTextBox"
+                                         Margin="14,10,34,10"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Foreground="{TemplateBinding Foreground}"
+                                         CaretBrush="{TemplateBinding Foreground}"
+                                         FontFamily="{TemplateBinding FontFamily}"
+                                         FontSize="{TemplateBinding FontSize}"
+                                         VerticalContentAlignment="Center"
+                                         Visibility="Collapsed"/>
                                 <Popup x:Name="PART_Popup"
                                        AllowsTransparency="True"
                                        Focusable="False"
@@ -214,6 +226,12 @@
                                 </Popup>
                             </Grid>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -455,14 +473,77 @@
                 <TextBlock Style="{StaticResource FieldLabelStyle}">
                     <Run Foreground="#E81123">* </Run><Run Text="模型"/>
                 </TextBlock>
-                <ComboBox x:Name="ModelCombo" Style="{StaticResource FieldComboStyle}"/>
-                <TextBox x:Name="ModelTextBox" Style="{StaticResource FieldInputStyle}" Visibility="Collapsed"/>
+                <!-- 预设服务商：初始显示占位提示，点击刷新按钮拉到列表后切换为下拉框 -->
+                <Grid x:Name="ModelFetchPanel" Margin="0,0,0,14">
+                    <Border Padding="14,10,44,10"
+                            Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8">
+                        <TextBlock Text="请先输入 API 密钥才能获取模型列表"
+                                   FontFamily="{StaticResource FontFamilyBody}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Border>
+                    <Button x:Name="ModelRefreshButton"
+                            Width="36" Height="36"
+                            Margin="0,0,4,0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            Cursor="Hand"
+                            FocusVisualStyle="{x:Null}"
+                            ToolTip="获取模型列表"
+                            Click="ModelRefreshButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd"
+                                        Background="Transparent"
+                                        CornerRadius="6">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppBorderBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.35"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <TextBlock x:Name="ModelRefreshIcon"
+                                   Text="&#xE72C;"
+                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                   RenderTransformOrigin="0.5,0.5">
+                            <TextBlock.RenderTransform>
+                                <RotateTransform/>
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
+                    </Button>
+                </Grid>
+                <!-- 预设：拉取成功后的模型下拉框 -->
+                <ComboBox x:Name="ModelCombo"
+                          Style="{StaticResource FieldComboStyle}"
+                          Visibility="Collapsed"/>
+                <!-- 自定义模型：可手动输入，也可从后台拉取的列表中选择 -->
+                <ComboBox x:Name="ModelCustomCombo"
+                          Style="{StaticResource FieldComboStyle}"
+                          IsEditable="True"
+                          IsTextSearchEnabled="False"
+                          DropDownOpened="ModelCustomCombo_DropDownOpened"
+                          Visibility="Collapsed"/>
 
                 <StackPanel x:Name="BaseUrlPanel" Visibility="Collapsed">
                     <TextBlock Style="{StaticResource FieldLabelStyle}">
                         <Run Foreground="#E81123">* </Run><Run Text="Base URL"/>
                     </TextBlock>
-                    <TextBox x:Name="BaseUrlBox" Style="{StaticResource FieldInputStyle}"/>
+                    <TextBox x:Name="BaseUrlBox"
+                             Style="{StaticResource FieldInputStyle}"
+                             LostFocus="BaseUrlBox_LostFocus"/>
                 </StackPanel>
 
                 <Grid Margin="0,0,0,4">
@@ -479,7 +560,10 @@
                                Cursor="Hand"
                                MouseLeftButtonUp="GetApiKeyLink_MouseLeftButtonUp"/>
                 </Grid>
-                <PasswordBox x:Name="ApiKeyBox" Style="{StaticResource FieldPasswordStyle}"/>
+                <PasswordBox x:Name="ApiKeyBox"
+                             Style="{StaticResource FieldPasswordStyle}"
+                             LostFocus="ApiKeyBox_LostFocus"
+                             PasswordChanged="ApiKeyBox_PasswordChanged"/>
 
                 <StackPanel Orientation="Horizontal" Margin="0,2,0,14">
                     <TextBlock Text="&#xE946;"

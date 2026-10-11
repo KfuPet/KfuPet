@@ -124,6 +124,116 @@
             </Setter>
         </Style>
 
+        <Style x:Key="FieldComboItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                Margin="4,1"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppBorderBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="FieldComboStyle" TargetType="ComboBox">
+            <Setter Property="Margin" Value="0,0,0,14"/>
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource FieldComboItemStyle}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <Grid>
+                                <ToggleButton x:Name="ToggleButton"
+                                              Focusable="False"
+                                              ClickMode="Press"
+                                              IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="Transparent">
+                                                <TextBlock Text="&#xE70D;"
+                                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                                           FontSize="{StaticResource FontSizeIconTiny}"
+                                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                           HorizontalAlignment="Right"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,14,0"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                                <ContentPresenter x:Name="ContentSite"
+                                                  Margin="14,10,34,10"
+                                                  VerticalAlignment="Center"
+                                                  IsHitTestVisible="False"
+                                                  Content="{TemplateBinding SelectionBoxItem}"/>
+                                <!-- 可编辑模式下用于手动输入模型 ID -->
+                                <TextBox x:Name="PART_EditableTextBox"
+                                         Margin="14,10,34,10"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Foreground="{TemplateBinding Foreground}"
+                                         CaretBrush="{TemplateBinding Foreground}"
+                                         FontFamily="{TemplateBinding FontFamily}"
+                                         FontSize="{TemplateBinding FontSize}"
+                                         VerticalContentAlignment="Center"
+                                         Visibility="Collapsed"/>
+                                <Popup x:Name="PART_Popup"
+                                       AllowsTransparency="True"
+                                       Focusable="False"
+                                       Placement="Bottom"
+                                       PopupAnimation="Fade"
+                                       IsOpen="{TemplateBinding IsDropDownOpen}">
+                                    <Border MinWidth="{TemplateBinding ActualWidth}"
+                                            MaxHeight="240"
+                                            Margin="0,4,0,0"
+                                            Background="{DynamicResource AppSurfaceBrush}"
+                                            BorderBrush="{DynamicResource AppBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8">
+                                        <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
+                                            <ItemsPresenter/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="DialogButtonStyle" TargetType="Button">
             <Setter Property="MinWidth" Value="88"/>
             <Setter Property="Padding" Value="16,8"/>
@@ -279,13 +389,21 @@
                 <TextBox x:Name="ModelNameBox" Style="{StaticResource FieldInputStyle}"/>
 
                 <TextBlock Text="Base URL" Style="{StaticResource FieldLabelStyle}"/>
-                <TextBox x:Name="BaseUrlBox" Style="{StaticResource FieldInputStyle}"/>
+                <TextBox x:Name="BaseUrlBox"
+                         Style="{StaticResource FieldInputStyle}"
+                         LostFocus="BaseUrlBox_LostFocus"/>
 
                 <TextBlock Text="API Key" Style="{StaticResource FieldLabelStyle}"/>
-                <PasswordBox x:Name="ApiKeyBox" Style="{StaticResource FieldPasswordStyle}"/>
+                <PasswordBox x:Name="ApiKeyBox"
+                             Style="{StaticResource FieldPasswordStyle}"
+                             LostFocus="ApiKeyBox_LostFocus"/>
 
-                <TextBlock Text="模型 ID（服务商支持的模型标识，如 deepseek-v4-pro）" Style="{StaticResource FieldLabelStyle}"/>
-                <TextBox x:Name="ModelIdBox" Style="{StaticResource FieldInputStyle}"/>
+                <TextBlock Text="模型 ID（可从下拉选择服务商可用模型，也可手动填写）" Style="{StaticResource FieldLabelStyle}"/>
+                <ComboBox x:Name="ModelIdBox"
+                          Style="{StaticResource FieldComboStyle}"
+                          IsEditable="True"
+                          IsTextSearchEnabled="False"
+                          DropDownOpened="ModelIdBox_DropDownOpened"/>
             </StackPanel>
 
             <!-- 按钮栏 -->

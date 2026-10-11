@@ -17,26 +17,30 @@ namespace KfuPet.Views
     /// </summary>
     public partial class AddModelProviderDialog : Window
     {
-        /// <summary>DeepSeek 服务商预设。</summary>
+        /// <summary>DeepSeek 服务商预设（模型列表由 /models 接口动态拉取）。</summary>
         public static readonly ModelPreset DeepSeekPreset = new(
             "DeepSeek",
             "https://api.deepseek.com",
             "https://platform.deepseek.com/api_keys",
-            "pack://application:,,,/Assets/Providers/deepseek.ico",
-            new[] { "deepseek-v4-flash", "deepseek-v4-pro" });
+            "pack://application:,,,/Assets/Providers/deepseek.ico");
 
-        /// <summary>Kimi CN（Moonshot）服务商预设。</summary>
+        /// <summary>Kimi CN（Moonshot）服务商预设（模型列表由 /models 接口动态拉取）。</summary>
         public static readonly ModelPreset KimiCnPreset = new(
             "Kimi",
             "https://api.moonshot.cn/v1",
             "https://platform.moonshot.cn/console/api-keys",
-            "pack://application:,,,/Assets/Providers/kimi.ico",
-            new[] { "kimi-k3", "kimi-k2.6", "kimi-k2.5" });
+            "pack://application:,,,/Assets/Providers/kimi.ico");
 
         private readonly AiConnectivityService _connectivityService = new();
 
         /// <summary>当前表单页对应的服务商预设；null 表示自定义模型。</summary>
         private ModelPreset? _currentPreset;
+
+        /// <summary>最近一次已尝试拉取自定义模型列表的（Base URL, API Key）组合，避免重复请求。</summary>
+        private (string BaseUrl, string ApiKey)? _lastModelFetch;
+
+        /// <summary>预设服务商是否正在拉取模型列表（拉取期间刷新按钮禁用并旋转）。</summary>
+        private bool _isFetchingModels;
 
         /// <summary>确认添加时触发，携带表单数据。</summary>
         public event EventHandler<ModelConfigEventArgs>? ModelConfirmed;
@@ -100,17 +104,6 @@ namespace KfuPet.Views
 
             GetApiKeyLink.Visibility = preset != null ? Visibility.Visible : Visibility.Collapsed;
             BaseUrlPanel.Visibility = preset == null ? Visibility.Visible : Visibility.Collapsed;
-            ModelTextBox.Visibility = preset == null ? Visibility.Visible : Visibility.Collapsed;
-            ModelCombo.Visibility = preset != null ? Visibility.Visible : Visibility.Collapsed;
-
-            ModelCombo.Items.Clear();
-            if (preset != null)
-            {
-                foreach (var model in preset.Models)
-                {
-                    ModelCombo.Items.Add(new ComboBoxItem { Content = model });
-                }
-            }
 
             ProviderListPanel.Visibility = Visibility.Collapsed;
             FormPanel.Visibility = Visibility.Visible;
@@ -181,19 +174,181 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 清空表单输入（服务商本身由入口决定，不在此处重置）。
+        /// 清空表单输入，并把模型输入恢复到当前流程的初始状态
+        /// （预设服务商回到“先刷新获取列表”，自定义模型保持手动输入）。
         /// </summary>
         private void ResetForm()
         {
             ModelCombo.SelectedItem = null;
-            ModelTextBox.Clear();
+            ModelCombo.Items.Clear();
+            ModelCustomCombo.SelectedItem = null;
+            ModelCustomCombo.Text = string.Empty;
+            ModelCustomCombo.Items.Clear();
+            _lastModelFetch = null;
+
+            if (_currentPreset != null)
+            {
+                // 预设：先显示占位提示，点击刷新按钮拉到列表后才切换成下拉框
+                ModelFetchPanel.Visibility = Visibility.Visible;
+                ModelCombo.Visibility = Visibility.Collapsed;
+                ModelCustomCombo.Visibility = Visibility.Collapsed;
+                StopRefreshSpin();
+            }
+            else
+            {
+                ModelFetchPanel.Visibility = Visibility.Collapsed;
+                ModelCombo.Visibility = Visibility.Collapsed;
+                ModelCustomCombo.Visibility = Visibility.Visible;
+            }
+
             BaseUrlBox.Clear();
             ApiKeyBox.Clear();
             if (_currentPreset == null)
             {
                 ProviderNameBox.Text = "自定义模型";
             }
+            UpdateRefreshButtonState();
             HideError();
+        }
+
+        /// <summary>
+        /// 刷新按钮：用当前填写的 API 密钥拉取服务商真实模型列表，
+        /// 成功后占位提示切换为可展开的模型下拉框。
+        /// </summary>
+        private async void ModelRefreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            var preset = _currentPreset;
+            var apiKey = ApiKeyBox.Password;
+            if (preset == null || string.IsNullOrEmpty(apiKey) || _isFetchingModels) return;
+
+            SetRefreshBusy(true);
+            HideError();
+            try
+            {
+                var modelIds = await _connectivityService.GetModelIdsAsync(preset.BaseUrl, apiKey);
+                if (_currentPreset != preset) return;
+
+                if (modelIds.Count == 0)
+                {
+                    ShowError("服务商没有返回可用的模型列表");
+                    return;
+                }
+
+                FillModelItems(ModelCombo, modelIds);
+                ModelFetchPanel.Visibility = Visibility.Collapsed;
+                ModelCombo.Visibility = Visibility.Visible;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[配置] 获取模型列表失败：{ex.Message}");
+                ShowError(ex.Message);
+            }
+            finally
+            {
+                SetRefreshBusy(false);
+            }
+        }
+
+        /// <summary>
+        /// 自定义模型：用已填写的 Base URL 与密钥在后台拉取模型列表填充候选项，
+        /// 失败时保持现状（不影响手动输入）。
+        /// </summary>
+        private async Task TryFetchCustomModelsAsync()
+        {
+            if (_currentPreset != null) return;
+
+            var baseUrl = BaseUrlBox.Text.Trim();
+            if (string.IsNullOrEmpty(baseUrl)) return;
+
+            var apiKey = ApiKeyBox.Password;
+            var signature = (baseUrl, apiKey);
+            if (_lastModelFetch == signature) return;
+            _lastModelFetch = signature;
+
+            try
+            {
+                var modelIds = await _connectivityService.GetModelIdsAsync(baseUrl, apiKey);
+                if (modelIds.Count == 0) return;
+
+                var current = ModelCustomCombo.Text;
+                FillModelItems(ModelCustomCombo, modelIds);
+                ModelCustomCombo.Text = current;
+            }
+            catch (Exception ex)
+            {
+                // 拉取失败不影响手动填写，清空签名以便下次交互时重试
+                _lastModelFetch = null;
+                Log.Warning($"[配置] 获取模型列表失败：{ex.Message}");
+            }
+        }
+
+        /// <summary>用模型 ID 列表替换下拉框候选项。</summary>
+        private static void FillModelItems(ComboBox combo, IReadOnlyList<string> modelIds)
+        {
+            combo.Items.Clear();
+            foreach (var id in modelIds)
+            {
+                combo.Items.Add(id);
+            }
+        }
+
+        /// <summary>
+        /// 切换刷新按钮的忙碌状态：拉取期间禁用按钮并让图标持续旋转。
+        /// </summary>
+        private void SetRefreshBusy(bool busy)
+        {
+            _isFetchingModels = busy;
+            UpdateRefreshButtonState();
+
+            if (ModelRefreshIcon.RenderTransform is not RotateTransform rotate) return;
+
+            if (busy)
+            {
+                rotate.BeginAnimation(RotateTransform.AngleProperty,
+                    new DoubleAnimation(0, 360, TimeSpan.FromMilliseconds(900))
+                    {
+                        RepeatBehavior = RepeatBehavior.Forever
+                    });
+            }
+            else
+            {
+                rotate.BeginAnimation(RotateTransform.AngleProperty, null);
+            }
+        }
+
+        /// <summary>停止刷新图标旋转并复位。</summary>
+        private void StopRefreshSpin()
+        {
+            if (ModelRefreshIcon.RenderTransform is RotateTransform rotate)
+            {
+                rotate.BeginAnimation(RotateTransform.AngleProperty, null);
+            }
+        }
+
+        /// <summary>刷新按钮只在已填写 API 密钥且未在拉取中时可用。</summary>
+        private void UpdateRefreshButtonState()
+        {
+            ModelRefreshButton.IsEnabled = !_isFetchingModels && !string.IsNullOrEmpty(ApiKeyBox.Password);
+        }
+
+        private void ApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            UpdateRefreshButtonState();
+        }
+
+        private async void BaseUrlBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            await TryFetchCustomModelsAsync();
+        }
+
+        private async void ApiKeyBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            await TryFetchCustomModelsAsync();
+        }
+
+        private async void ModelCustomCombo_DropDownOpened(object sender, EventArgs e)
+        {
+            await TryFetchCustomModelsAsync();
         }
 
         private async void ConfirmButton_Click(object sender, RoutedEventArgs e)
@@ -201,19 +356,19 @@ namespace KfuPet.Views
             var preset = _currentPreset;
             var baseUrl = preset?.BaseUrl ?? BaseUrlBox.Text.Trim();
 
-            string? modelId;
+            string modelId;
             if (preset != null)
             {
-                modelId = (ModelCombo.SelectedItem as ComboBoxItem)?.Content as string;
+                modelId = ModelCombo.SelectedItem as string ?? string.Empty;
                 if (string.IsNullOrEmpty(modelId))
                 {
-                    ShowError("请选择模型");
+                    ShowError("请先点击刷新按钮获取模型列表，再选择模型");
                     return;
                 }
             }
             else
             {
-                modelId = ModelTextBox.Text.Trim();
+                modelId = ModelCustomCombo.Text.Trim();
                 if (string.IsNullOrEmpty(modelId))
                 {
                     ShowError("模型 ID 不能为空，请填写服务商支持的模型标识");
@@ -343,22 +498,20 @@ namespace KfuPet.Views
         }
     }
 
-    /// <summary>服务商预设：提供商名称、Base URL、API Key 申请页、logo 资源路径与可选模型列表。</summary>
+    /// <summary>服务商预设：提供商名称、Base URL、API Key 申请页与 logo 资源路径（模型列表由 /models 动态拉取）。</summary>
     public class ModelPreset
     {
-        public ModelPreset(string providerName, string baseUrl, string apiKeysPageUrl, string? logoPath, IReadOnlyList<string> models)
+        public ModelPreset(string providerName, string baseUrl, string apiKeysPageUrl, string? logoPath)
         {
             ProviderName = providerName;
             BaseUrl = baseUrl;
             ApiKeysPageUrl = apiKeysPageUrl;
             LogoPath = logoPath;
-            Models = models;
         }
 
         public string ProviderName { get; }
         public string BaseUrl { get; }
         public string ApiKeysPageUrl { get; }
         public string? LogoPath { get; }
-        public IReadOnlyList<string> Models { get; }
     }
 }
