@@ -830,15 +830,10 @@
             Background="{DynamicResource AppBackgroundBrush}"
             BorderBrush="{DynamicResource AppBorderBrush}"
             BorderThickness="1"
-            CornerRadius="12"
-            Opacity="0"
-            RenderTransformOrigin="0.5,0.5">
+            CornerRadius="12">
         <Border.Effect>
             <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.3" Color="Black"/>
         </Border.Effect>
-        <Border.RenderTransform>
-            <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
-        </Border.RenderTransform>
 
         <Grid>
             <Grid.RowDefinitions>
@@ -1552,7 +1547,7 @@
                                                            TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                         </Grid>
-                                        <!-- 编辑按钮：悬停描边光环淡入 + 图标变色，按压缩放、回弹松手 -->
+                                        <!-- 编辑按钮：悬停描边光环淡入 + 图标变色，按压轻微缩放 -->
                                         <Button x:Name="EditStopWordsButton"
                                                 Grid.Column="1"
                                                 VerticalAlignment="Center"
@@ -1640,14 +1635,14 @@
                                                                                          Storyboard.TargetProperty="ScaleX"
                                                                                          To="1" Duration="0:0:0.25">
                                                                             <DoubleAnimation.EasingFunction>
-                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                                <CubicEase EasingMode="EaseOut"/>
                                                                             </DoubleAnimation.EasingFunction>
                                                                         </DoubleAnimation>
                                                                         <DoubleAnimation Storyboard.TargetName="BtnScale"
                                                                                          Storyboard.TargetProperty="ScaleY"
                                                                                          To="1" Duration="0:0:0.25">
                                                                             <DoubleAnimation.EasingFunction>
-                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                                <CubicEase EasingMode="EaseOut"/>
                                                                             </DoubleAnimation.EasingFunction>
                                                                         </DoubleAnimation>
                                                                     </Storyboard>
@@ -2273,7 +2268,7 @@
                                                            TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                         </StackPanel>
-                                        <!-- 查看按钮：悬停描边光环淡入 + 图标变色，按压缩放、回弹松手 -->
+                                        <!-- 查看按钮：悬停描边光环淡入 + 图标变色，按压轻微缩放 -->
                                         <Button x:Name="ViewChatHistoryButton"
                                                 Grid.Column="1"
                                                 VerticalAlignment="Center"
@@ -2361,14 +2356,14 @@
                                                                                          Storyboard.TargetProperty="ScaleX"
                                                                                          To="1" Duration="0:0:0.25">
                                                                             <DoubleAnimation.EasingFunction>
-                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                                <CubicEase EasingMode="EaseOut"/>
                                                                             </DoubleAnimation.EasingFunction>
                                                                         </DoubleAnimation>
                                                                         <DoubleAnimation Storyboard.TargetName="BtnScale"
                                                                                          Storyboard.TargetProperty="ScaleY"
                                                                                          To="1" Duration="0:0:0.25">
                                                                             <DoubleAnimation.EasingFunction>
-                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                                <CubicEase EasingMode="EaseOut"/>
                                                                             </DoubleAnimation.EasingFunction>
                                                                         </DoubleAnimation>
                                                                     </Storyboard>
@@ -2424,7 +2419,7 @@
                                                            TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                         </StackPanel>
-                                        <!-- 查看按钮：悬停描边光环淡入 + 图标变色，按压缩放、回弹松手 -->
+                                        <!-- 查看按钮：悬停描边光环淡入 + 图标变色，按压轻微缩放 -->
                                         <Button x:Name="ViewLongTermMemoryButton"
                                                 Grid.Column="1"
                                                 VerticalAlignment="Center"
@@ -2512,14 +2507,14 @@
                                                                                          Storyboard.TargetProperty="ScaleX"
                                                                                          To="1" Duration="0:0:0.25">
                                                                             <DoubleAnimation.EasingFunction>
-                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                                <CubicEase EasingMode="EaseOut"/>
                                                                             </DoubleAnimation.EasingFunction>
                                                                         </DoubleAnimation>
                                                                         <DoubleAnimation Storyboard.TargetName="BtnScale"
                                                                                          Storyboard.TargetProperty="ScaleY"
                                                                                          To="1" Duration="0:0:0.25">
                                                                             <DoubleAnimation.EasingFunction>
-                                                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                                <CubicEase EasingMode="EaseOut"/>
                                                                             </DoubleAnimation.EasingFunction>
                                                                         </DoubleAnimation>
                                                                     </Storyboard>
@@ -2948,14 +2943,14 @@
                                                                                  Storyboard.TargetProperty="ScaleX"
                                                                                  To="1" Duration="0:0:0.25">
                                                                     <DoubleAnimation.EasingFunction>
-                                                                        <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                        <CubicEase EasingMode="EaseOut"/>
                                                                     </DoubleAnimation.EasingFunction>
                                                                 </DoubleAnimation>
                                                                 <DoubleAnimation Storyboard.TargetName="BtnScale"
                                                                                  Storyboard.TargetProperty="ScaleY"
                                                                                  To="1" Duration="0:0:0.25">
                                                                     <DoubleAnimation.EasingFunction>
-                                                                        <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                                                        <CubicEase EasingMode="EaseOut"/>
                                                                     </DoubleAnimation.EasingFunction>
                                                                 </DoubleAnimation>
                                                             </Storyboard>

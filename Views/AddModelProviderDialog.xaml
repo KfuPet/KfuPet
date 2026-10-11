@@ -10,143 +10,16 @@
         ResizeMode="NoResize"
         Background="{x:Null}">
 
-    <Window.Resources>
-        <!-- 页1：服务商条目错峰入场（由代码后置在窗口加载/返回时播放） -->
-        <Storyboard x:Key="ProviderItemsStagger">
-            <DoubleAnimation Storyboard.TargetName="CustomModelButton"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="CustomModelButton"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="DeepSeekButton"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.06">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="DeepSeekButton"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.06">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="KimiCnButton"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.12">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="KimiCnButton"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.12">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-        </Storyboard>
-
-        <!-- 页2：表单字段错峰入场（由代码后置在切换到表单页时播放） -->
-        <Storyboard x:Key="FormFieldsStagger">
-            <DoubleAnimation Storyboard.TargetName="NameGroup"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="NameGroup"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="ModelGroup"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.06">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="ModelGroup"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.06">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="BaseUrlGroup"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.12">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="BaseUrlGroup"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.12">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="ApiKeyGroup"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.18">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="ApiKeyGroup"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.18">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="HintGroup"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.24">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="HintGroup"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.24">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-        </Storyboard>
-    </Window.Resources>
-
     <!-- 圆角卡片：Margin 为投影留出空间 -->
     <Border x:Name="DialogRoot"
             Margin="16"
             Background="{DynamicResource AppBackgroundBrush}"
             BorderBrush="{DynamicResource AppBorderBrush}"
             BorderThickness="1"
-            CornerRadius="12"
-            Opacity="0"
-            RenderTransformOrigin="0.5,0.5">
+            CornerRadius="12">
         <Border.Effect>
             <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.35" Color="Black"/>
         </Border.Effect>
-        <Border.RenderTransform>
-            <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
-        </Border.RenderTransform>
 
         <Grid>
             <Grid.RowDefinitions>
@@ -193,9 +66,6 @@
                 <Button x:Name="CustomModelButton"
                         Style="{StaticResource ProviderButtonStyle}"
                         Click="CustomModelButton_Click">
-                    <Button.RenderTransform>
-                        <TranslateTransform/>
-                    </Button.RenderTransform>
                     <TextBlock Text="&#xE710;"
                                FontFamily="{DynamicResource FontFamilyIcon}"
                                FontSize="{DynamicResource FontSizeIconSmall}"
@@ -206,9 +76,6 @@
                 <Button x:Name="DeepSeekButton"
                         Style="{StaticResource ProviderButtonStyle}"
                         Click="DeepSeekButton_Click">
-                    <Button.RenderTransform>
-                        <TranslateTransform/>
-                    </Button.RenderTransform>
                     <Image Source="pack://application:,,,/Assets/Providers/deepseek.ico"
                            Width="22" Height="22"/>
                     <Button.Tag>DeepSeek</Button.Tag>
@@ -218,9 +85,6 @@
                         Style="{StaticResource ProviderButtonStyle}"
                         Margin="0"
                         Click="KimiCnButton_Click">
-                    <Button.RenderTransform>
-                        <TranslateTransform/>
-                    </Button.RenderTransform>
                     <Image Source="pack://application:,,,/Assets/Providers/kimi.ico"
                            Width="22" Height="22"/>
                     <Button.Tag>Kimi CN</Button.Tag>
@@ -266,9 +130,6 @@
                 </Border>
 
                 <Grid x:Name="NameGroup">
-                    <Grid.RenderTransform>
-                        <TranslateTransform/>
-                    </Grid.RenderTransform>
                     <StackPanel>
                         <TextBlock Style="{StaticResource FieldLabelStyle}" Text="显示名称"/>
                         <!-- 服务商：预设只读展示；自定义模型可编辑名称 -->
@@ -298,9 +159,6 @@
                 </Grid>
 
                 <Grid x:Name="ModelGroup">
-                    <Grid.RenderTransform>
-                        <TranslateTransform/>
-                    </Grid.RenderTransform>
                     <StackPanel>
                         <TextBlock Style="{StaticResource FieldLabelStyle}">
                             <Run Foreground="#E81123">* </Run><Run Text="模型"/>
@@ -342,34 +200,24 @@
                         <ComboBox x:Name="ModelCombo"
                                   Style="{StaticResource FieldComboStyle}"
                                   Visibility="Collapsed"/>
-                        <!-- 自定义模型：可手动输入，也可从后台拉取的列表中选择 -->
-                        <ComboBox x:Name="ModelCustomCombo"
-                                  Style="{StaticResource FieldComboStyle}"
-                                  IsEditable="True"
-                                  IsTextSearchEnabled="False"
-                                  DropDownOpened="ModelCustomCombo_DropDownOpened"
-                                  Visibility="Collapsed"/>
+                        <!-- 自定义模型：手动填写模型 ID -->
+                        <TextBox x:Name="ModelCustomBox"
+                                 Style="{StaticResource FieldInputStyle}"
+                                 Visibility="Collapsed"/>
                     </StackPanel>
                 </Grid>
 
                 <Grid x:Name="BaseUrlGroup">
-                    <Grid.RenderTransform>
-                        <TranslateTransform/>
-                    </Grid.RenderTransform>
                     <StackPanel x:Name="BaseUrlPanel" Visibility="Collapsed">
                         <TextBlock Style="{StaticResource FieldLabelStyle}">
                             <Run Foreground="#E81123">* </Run><Run Text="Base URL"/>
                         </TextBlock>
                         <TextBox x:Name="BaseUrlBox"
-                                 Style="{StaticResource FieldInputStyle}"
-                                 LostFocus="BaseUrlBox_LostFocus"/>
+                                 Style="{StaticResource FieldInputStyle}"/>
                     </StackPanel>
                 </Grid>
 
                 <Grid x:Name="ApiKeyGroup">
-                    <Grid.RenderTransform>
-                        <TranslateTransform/>
-                    </Grid.RenderTransform>
                     <StackPanel>
                         <Grid Margin="0,0,0,4">
                             <TextBlock Style="{StaticResource FieldLabelStyle}" Margin="0">
@@ -387,15 +235,11 @@
                         </Grid>
                         <PasswordBox x:Name="ApiKeyBox"
                                      Style="{StaticResource FieldPasswordStyle}"
-                                     LostFocus="ApiKeyBox_LostFocus"
                                      PasswordChanged="ApiKeyBox_PasswordChanged"/>
                     </StackPanel>
                 </Grid>
 
                 <Grid x:Name="HintGroup">
-                    <Grid.RenderTransform>
-                        <TranslateTransform/>
-                    </Grid.RenderTransform>
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,14">
                         <TextBlock Text="&#xE946;"
                                    FontFamily="{DynamicResource FontFamilyIcon}"

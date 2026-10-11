@@ -11,7 +11,7 @@
         Background="{x:Null}">
 
     <Window.Resources>
-        <!-- 危险操作按钮：红底白字，悬停提亮、按压缩放回弹、禁用时半透明 -->
+        <!-- 危险操作按钮：红底白字，悬停提亮、禁用时半透明 -->
         <Style x:Key="DangerButtonStyle" TargetType="Button">
             <Setter Property="MinWidth" Value="88"/>
             <Setter Property="Padding" Value="16,8"/>
@@ -22,10 +22,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Grid RenderTransformOrigin="0.5,0.5">
-                            <Grid.RenderTransform>
-                                <ScaleTransform x:Name="BtnScale"/>
-                            </Grid.RenderTransform>
+                        <Grid>
                             <Border x:Name="Bd"
                                     Background="#E81123"
                                     CornerRadius="8"
@@ -56,40 +53,6 @@
                                             <ColorAnimation Storyboard.TargetName="Bd"
                                                             Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
                                                             To="#E81123" Duration="0:0:0.18"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                             Storyboard.TargetProperty="ScaleX"
-                                                             To="0.95" Duration="0:0:0.08"/>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                             Storyboard.TargetProperty="ScaleY"
-                                                             To="0.95" Duration="0:0:0.08"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                             Storyboard.TargetProperty="ScaleX"
-                                                             To="1" Duration="0:0:0.25">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                             Storyboard.TargetProperty="ScaleY"
-                                                             To="1" Duration="0:0:0.25">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -134,15 +97,10 @@
             Background="{DynamicResource AppBackgroundBrush}"
             BorderBrush="{DynamicResource AppBorderBrush}"
             BorderThickness="1"
-            CornerRadius="12"
-            Opacity="0"
-            RenderTransformOrigin="0.5,0.5">
+            CornerRadius="12">
         <Border.Effect>
             <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.35" Color="Black"/>
         </Border.Effect>
-        <Border.RenderTransform>
-            <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
-        </Border.RenderTransform>
 
         <Grid>
             <Grid.RowDefinitions>
@@ -224,7 +182,7 @@
                     <Button x:Name="ConfirmDeleteButton"
                             Style="{StaticResource DangerButtonStyle}"
                             Foreground="White"
-                            IsEnabled="False"
+                            Content="确认删除"
                             Click="ConfirmDeleteButton_Click"/>
                 </StackPanel>
             </Border>

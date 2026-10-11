@@ -72,7 +72,6 @@ namespace KfuPet.Views
             // 直接用真实日志目录当提示，避免路径写死在文案里
             OpenLogButton.ToolTip = $"在资源管理器中打开日志目录：{LogFileWriter.LogDirectory}";
 
-            Loaded += (s, e) => PlayEntranceAnimation();
             KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Escape)
@@ -181,24 +180,6 @@ namespace KfuPet.Views
             if (e.ButtonState == MouseButtonState.Pressed)
             {
                 DragMove();
-            }
-        }
-
-        /// <summary>
-        /// 窗口打开时的淡入 + 轻微放大动画。
-        /// </summary>
-        private void PlayEntranceAnimation()
-        {
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            RootCard.BeginAnimation(OpacityProperty,
-                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });
-
-            if (RootCard.RenderTransform is ScaleTransform scale)
-            {
-                scale.BeginAnimation(ScaleTransform.ScaleXProperty,
-                    new DoubleAnimation(0.97, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });
-                scale.BeginAnimation(ScaleTransform.ScaleYProperty,
-                    new DoubleAnimation(0.97, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = ease });
             }
         }
 
@@ -842,7 +823,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 记忆页入场：卡片依次错峰淡入上滑，统计数字滚动、进度条缓动填充。
+        /// 记忆页刷新：重载统计、数字滚动与进度条缓动填充（无卡片入场动画）。
         /// </summary>
         private void PlayMemoryPageEntrance()
         {
@@ -850,30 +831,6 @@ namespace KfuPet.Views
 
             // 先重载磁盘数据，避免删除后又把备份文件复制回来时，统计数字仍显示旧缓存
             memory.Reload();
-
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-
-            var cards = new FrameworkElement[]
-            {
-                ShortMemoryCard, ArchiveMemoryCard, LongMemoryCard, ChatHistoryCard, LongTermMemoryCard
-            };
-
-            // 卡片错峰入场（每张比上一张晚 60ms）
-            for (var i = 0; i < cards.Length; i++)
-            {
-                var begin = TimeSpan.FromMilliseconds(60 * i);
-                var duration = TimeSpan.FromMilliseconds(260);
-
-                cards[i].BeginAnimation(OpacityProperty,
-                    new DoubleAnimation(0, 1, duration) { BeginTime = begin, EasingFunction = ease });
-
-                var translate = FindTranslateTransform(cards[i]);
-                if (translate != null)
-                {
-                    translate.BeginAnimation(TranslateTransform.YProperty,
-                        new DoubleAnimation(14, 0, duration) { BeginTime = begin, EasingFunction = ease });
-                }
-            }
 
             // 数字滚动 + 进度条填充，错开节奏更有层次
             PlayCountUpAnimation(ShortCountText, memory.ShortCount, TimeSpan.FromMilliseconds(120));
@@ -1410,7 +1367,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 删除模型：先弹确认对话框（确认按钮倒计时 3 秒后才可点），确认后再移除卡片。
+        /// 删除模型：先弹确认对话框，确认后移除卡片。
         /// </summary>
         private void RemoveModelCard(ListBoxItem item)
         {

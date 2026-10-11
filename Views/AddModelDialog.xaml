@@ -10,83 +10,16 @@
         ResizeMode="NoResize"
         Background="{x:Null}">
 
-    <Window.Resources>
-        <!-- 字段错峰入场：透明度 + 轻微上移，逐项延迟 60ms（由代码后置在窗口加载后播放） -->
-        <Storyboard x:Key="FormFieldsStagger">
-            <DoubleAnimation Storyboard.TargetName="NameGroup"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="NameGroup"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="BaseUrlGroup"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.06">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="BaseUrlGroup"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.06">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="ApiKeyGroup"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.12">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="ApiKeyGroup"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.12">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="ModelIdGroup"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.18">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="ModelIdGroup"
-                             Storyboard.TargetProperty="RenderTransform.Y"
-                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.18">
-                <DoubleAnimation.EasingFunction>
-                    <CubicEase EasingMode="EaseOut"/>
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-        </Storyboard>
-    </Window.Resources>
-
     <!-- 圆角卡片：Margin 为投影留出空间 -->
     <Border x:Name="DialogRoot"
             Margin="16"
             Background="{DynamicResource AppBackgroundBrush}"
             BorderBrush="{DynamicResource AppBorderBrush}"
             BorderThickness="1"
-            CornerRadius="12"
-            Opacity="0"
-            RenderTransformOrigin="0.5,0.5">
+            CornerRadius="12">
         <Border.Effect>
             <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.35" Color="Black"/>
         </Border.Effect>
-        <Border.RenderTransform>
-            <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
-        </Border.RenderTransform>
 
         <Grid>
             <Grid.RowDefinitions>
@@ -156,9 +89,6 @@
                 </Border>
 
                 <Grid x:Name="NameGroup">
-                    <Grid.RenderTransform>
-                        <TranslateTransform/>
-                    </Grid.RenderTransform>
                     <StackPanel>
                         <TextBlock Text="显示名称" Style="{StaticResource FieldLabelStyle}"/>
                         <TextBox x:Name="ModelNameBox" Style="{StaticResource FieldInputStyle}"/>
@@ -166,40 +96,26 @@
                 </Grid>
 
                 <Grid x:Name="BaseUrlGroup">
-                    <Grid.RenderTransform>
-                        <TranslateTransform/>
-                    </Grid.RenderTransform>
                     <StackPanel>
                         <TextBlock Text="Base URL" Style="{StaticResource FieldLabelStyle}"/>
                         <TextBox x:Name="BaseUrlBox"
-                                 Style="{StaticResource FieldInputStyle}"
-                                 LostFocus="BaseUrlBox_LostFocus"/>
+                                 Style="{StaticResource FieldInputStyle}"/>
                     </StackPanel>
                 </Grid>
 
                 <Grid x:Name="ApiKeyGroup">
-                    <Grid.RenderTransform>
-                        <TranslateTransform/>
-                    </Grid.RenderTransform>
                     <StackPanel>
                         <TextBlock Text="API Key" Style="{StaticResource FieldLabelStyle}"/>
                         <PasswordBox x:Name="ApiKeyBox"
-                                     Style="{StaticResource FieldPasswordStyle}"
-                                     LostFocus="ApiKeyBox_LostFocus"/>
+                                     Style="{StaticResource FieldPasswordStyle}"/>
                     </StackPanel>
                 </Grid>
 
                 <Grid x:Name="ModelIdGroup">
-                    <Grid.RenderTransform>
-                        <TranslateTransform/>
-                    </Grid.RenderTransform>
                     <StackPanel>
-                        <TextBlock Text="模型 ID（可从下拉选择服务商可用模型，也可手动填写）" Style="{StaticResource FieldLabelStyle}"/>
-                        <ComboBox x:Name="ModelIdBox"
-                                  Style="{StaticResource FieldComboStyle}"
-                                  IsEditable="True"
-                                  IsTextSearchEnabled="False"
-                                  DropDownOpened="ModelIdBox_DropDownOpened"/>
+                        <TextBlock Text="模型 ID（手动填写服务商支持的模型标识）" Style="{StaticResource FieldLabelStyle}"/>
+                        <TextBox x:Name="ModelIdBox"
+                                 Style="{StaticResource FieldInputStyle}"/>
                     </StackPanel>
                 </Grid>
             </StackPanel>

@@ -36,11 +36,11 @@ namespace KfuPet.Views
         /// <summary>当前表单页对应的服务商预设；null 表示自定义模型。</summary>
         private ModelPreset? _currentPreset;
 
-        /// <summary>最近一次已尝试拉取自定义模型列表的（Base URL, API Key）组合，避免重复请求。</summary>
-        private (string BaseUrl, string ApiKey)? _lastModelFetch;
-
         /// <summary>预设服务商是否正在拉取模型列表（拉取期间刷新按钮禁用并旋转）。</summary>
         private bool _isFetchingModels;
+
+        /// <summary>关闭前淡出动画已开始的标记，动画结束后再真正关闭窗口。</summary>
+        private bool _isFadingOut;
 
         /// <summary>确认添加时触发，携带表单数据。</summary>
         public event EventHandler<ModelConfigEventArgs>? ModelConfirmed;
@@ -48,8 +48,8 @@ namespace KfuPet.Views
         public AddModelProviderDialog()
         {
             InitializeComponent();
-            Loaded += (s, e) => PlayEntranceAnimation();
-            Loaded += (s, e) => PlayProviderItemsStagger();
+            Loaded += (s, e) => PlayFadeIn();
+            Closing += Window_Closing;
             KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Escape)
@@ -57,6 +57,32 @@ namespace KfuPet.Views
                     Close();
                 }
             };
+        }
+
+        /// <summary>打开时整窗淡入（无缩放/位移）。</summary>
+        private void PlayFadeIn()
+        {
+            DialogRoot.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                });
+        }
+
+        /// <summary>关闭时先淡出整窗，动画结束后再真正关闭。</summary>
+        private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (_isFadingOut) return;
+
+            e.Cancel = true;
+            _isFadingOut = true;
+
+            var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(180))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            fadeOut.Completed += (s, _) => Close();
+            DialogRoot.BeginAnimation(OpacityProperty, fadeOut);
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -112,7 +138,6 @@ namespace KfuPet.Views
             BackButton.Visibility = Visibility.Visible;
             DialogTitleText.Text = "通过服务商添加";
             AnimatePageSwitch(FormPanel, fromX: 16);
-            PlayFormFieldsStagger();
         }
 
         /// <summary>
@@ -127,7 +152,6 @@ namespace KfuPet.Views
             DialogTitleText.Text = "添加模型";
             HideError();
             AnimatePageSwitch(ProviderListPanel, fromX: -16);
-            PlayProviderItemsStagger();
         }
 
         /// <summary>
@@ -184,24 +208,21 @@ namespace KfuPet.Views
         {
             ModelCombo.SelectedItem = null;
             ModelCombo.Items.Clear();
-            ModelCustomCombo.SelectedItem = null;
-            ModelCustomCombo.Text = string.Empty;
-            ModelCustomCombo.Items.Clear();
-            _lastModelFetch = null;
+            ModelCustomBox.Text = string.Empty;
 
             if (_currentPreset != null)
             {
                 // 预设：先显示占位提示，点击刷新按钮拉到列表后才切换成下拉框
                 ModelFetchPanel.Visibility = Visibility.Visible;
                 ModelCombo.Visibility = Visibility.Collapsed;
-                ModelCustomCombo.Visibility = Visibility.Collapsed;
+                ModelCustomBox.Visibility = Visibility.Collapsed;
                 StopRefreshSpin();
             }
             else
             {
                 ModelFetchPanel.Visibility = Visibility.Collapsed;
                 ModelCombo.Visibility = Visibility.Collapsed;
-                ModelCustomCombo.Visibility = Visibility.Visible;
+                ModelCustomBox.Visibility = Visibility.Visible;
             }
 
             BaseUrlBox.Clear();
@@ -249,39 +270,6 @@ namespace KfuPet.Views
             finally
             {
                 SetRefreshBusy(false);
-            }
-        }
-
-        /// <summary>
-        /// 自定义模型：用已填写的 Base URL 与密钥在后台拉取模型列表填充候选项，
-        /// 失败时保持现状（不影响手动输入）。
-        /// </summary>
-        private async Task TryFetchCustomModelsAsync()
-        {
-            if (_currentPreset != null) return;
-
-            var baseUrl = BaseUrlBox.Text.Trim();
-            if (string.IsNullOrEmpty(baseUrl)) return;
-
-            var apiKey = ApiKeyBox.Password;
-            var signature = (baseUrl, apiKey);
-            if (_lastModelFetch == signature) return;
-            _lastModelFetch = signature;
-
-            try
-            {
-                var modelIds = await _connectivityService.GetModelIdsAsync(baseUrl, apiKey);
-                if (modelIds.Count == 0) return;
-
-                var current = ModelCustomCombo.Text;
-                FillModelItems(ModelCustomCombo, modelIds);
-                ModelCustomCombo.Text = current;
-            }
-            catch (Exception ex)
-            {
-                // 拉取失败不影响手动填写，清空签名以便下次交互时重试
-                _lastModelFetch = null;
-                Log.Warning($"[配置] 获取模型列表失败：{ex.Message}");
             }
         }
 
@@ -339,21 +327,6 @@ namespace KfuPet.Views
             UpdateRefreshButtonState();
         }
 
-        private async void BaseUrlBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            await TryFetchCustomModelsAsync();
-        }
-
-        private async void ApiKeyBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            await TryFetchCustomModelsAsync();
-        }
-
-        private async void ModelCustomCombo_DropDownOpened(object sender, EventArgs e)
-        {
-            await TryFetchCustomModelsAsync();
-        }
-
         private async void ConfirmButton_Click(object sender, RoutedEventArgs e)
         {
             var preset = _currentPreset;
@@ -371,7 +344,7 @@ namespace KfuPet.Views
             }
             else
             {
-                modelId = ModelCustomCombo.Text.Trim();
+                modelId = ModelCustomBox.Text.Trim();
                 if (string.IsNullOrEmpty(modelId))
                 {
                     ShowError("模型 ID 不能为空，请填写服务商支持的模型标识");
@@ -482,40 +455,6 @@ namespace KfuPet.Views
             var workArea = SystemParameters.WorkArea;
             Left = workArea.Left + (workArea.Width - ActualWidth) / 2;
             Top = workArea.Top + (workArea.Height - ActualHeight) / 2;
-        }
-
-        private void PlayEntranceAnimation()
-        {
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            var duration = TimeSpan.FromMilliseconds(280);
-            DialogRoot.BeginAnimation(OpacityProperty,
-                new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
-
-            if (DialogRoot.RenderTransform is ScaleTransform scale)
-            {
-                scale.BeginAnimation(ScaleTransform.ScaleXProperty,
-                    new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
-                scale.BeginAnimation(ScaleTransform.ScaleYProperty,
-                    new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
-            }
-        }
-
-        /// <summary>服务商条目依次淡入上移，形成错峰入场。</summary>
-        private void PlayProviderItemsStagger()
-        {
-            if (FindResource("ProviderItemsStagger") is Storyboard storyboard)
-            {
-                storyboard.Begin(this);
-            }
-        }
-
-        /// <summary>表单字段依次淡入上移，形成错峰入场。</summary>
-        private void PlayFormFieldsStagger()
-        {
-            if (FindResource("FormFieldsStagger") is Storyboard storyboard)
-            {
-                storyboard.Begin(this);
-            }
         }
     }
 

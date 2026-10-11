@@ -16,8 +16,8 @@ namespace KfuPet.Views
     {
         private readonly AiConnectivityService _connectivityService = new();
 
-        /// <summary>最近一次已尝试拉取模型列表的（Base URL, API Key）组合，避免重复请求。</summary>
-        private (string BaseUrl, string ApiKey)? _lastModelFetch;
+        /// <summary>关闭前淡出动画已开始的标记，动画结束后再真正关闭窗口。</summary>
+        private bool _isFadingOut;
 
         /// <summary>确认添加时触发，携带表单数据。</summary>
         public event EventHandler<ModelConfigEventArgs>? ModelConfirmed;
@@ -25,7 +25,8 @@ namespace KfuPet.Views
         public AddModelDialog()
         {
             InitializeComponent();
-            Loaded += OnLoaded;
+            Loaded += (s, e) => PlayFadeIn();
+            Closing += Window_Closing;
             KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Escape)
@@ -35,23 +36,30 @@ namespace KfuPet.Views
             };
         }
 
-        /// <summary>
-        /// 窗口显示后播放入场动画与字段错峰动画，并用预填的配置拉取服务商可用模型列表。
-        /// </summary>
-        private async void OnLoaded(object sender, RoutedEventArgs e)
+        /// <summary>打开时整窗淡入（无缩放/位移）。</summary>
+        private void PlayFadeIn()
         {
-            PlayEntranceAnimation();
-            PlayFormFieldsStagger();
-            await TryFetchModelsAsync();
+            DialogRoot.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                });
         }
 
-        /// <summary>表单字段依次淡入上移，形成错峰入场。</summary>
-        private void PlayFormFieldsStagger()
+        /// <summary>关闭时先淡出整窗，动画结束后再真正关闭。</summary>
+        private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (FindResource("FormFieldsStagger") is Storyboard storyboard)
+            if (_isFadingOut) return;
+
+            e.Cancel = true;
+            _isFadingOut = true;
+
+            var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(180))
             {
-                storyboard.Begin(this);
-            }
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            fadeOut.Completed += (s, _) => Close();
+            DialogRoot.BeginAnimation(OpacityProperty, fadeOut);
         }
 
         /// <summary>
@@ -72,58 +80,6 @@ namespace KfuPet.Views
             ModelIdBox.Text = model.ModelId;
             ModelNameBox.Text = model.ModelName;
             DialogTitleText.Text = "编辑模型";
-        }
-
-        /// <summary>
-        /// 用已填写的 Base URL 与 API Key 拉取服务商当前提供的模型列表，
-        /// 成功时填充模型 ID 下拉候选项；失败时保持现状（不影响手动输入）。
-        /// </summary>
-        private async Task TryFetchModelsAsync()
-        {
-            var baseUrl = BaseUrlBox.Text.Trim();
-            if (string.IsNullOrEmpty(baseUrl)) return;
-
-            var apiKey = ApiKeyBox.Password;
-            var signature = (baseUrl, apiKey);
-            if (_lastModelFetch == signature) return;
-            _lastModelFetch = signature;
-
-            try
-            {
-                var modelIds = await _connectivityService.GetModelIdsAsync(baseUrl, apiKey);
-                if (modelIds.Count == 0) return;
-
-                var current = ModelIdBox.Text;
-                ModelIdBox.Items.Clear();
-                foreach (var id in modelIds)
-                {
-                    ModelIdBox.Items.Add(id);
-                }
-
-                // 保留用户已填写或已选择的模型 ID
-                ModelIdBox.Text = current;
-            }
-            catch (Exception ex)
-            {
-                // 拉取失败不影响手动填写，清空签名以便下次交互时重试
-                _lastModelFetch = null;
-                Log.Warning($"[配置] 获取模型列表失败：{ex.Message}");
-            }
-        }
-
-        private async void BaseUrlBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            await TryFetchModelsAsync();
-        }
-
-        private async void ApiKeyBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            await TryFetchModelsAsync();
-        }
-
-        private async void ModelIdBox_DropDownOpened(object sender, EventArgs e)
-        {
-            await TryFetchModelsAsync();
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -280,21 +236,6 @@ namespace KfuPet.Views
             catch
             {
                 // 提示音播放失败不影响主流程
-            }
-        }
-
-        private void PlayEntranceAnimation()
-        {
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            DialogRoot.BeginAnimation(OpacityProperty,
-                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
-
-            if (DialogRoot.RenderTransform is ScaleTransform scale)
-            {
-                scale.BeginAnimation(ScaleTransform.ScaleXProperty,
-                    new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
-                scale.BeginAnimation(ScaleTransform.ScaleYProperty,
-                    new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
             }
         }
     }
