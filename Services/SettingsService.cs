@@ -29,15 +29,12 @@ namespace KfuPet.Services
     }
 
     /// <summary>
-    /// 应用通用设置，统一读写 %AppData%\KfuPet\Config\settings.json。
+    /// 应用通用设置，统一读写缓存目录下的 Config\settings.json（默认 %AppData%\KfuPet，可在设置中自定义）。
     /// 目前包含主题偏好、开发者模式、骨骼调试线框、桌宠窗口位置、模型功能节省模式与主动搭话；后续通用设置继续在此扩展字段。
     /// </summary>
     internal class SettingsService
     {
-        private static readonly string ConfigDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet", "Config");
-
-        private static readonly string ConfigFilePath = Path.Combine(ConfigDirectory, "settings.json");
+        private static readonly string ConfigFilePath = Path.Combine(AppPaths.ConfigDirectory, "settings.json");
 
         private static readonly Lazy<SettingsService> LazyInstance = new(() => new SettingsService());
 
@@ -439,7 +436,7 @@ namespace KfuPet.Services
         {
             try
             {
-                Directory.CreateDirectory(ConfigDirectory);
+                Directory.CreateDirectory(AppPaths.ConfigDirectory);
                 var json = JsonSerializer.Serialize(new
                 {
                     Theme = Theme switch { true => "Dark", false => "Light", null => "System" },

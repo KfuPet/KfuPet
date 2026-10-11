@@ -11,9 +11,8 @@ namespace KfuPet.Services
     /// </summary>
     internal class LogFileWriter : IDisposable
     {
-        /// <summary>日志目录：%AppData%\KfuPet\Logs（与项目其他本地数据同级）。</summary>
-        public static string LogDirectory { get; } = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet", "Logs");
+        /// <summary>日志目录：缓存目录下的 Logs（默认为 %AppData%\KfuPet\Logs，可在设置中自定义）。</summary>
+        public static string LogDirectory { get; } = AppPaths.LogsDirectory;
 
         /// <summary>日志目录内最多保留的文件数（含本次启动产生的那一份）。</summary>
         private const int MaxFiles = 4;

@@ -5,7 +5,7 @@ namespace KfuPet.Core.Memory
 {
     /// <summary>
     /// 长期记忆的持久化存储：记忆正文与元数据统一写入 <c>LongMemory.json</c>（单一 JSON 文件）。
-    /// 记忆统一存放在 %AppData%\KfuPet\Memory。
+    /// 记忆统一存放在缓存目录下的 Memory（默认为 %AppData%\KfuPet\Memory，可在设置中自定义）。
     /// </summary>
     internal class MemoryStore
     {
@@ -14,8 +14,7 @@ namespace KfuPet.Core.Memory
 
         public MemoryStore()
         {
-            _directory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet", "Memory");
+            _directory = AppPaths.MemoryDirectory;
             _filePath = Path.Combine(_directory, "LongMemory.json");
         }
 

@@ -7,10 +7,6 @@ namespace KfuPet.Services
     /// </summary>
     internal static class CacheCleanupService
     {
-        /// <summary>软件配置目录：%AppData%\KfuPet\Config。</summary>
-        private static readonly string ConfigDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet", "Config");
-
         /// <summary>属于“软件配置”的文件清单。</summary>
         private static readonly string[] ConfigFileNames =
         {
@@ -63,7 +59,7 @@ namespace KfuPet.Services
             var deleted = 0;
             foreach (var fileName in ConfigFileNames)
             {
-                var path = Path.Combine(ConfigDirectory, fileName);
+                var path = Path.Combine(AppPaths.ConfigDirectory, fileName);
                 try
                 {
                     if (!File.Exists(path)) continue;

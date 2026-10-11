@@ -26,6 +26,9 @@ namespace KfuPet.Views
         /// <summary>版本徽章相邻两次点击的最大间隔，超过则从 1 重新计数。</summary>
         private static readonly TimeSpan VersionBadgeClickInterval = TimeSpan.FromSeconds(2);
 
+        /// <summary>错误提示使用的红色（与缓存清理等危险操作按钮保持一致）。</summary>
+        private static readonly SolidColorBrush DangerBrush = new(Color.FromRgb(0xE8, 0x11, 0x23));
+
         /// <summary>停用词卡片预览最多显示多少个词，其余用省略号代替。</summary>
         private const int StopWordsPreviewMaxWords = 10;
 
@@ -987,7 +990,7 @@ namespace KfuPet.Views
                 if (kinds.HasFlag(CleanupCacheDialog.CacheKinds.Config))
                 {
                     Log.Info($"[清理] 缓存清理完成：{string.Join("、", cleanedParts)}，3 秒后自动重启软件");
-                    ScheduleRestart(cleanedParts);
+                    ScheduleRestart($"已清理：{string.Join("、", cleanedParts)}", CleanupCacheButton);
                     return;
                 }
 
@@ -1013,11 +1016,11 @@ namespace KfuPet.Views
             Log.Info("[清理] 软件配置已复位为初始值，等待重启生效");
         }
 
-        /// <summary>提示清理结果并在 3 秒后自动重启软件（等待期间禁用清理按钮，避免重复触发）。</summary>
-        private void ScheduleRestart(IReadOnlyList<string> cleanedParts)
+        /// <summary>提示结果并在 3 秒后自动重启软件（等待期间禁用触发重启的按钮，避免重复触发）。</summary>
+        private void ScheduleRestart(string message, Button triggerButton)
         {
-            CleanupCacheButton.IsEnabled = false;
-            ShowToast($"已清理：{string.Join("、", cleanedParts)}，3 秒后自动重启软件…");
+            triggerButton.IsEnabled = false;
+            ShowToast($"{message}，3 秒后自动重启软件…");
 
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             timer.Tick += (s, e) =>
@@ -1060,6 +1063,37 @@ namespace KfuPet.Views
         private void OpenCharacterGalleryButton_Click(object sender, RoutedEventArgs e)
         {
             (Application.Current as App)?.OpenCharacterGalleryWindow();
+        }
+
+        /// <summary>
+        /// “更改…”：选择新的缓存目录，校验通过后迁移数据并写入注册表，随后自动重启软件。
+        /// </summary>
+        private void ChangeCacheLocationButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = "选择新的缓存目录",
+                InitialDirectory = AppPaths.CacheRoot,
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog(this) != true) return;
+
+            var newRoot = dialog.FolderName;
+            if (!CachePathService.TryValidate(newRoot, out var error))
+            {
+                Log.Warning($"[缓存] 自定义缓存目录不可用：{error}");
+                ShowToast(error, isError: true);
+                return;
+            }
+
+            if (!CachePathService.Migrate(newRoot, out var message))
+            {
+                ShowToast(message, isError: true);
+                return;
+            }
+
+            ScheduleRestart(message, ChangeCacheLocationButton);
         }
 
         /// <summary>统计数字从 0 滚动到目标整数值（TextBlock 没有可动画的数字属性，用定时器驱动插值）。</summary>
@@ -1125,6 +1159,8 @@ namespace KfuPet.Views
                 StorageInstallSizeText.Text = "统计中…";
                 StorageCacheSizeText.Text = "统计中…";
                 StorageModelsSizeText.Text = "统计中…";
+                // 缓存路径与统计无关，直接显示当前进程实际使用的目录
+                CacheLocationPathText.Text = AppPaths.CacheRoot;
 
                 var usage = await StorageUsageService.LoadUsageAsync();
                 ApplyStorageUsage(usage);
@@ -1217,7 +1253,7 @@ namespace KfuPet.Views
         {
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
-            var cards = new List<FrameworkElement> { StorageInstallCard, StorageCacheCard, StorageModelsCard };
+            var cards = new List<FrameworkElement> { StorageInstallCard, StorageCacheCard, StorageModelsCard, StorageCachePathCard };
             if (StoragePackagesCard.Visibility == Visibility.Visible)
             {
                 cards.Add(StoragePackagesCard);
@@ -1507,9 +1543,24 @@ namespace KfuPet.Views
         /// 在页面下方居中弹出飘窗提示
         /// 重复调用会重置停留计时，不会叠加多个提示。
         /// </summary>
-        private void ShowToast(string message)
+        /// <param name="message">提示文本。</param>
+        /// <param name="isError">错误提示：图标换成红色叉号；默认是勾号的普通提示。</param>
+        private void ShowToast(string message, bool isError = false)
         {
             ToastText.Text = message;
+
+            // 只有图标区分状态，文字始终保持主题正文色
+            if (isError)
+            {
+                ToastIcon.Text = "\uE711";
+                ToastIcon.Foreground = DangerBrush;
+            }
+            else
+            {
+                ToastIcon.Text = "\uE73E";
+                ToastIcon.SetResourceReference(TextBlock.ForegroundProperty, "AppAccentBrush");
+            }
+
             ToastCard.Visibility = Visibility.Visible;
 
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };

@@ -3132,6 +3132,66 @@
                                 </Border>
                             </Grid>
 
+                            <!-- 自定义缓存：手动选择缓存路径（软件配置、记忆与日志的存放位置） -->
+                            <Border x:Name="StorageCachePathCard"
+                                    Margin="0,12,0,0"
+                                    Padding="14,12"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <TranslateTransform x:Name="StorageCachePathCardTransform"/>
+                                </Border.RenderTransform>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="26" Height="26"
+                                                CornerRadius="8"
+                                                Background="{DynamicResource AppBorderBrush}"
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="&#xE838;"
+                                                       FontFamily="{StaticResource FontFamilyIcon}"
+                                                       FontSize="{StaticResource FontSizeIconSmall}"
+                                                       Foreground="{DynamicResource AppAccentBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="自定义缓存"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       FontWeight="{StaticResource FontWeightSemiBold}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock x:Name="CacheLocationPathText"
+                                                       Text="—"
+                                                       Margin="0,3,0,0"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Button x:Name="ChangeCacheLocationButton"
+                                            Grid.Column="1"
+                                            Style="{StaticResource AboutActionButtonStyle}"
+                                            VerticalAlignment="Center"
+                                            Margin="12,0,0,0"
+                                            Padding="12,7"
+                                            ToolTip="选择新的缓存目录，数据会迁移过去并自动重启软件"
+                                            Click="ChangeCacheLocationButton_Click">
+                                        <TextBlock Text="更改…"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                    </Button>
+                                </Grid>
+                            </Border>
+
                             <!-- 模型包明细：多于一个模型包时显示占用最大的 3 个 -->
                             <Border x:Name="StoragePackagesCard"
                                     Visibility="Collapsed"
@@ -3289,7 +3349,8 @@
                     <TranslateTransform x:Name="ToastTranslate" Y="16"/>
                 </Border.RenderTransform>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE73E;"
+                    <TextBlock x:Name="ToastIcon"
+                               Text="&#xE73E;"
                                FontFamily="{StaticResource FontFamilyIcon}"
                                FontSize="{StaticResource FontSizeIconSmall}"
                                Foreground="{DynamicResource AppAccentBrush}"

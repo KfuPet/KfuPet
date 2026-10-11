@@ -4,14 +4,11 @@ using KfuPet.Models;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 管理 AI 模型配置，负责加载 / 保存到本地 JSON 文件（%AppData%\KfuPet\Config\models.json）。
+    /// 管理 AI 模型配置，负责加载 / 保存到缓存目录下的 Config\models.json（默认 %AppData%\KfuPet）。
     /// </summary>
     internal class ModelConfigService
     {
-        private static readonly string ConfigDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet", "Config");
-
-        private static readonly string ConfigFilePath = Path.Combine(ConfigDirectory, "models.json");
+        private static readonly string ConfigFilePath = Path.Combine(AppPaths.ConfigDirectory, "models.json");
 
         private readonly List<ModelConfig> _models = new();
 
@@ -133,7 +130,7 @@ namespace KfuPet.Services
         {
             try
             {
-                Directory.CreateDirectory(ConfigDirectory);
+                Directory.CreateDirectory(AppPaths.ConfigDirectory);
                 var json = JsonSerializer.Serialize(_models, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

@@ -18,7 +18,7 @@ namespace KfuPet.Services
         /// <summary>软件本体目录（程序输出 / 安装目录）占用的字节数。</summary>
         public long InstallBytes { get; init; }
 
-        /// <summary>缓存目录（%AppData%\KfuPet）占用的字节数。</summary>
+        /// <summary>缓存目录（可在设置中自定义，默认 %AppData%\KfuPet）占用的字节数。</summary>
         public long CacheBytes { get; init; }
 
         /// <summary>模型包目录（Characters）；未找到时为空。</summary>
@@ -48,8 +48,7 @@ namespace KfuPet.Services
             return Task.Run(() =>
             {
                 var installPath = AppDomain.CurrentDomain.BaseDirectory;
-                var cachePath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet");
+                var cachePath = AppPaths.CacheRoot;
                 var modelsPath = PromptService.FindCharactersDirectory();
 
                 var packages = new List<ModelPackageUsage>();

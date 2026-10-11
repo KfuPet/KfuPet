@@ -14,8 +14,7 @@ namespace KfuPet.Core.Memory
 
         public ShortTermMemoryStore()
         {
-            _directory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KfuPet", "Memory");
+            _directory = AppPaths.MemoryDirectory;
             _filePath = Path.Combine(_directory, "ShortMemory.json");
         }
 
