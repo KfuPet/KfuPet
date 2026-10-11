@@ -36,12 +36,22 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 窗口显示后播放入场动画，并用预填的配置拉取服务商可用模型列表。
+        /// 窗口显示后播放入场动画与字段错峰动画，并用预填的配置拉取服务商可用模型列表。
         /// </summary>
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             PlayEntranceAnimation();
+            PlayFormFieldsStagger();
             await TryFetchModelsAsync();
+        }
+
+        /// <summary>表单字段依次淡入上移，形成错峰入场。</summary>
+        private void PlayFormFieldsStagger()
+        {
+            if (FindResource("FormFieldsStagger") is Storyboard storyboard)
+            {
+                storyboard.Begin(this);
+            }
         }
 
         /// <summary>

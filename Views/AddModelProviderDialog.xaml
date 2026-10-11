@@ -11,256 +11,128 @@
         Background="{x:Null}">
 
     <Window.Resources>
-        <!-- 服务商条目按钮：图标 + 名称 + 右侧箭头，悬停时整行高亮 -->
-        <Style x:Key="ProviderButtonStyle" TargetType="Button">
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{DynamicResource AppBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="10"
-                                Padding="{TemplateBinding Padding}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+        <!-- 页1：服务商条目错峰入场（由代码后置在窗口加载/返回时播放） -->
+        <Storyboard x:Key="ProviderItemsStagger">
+            <DoubleAnimation Storyboard.TargetName="CustomModelButton"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.24">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="CustomModelButton"
+                             Storyboard.TargetProperty="RenderTransform.Y"
+                             From="8" To="0" Duration="0:0:0.24">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="DeepSeekButton"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.06">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="DeepSeekButton"
+                             Storyboard.TargetProperty="RenderTransform.Y"
+                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.06">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="KimiCnButton"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.12">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="KimiCnButton"
+                             Storyboard.TargetProperty="RenderTransform.Y"
+                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.12">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
 
-                                <!-- 图标底块 -->
-                                <Border Width="36" Height="36"
-                                        CornerRadius="8"
-                                        Background="White"
-                                        BorderBrush="{DynamicResource AppBorderBrush}"
-                                        BorderThickness="1"
-                                        VerticalAlignment="Center">
-                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-
-                                <TextBlock Grid.Column="1"
-                                           Text="{TemplateBinding Tag}"
-                                           Margin="12,0,0,0"
-                                           VerticalAlignment="Center"
-                                           FontFamily="{StaticResource FontFamilyBody}"
-                                           FontSize="{StaticResource FontSizeBody}"
-                                           FontWeight="{StaticResource FontWeightSemiBold}"
-                                           Foreground="{TemplateBinding Foreground}"/>
-
-                                <TextBlock Grid.Column="2"
-                                           Text="&#xE76C;"
-                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                           FontSize="{StaticResource FontSizeIconTiny}"
-                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                           VerticalAlignment="Center"/>
-                            </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-
-        <Style x:Key="FieldInputStyle" TargetType="TextBox">
-            <Setter Property="Margin" Value="0,0,0,14"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{DynamicResource AppBorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
-                                CornerRadius="8">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="2,0"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="FieldPasswordStyle" TargetType="PasswordBox">
-            <Setter Property="Margin" Value="0,0,0,14"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="PasswordBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{DynamicResource AppBorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
-                                CornerRadius="8">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="2,0"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="FieldComboItemStyle" TargetType="ComboBoxItem">
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBoxItem">
-                        <Border x:Name="Bd"
-                                Background="Transparent"
-                                Margin="4,1"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppBorderBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppBorderBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="FieldComboStyle" TargetType="ComboBox">
-            <Setter Property="Margin" Value="0,0,0,14"/>
-            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="ItemContainerStyle" Value="{StaticResource FieldComboItemStyle}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{DynamicResource AppBorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8">
-                            <Grid>
-                                <ToggleButton x:Name="ToggleButton"
-                                              Focusable="False"
-                                              ClickMode="Press"
-                                              IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
-                                    <ToggleButton.Template>
-                                        <ControlTemplate TargetType="ToggleButton">
-                                            <Border Background="Transparent">
-                                                <TextBlock Text="&#xE70D;"
-                                                           FontFamily="{StaticResource FontFamilyIcon}"
-                                                           FontSize="{StaticResource FontSizeIconTiny}"
-                                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                                           HorizontalAlignment="Right"
-                                                           VerticalAlignment="Center"
-                                                           Margin="0,0,14,0"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </ToggleButton.Template>
-                                </ToggleButton>
-                                <ContentPresenter x:Name="ContentSite"
-                                                  Margin="14,10,34,10"
-                                                  VerticalAlignment="Center"
-                                                  IsHitTestVisible="False"
-                                                  Content="{TemplateBinding SelectionBoxItem}"/>
-                                <!-- 可编辑模式下用于手动输入模型 ID -->
-                                <TextBox x:Name="PART_EditableTextBox"
-                                         Margin="14,10,34,10"
-                                         Background="Transparent"
-                                         BorderThickness="0"
-                                         Foreground="{TemplateBinding Foreground}"
-                                         CaretBrush="{TemplateBinding Foreground}"
-                                         FontFamily="{TemplateBinding FontFamily}"
-                                         FontSize="{TemplateBinding FontSize}"
-                                         VerticalContentAlignment="Center"
-                                         Visibility="Collapsed"/>
-                                <Popup x:Name="PART_Popup"
-                                       AllowsTransparency="True"
-                                       Focusable="False"
-                                       Placement="Bottom"
-                                       PopupAnimation="Fade"
-                                       IsOpen="{TemplateBinding IsDropDownOpen}">
-                                    <Border MinWidth="{TemplateBinding ActualWidth}"
-                                            MaxHeight="240"
-                                            Margin="0,4,0,0"
-                                            Background="{DynamicResource AppSurfaceBrush}"
-                                            BorderBrush="{DynamicResource AppBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="8">
-                                        <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
-                                            <ItemsPresenter/>
-                                        </ScrollViewer>
-                                    </Border>
-                                </Popup>
-                            </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsEditable" Value="True">
-                                <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed"/>
-                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="DialogButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="88"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- 页2：表单字段错峰入场（由代码后置在切换到表单页时播放） -->
+        <Storyboard x:Key="FormFieldsStagger">
+            <DoubleAnimation Storyboard.TargetName="NameGroup"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.24">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="NameGroup"
+                             Storyboard.TargetProperty="RenderTransform.Y"
+                             From="8" To="0" Duration="0:0:0.24">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="ModelGroup"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.06">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="ModelGroup"
+                             Storyboard.TargetProperty="RenderTransform.Y"
+                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.06">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="BaseUrlGroup"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.12">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="BaseUrlGroup"
+                             Storyboard.TargetProperty="RenderTransform.Y"
+                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.12">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="ApiKeyGroup"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.18">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="ApiKeyGroup"
+                             Storyboard.TargetProperty="RenderTransform.Y"
+                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.18">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="HintGroup"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.24" BeginTime="0:0:0.24">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="HintGroup"
+                             Storyboard.TargetProperty="RenderTransform.Y"
+                             From="8" To="0" Duration="0:0:0.24" BeginTime="0:0:0.24">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
     </Window.Resources>
 
+    <!-- 圆角卡片：Margin 为投影留出空间 -->
     <Border x:Name="DialogRoot"
             Margin="16"
             Background="{DynamicResource AppBackgroundBrush}"
@@ -273,7 +145,7 @@
             <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.35" Color="Black"/>
         </Border.Effect>
         <Border.RenderTransform>
-            <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
+            <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
         </Border.RenderTransform>
 
         <Grid>
@@ -292,83 +164,27 @@
                 <Grid>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
                         <Button x:Name="BackButton"
-                                Width="32" Height="32"
-                                Background="Transparent"
-                                Cursor="Hand"
-                                FocusVisualStyle="{x:Null}"
+                                Style="{StaticResource DialogIconButtonStyle}"
                                 Visibility="Collapsed"
                                 Click="BackButton_Click">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
-                                        <TextBlock Text="&#xE76B;"
-                                                   FontFamily="{StaticResource FontFamilyIcon}"
-                                                   FontSize="{StaticResource FontSizeIconSmall}"
-                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppBorderBrush}"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
+                            <TextBlock Text="&#xE76B;"
+                                       FontFamily="{DynamicResource FontFamilyIcon}"
+                                       FontSize="{DynamicResource FontSizeIconSmall}"
+                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
                         </Button>
                         <TextBlock x:Name="DialogTitleText"
                                    Text="添加模型"
                                    Margin="8,0,0,0"
-                                   FontFamily="{StaticResource FontFamilyBody}"
-                                   FontSize="{StaticResource FontSizeBody}"
-                                   FontWeight="{StaticResource FontWeightSemiBold}"
+                                   FontFamily="{DynamicResource FontFamilyBody}"
+                                   FontSize="{DynamicResource FontSizeBody}"
+                                   FontWeight="{DynamicResource FontWeightSemiBold}"
                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                     <Button x:Name="CloseButton"
-                            Width="46" Height="44"
+                            Style="{StaticResource DialogCloseButtonStyle}"
                             HorizontalAlignment="Right"
-                            Background="Transparent"
-                            Cursor="Hand"
-                            FocusVisualStyle="{x:Null}"
-                            Click="CloseButton_Click">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}">
-                                    <Grid>
-                                        <Border x:Name="HoverBg" Background="#E81123" CornerRadius="0,10,0,0" Opacity="0"/>
-                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Foreground" Value="White"/>
-                                        <Trigger.EnterActions>
-                                            <BeginStoryboard>
-                                                <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetName="HoverBg"
-                                                                     Storyboard.TargetProperty="Opacity"
-                                                                     To="1" Duration="0:0:0.1"/>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </Trigger.EnterActions>
-                                        <Trigger.ExitActions>
-                                            <BeginStoryboard>
-                                                <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetName="HoverBg"
-                                                                     Storyboard.TargetProperty="Opacity"
-                                                                     To="0" Duration="0:0:0.15"/>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </Trigger.ExitActions>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                        <TextBlock Text="&#xE8BB;"
-                                   FontFamily="{StaticResource FontFamilyIcon}"
-                                   FontSize="{StaticResource FontSizeIconTiny}"/>
-                    </Button>
+                            Click="CloseButton_Click"/>
                 </Grid>
             </Border>
 
@@ -377,9 +193,12 @@
                 <Button x:Name="CustomModelButton"
                         Style="{StaticResource ProviderButtonStyle}"
                         Click="CustomModelButton_Click">
+                    <Button.RenderTransform>
+                        <TranslateTransform/>
+                    </Button.RenderTransform>
                     <TextBlock Text="&#xE710;"
-                               FontFamily="{StaticResource FontFamilyIcon}"
-                               FontSize="{StaticResource FontSizeIconSmall}"
+                               FontFamily="{DynamicResource FontFamilyIcon}"
+                               FontSize="{DynamicResource FontSizeIconSmall}"
                                Foreground="{DynamicResource AppTextPrimaryBrush}"/>
                     <Button.Tag>自定义模型</Button.Tag>
                 </Button>
@@ -387,6 +206,9 @@
                 <Button x:Name="DeepSeekButton"
                         Style="{StaticResource ProviderButtonStyle}"
                         Click="DeepSeekButton_Click">
+                    <Button.RenderTransform>
+                        <TranslateTransform/>
+                    </Button.RenderTransform>
                     <Image Source="pack://application:,,,/Assets/Providers/deepseek.ico"
                            Width="22" Height="22"/>
                     <Button.Tag>DeepSeek</Button.Tag>
@@ -396,22 +218,20 @@
                         Style="{StaticResource ProviderButtonStyle}"
                         Margin="0"
                         Click="KimiCnButton_Click">
+                    <Button.RenderTransform>
+                        <TranslateTransform/>
+                    </Button.RenderTransform>
                     <Image Source="pack://application:,,,/Assets/Providers/kimi.ico"
                            Width="22" Height="22"/>
                     <Button.Tag>Kimi CN</Button.Tag>
                 </Button>
             </StackPanel>
 
-            <!-- 页 2：模型配置表单（通过服务商添加） -->
+            <!-- 页 2：模型配置表单 -->
             <StackPanel x:Name="FormPanel" Grid.Row="1" Margin="20,20,20,0" Visibility="Collapsed">
-                <!-- 连接失败提示横幅 -->
+                <!-- 连接失败提示横幅：默认隐藏，失败时淡入并轻微下滑 -->
                 <Border x:Name="ErrorBanner"
-                        Margin="0,0,0,14"
-                        Padding="12,10"
-                        Background="#22E81123"
-                        BorderBrush="#E81123"
-                        BorderThickness="1"
-                        CornerRadius="8"
+                        Style="{StaticResource DialogErrorBannerStyle}"
                         Opacity="0"
                         Visibility="Collapsed">
                     <Border.RenderTransform>
@@ -423,159 +243,171 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="&#xE783;"
-                                   FontFamily="{StaticResource FontFamilyIcon}"
-                                   FontSize="{StaticResource FontSizeIcon}"
+                                   FontFamily="{DynamicResource FontFamilyIcon}"
+                                   FontSize="{DynamicResource FontSizeIcon}"
                                    Foreground="#E81123"
                                    VerticalAlignment="Top"
                                    Margin="0,1,8,0"/>
                         <StackPanel Grid.Column="1">
                             <TextBlock Text="连接失败，请检查服务商、Base URL 与 API Key 是否正确"
-                                       FontFamily="{StaticResource FontFamilyBody}"
-                                       FontSize="{StaticResource FontSizeBody}"
-                                       FontWeight="{StaticResource FontWeightSemiBold}"
+                                       FontFamily="{DynamicResource FontFamilyBody}"
+                                       FontSize="{DynamicResource FontSizeBody}"
+                                       FontWeight="{DynamicResource FontWeightSemiBold}"
                                        Foreground="{DynamicResource AppTextPrimaryBrush}"
                                        TextWrapping="Wrap"/>
                             <TextBlock x:Name="ErrorDetailText"
                                        Margin="0,4,0,0"
-                                       FontFamily="{StaticResource FontFamilyBody}"
-                                       FontSize="{StaticResource FontSizeCaption}"
+                                       FontFamily="{DynamicResource FontFamilyBody}"
+                                       FontSize="{DynamicResource FontSizeCaption}"
                                        Foreground="{DynamicResource AppTextSecondaryBrush}"
                                        TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <TextBlock Style="{StaticResource FieldLabelStyle}" Text="显示名称"/>
-                <!-- 服务商：预设只读展示；自定义模型可编辑名称 -->
-                <Border x:Name="ProviderReadonlyPanel"
-                        Margin="0,0,0,14"
-                        Padding="14,10"
-                        Background="{DynamicResource AppSurfaceBrush}"
-                        BorderBrush="{DynamicResource AppBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8">
-                    <StackPanel Orientation="Horizontal">
-                        <Image x:Name="ProviderLogo"
-                               Width="18" Height="18"
-                               Margin="0,0,8,0"
-                               VerticalAlignment="Center"/>
-                        <TextBlock x:Name="ProviderNameText"
-                                   FontFamily="{StaticResource FontFamilyBody}"
-                                   FontSize="{StaticResource FontSizeBody}"
-                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                   VerticalAlignment="Center"/>
+                <Grid x:Name="NameGroup">
+                    <Grid.RenderTransform>
+                        <TranslateTransform/>
+                    </Grid.RenderTransform>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="显示名称"/>
+                        <!-- 服务商：预设只读展示；自定义模型可编辑名称 -->
+                        <Border x:Name="ProviderReadonlyPanel"
+                                Margin="0,0,0,14"
+                                Padding="14,10"
+                                Background="{DynamicResource AppSurfaceBrush}"
+                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <StackPanel Orientation="Horizontal">
+                                <Image x:Name="ProviderLogo"
+                                       Width="18" Height="18"
+                                       Margin="0,0,8,0"
+                                       VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ProviderNameText"
+                                           FontFamily="{DynamicResource FontFamilyBody}"
+                                           FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBox x:Name="ProviderNameBox"
+                                 Style="{StaticResource FieldInputStyle}"
+                                 Visibility="Collapsed"/>
                     </StackPanel>
-                </Border>
-                <TextBox x:Name="ProviderNameBox"
-                         Style="{StaticResource FieldInputStyle}"
-                         Visibility="Collapsed"/>
+                </Grid>
 
-                <TextBlock Style="{StaticResource FieldLabelStyle}">
-                    <Run Foreground="#E81123">* </Run><Run Text="模型"/>
-                </TextBlock>
-                <!-- 预设服务商：初始显示占位提示，点击刷新按钮拉到列表后切换为下拉框 -->
-                <Grid x:Name="ModelFetchPanel" Margin="0,0,0,14">
-                    <Border Padding="14,10,44,10"
-                            Background="{DynamicResource AppSurfaceBrush}"
-                            BorderBrush="{DynamicResource AppBorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="8">
-                        <TextBlock Text="请先输入 API 密钥才能获取模型列表"
-                                   FontFamily="{StaticResource FontFamilyBody}"
-                                   FontSize="{StaticResource FontSizeBody}"
-                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                   TextTrimming="CharacterEllipsis"/>
-                    </Border>
-                    <Button x:Name="ModelRefreshButton"
-                            Width="36" Height="36"
-                            Margin="0,0,4,0"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Background="Transparent"
-                            Cursor="Hand"
-                            FocusVisualStyle="{x:Null}"
-                            ToolTip="获取模型列表"
-                            Click="ModelRefreshButton_Click">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd"
-                                        Background="Transparent"
-                                        CornerRadius="6">
-                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AppBorderBrush}"/>
-                                    </Trigger>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.35"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                        <TextBlock x:Name="ModelRefreshIcon"
-                                   Text="&#xE72C;"
-                                   FontFamily="{StaticResource FontFamilyIcon}"
-                                   FontSize="{StaticResource FontSizeIconSmall}"
-                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                   RenderTransformOrigin="0.5,0.5">
-                            <TextBlock.RenderTransform>
-                                <RotateTransform/>
-                            </TextBlock.RenderTransform>
+                <Grid x:Name="ModelGroup">
+                    <Grid.RenderTransform>
+                        <TranslateTransform/>
+                    </Grid.RenderTransform>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource FieldLabelStyle}">
+                            <Run Foreground="#E81123">* </Run><Run Text="模型"/>
                         </TextBlock>
-                    </Button>
+                        <!-- 预设服务商：先点击刷新按钮拉取模型列表，成功后切换为可展开的下拉框 -->
+                        <Grid x:Name="ModelFetchPanel" Margin="0,0,0,14">
+                            <Border Padding="14,10,44,10"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                <TextBlock Text="请先输入 API 密钥才能获取模型列表"
+                                           FontFamily="{DynamicResource FontFamilyBody}"
+                                           FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Border>
+                            <Button x:Name="ModelRefreshButton"
+                                    Style="{StaticResource DialogIconButtonStyle}"
+                                    Width="36" Height="36"
+                                    Margin="0,0,4,0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    ToolTip="获取模型列表"
+                                    Click="ModelRefreshButton_Click">
+                                <TextBlock x:Name="ModelRefreshIcon"
+                                           Text="&#xE72C;"
+                                           FontFamily="{DynamicResource FontFamilyIcon}"
+                                           FontSize="{DynamicResource FontSizeIconSmall}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                           RenderTransformOrigin="0.5,0.5">
+                                    <TextBlock.RenderTransform>
+                                        <RotateTransform/>
+                                    </TextBlock.RenderTransform>
+                                </TextBlock>
+                            </Button>
+                        </Grid>
+                        <!-- 预设：拉取成功后的模型下拉框 -->
+                        <ComboBox x:Name="ModelCombo"
+                                  Style="{StaticResource FieldComboStyle}"
+                                  Visibility="Collapsed"/>
+                        <!-- 自定义模型：可手动输入，也可从后台拉取的列表中选择 -->
+                        <ComboBox x:Name="ModelCustomCombo"
+                                  Style="{StaticResource FieldComboStyle}"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="False"
+                                  DropDownOpened="ModelCustomCombo_DropDownOpened"
+                                  Visibility="Collapsed"/>
+                    </StackPanel>
                 </Grid>
-                <!-- 预设：拉取成功后的模型下拉框 -->
-                <ComboBox x:Name="ModelCombo"
-                          Style="{StaticResource FieldComboStyle}"
-                          Visibility="Collapsed"/>
-                <!-- 自定义模型：可手动输入，也可从后台拉取的列表中选择 -->
-                <ComboBox x:Name="ModelCustomCombo"
-                          Style="{StaticResource FieldComboStyle}"
-                          IsEditable="True"
-                          IsTextSearchEnabled="False"
-                          DropDownOpened="ModelCustomCombo_DropDownOpened"
-                          Visibility="Collapsed"/>
 
-                <StackPanel x:Name="BaseUrlPanel" Visibility="Collapsed">
-                    <TextBlock Style="{StaticResource FieldLabelStyle}">
-                        <Run Foreground="#E81123">* </Run><Run Text="Base URL"/>
-                    </TextBlock>
-                    <TextBox x:Name="BaseUrlBox"
-                             Style="{StaticResource FieldInputStyle}"
-                             LostFocus="BaseUrlBox_LostFocus"/>
-                </StackPanel>
-
-                <Grid Margin="0,0,0,4">
-                    <TextBlock Style="{StaticResource FieldLabelStyle}" Margin="0">
-                        <Run Foreground="#E81123">* </Run><Run Text="API 密钥"/>
-                    </TextBlock>
-                    <TextBlock x:Name="GetApiKeyLink"
-                               Text="获取 API 密钥"
-                               HorizontalAlignment="Right"
-                               FontFamily="{StaticResource FontFamilyBody}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource AppTextSecondaryBrush}"
-                               TextDecorations="Underline"
-                               Cursor="Hand"
-                               MouseLeftButtonUp="GetApiKeyLink_MouseLeftButtonUp"/>
+                <Grid x:Name="BaseUrlGroup">
+                    <Grid.RenderTransform>
+                        <TranslateTransform/>
+                    </Grid.RenderTransform>
+                    <StackPanel x:Name="BaseUrlPanel" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource FieldLabelStyle}">
+                            <Run Foreground="#E81123">* </Run><Run Text="Base URL"/>
+                        </TextBlock>
+                        <TextBox x:Name="BaseUrlBox"
+                                 Style="{StaticResource FieldInputStyle}"
+                                 LostFocus="BaseUrlBox_LostFocus"/>
+                    </StackPanel>
                 </Grid>
-                <PasswordBox x:Name="ApiKeyBox"
-                             Style="{StaticResource FieldPasswordStyle}"
-                             LostFocus="ApiKeyBox_LostFocus"
-                             PasswordChanged="ApiKeyBox_PasswordChanged"/>
 
-                <StackPanel Orientation="Horizontal" Margin="0,2,0,14">
-                    <TextBlock Text="&#xE946;"
-                               FontFamily="{StaticResource FontFamilyIcon}"
-                               FontSize="{StaticResource FontSizeIconSmall}"
-                               Foreground="{DynamicResource AppTextSecondaryBrush}"
-                               Margin="0,1,6,0"/>
-                    <TextBlock Text="连通性测试会发起一次真实请求，会消耗少量模型Token"
-                               FontFamily="{StaticResource FontFamilyBody}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-                </StackPanel>
+                <Grid x:Name="ApiKeyGroup">
+                    <Grid.RenderTransform>
+                        <TranslateTransform/>
+                    </Grid.RenderTransform>
+                    <StackPanel>
+                        <Grid Margin="0,0,0,4">
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Margin="0">
+                                <Run Foreground="#E81123">* </Run><Run Text="API 密钥"/>
+                            </TextBlock>
+                            <TextBlock x:Name="GetApiKeyLink"
+                                       Text="获取 API 密钥"
+                                       HorizontalAlignment="Right"
+                                       FontFamily="{DynamicResource FontFamilyBody}"
+                                       FontSize="{DynamicResource FontSizeCaption}"
+                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                       TextDecorations="Underline"
+                                       Cursor="Hand"
+                                       MouseLeftButtonUp="GetApiKeyLink_MouseLeftButtonUp"/>
+                        </Grid>
+                        <PasswordBox x:Name="ApiKeyBox"
+                                     Style="{StaticResource FieldPasswordStyle}"
+                                     LostFocus="ApiKeyBox_LostFocus"
+                                     PasswordChanged="ApiKeyBox_PasswordChanged"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid x:Name="HintGroup">
+                    <Grid.RenderTransform>
+                        <TranslateTransform/>
+                    </Grid.RenderTransform>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,14">
+                        <TextBlock Text="&#xE946;"
+                                   FontFamily="{DynamicResource FontFamilyIcon}"
+                                   FontSize="{DynamicResource FontSizeIconSmall}"
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                   Margin="0,1,6,0"/>
+                        <TextBlock Text="连通性测试会发起一次真实请求，会消耗少量模型Token"
+                                   FontFamily="{DynamicResource FontFamilyBody}"
+                                   FontSize="{DynamicResource FontSizeCaption}"
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                    </StackPanel>
+                </Grid>
             </StackPanel>
 
             <!-- 按钮栏：仅表单页可见 -->

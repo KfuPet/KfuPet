@@ -9,6 +9,8 @@
                 <ResourceDictionary Source="Resources/Colors.Light.xaml"/>
                 <!-- 字体与字号令牌（主题无关） -->
                 <ResourceDictionary Source="Resources/Typography.xaml"/>
+                <!-- 弹窗共享样式（模型配置弹窗等；主题无关） -->
+                <ResourceDictionary Source="Resources/DialogStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

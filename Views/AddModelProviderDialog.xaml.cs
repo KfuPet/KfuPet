@@ -49,6 +49,7 @@ namespace KfuPet.Views
         {
             InitializeComponent();
             Loaded += (s, e) => PlayEntranceAnimation();
+            Loaded += (s, e) => PlayProviderItemsStagger();
             KeyDown += (s, e) =>
             {
                 if (e.Key == Key.Escape)
@@ -111,6 +112,7 @@ namespace KfuPet.Views
             BackButton.Visibility = Visibility.Visible;
             DialogTitleText.Text = "通过服务商添加";
             AnimatePageSwitch(FormPanel, fromX: 16);
+            PlayFormFieldsStagger();
         }
 
         /// <summary>
@@ -125,6 +127,7 @@ namespace KfuPet.Views
             DialogTitleText.Text = "添加模型";
             HideError();
             AnimatePageSwitch(ProviderListPanel, fromX: -16);
+            PlayProviderItemsStagger();
         }
 
         /// <summary>
@@ -494,6 +497,24 @@ namespace KfuPet.Views
                     new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
                 scale.BeginAnimation(ScaleTransform.ScaleYProperty,
                     new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
+            }
+        }
+
+        /// <summary>服务商条目依次淡入上移，形成错峰入场。</summary>
+        private void PlayProviderItemsStagger()
+        {
+            if (FindResource("ProviderItemsStagger") is Storyboard storyboard)
+            {
+                storyboard.Begin(this);
+            }
+        }
+
+        /// <summary>表单字段依次淡入上移，形成错峰入场。</summary>
+        private void PlayFormFieldsStagger()
+        {
+            if (FindResource("FormFieldsStagger") is Storyboard storyboard)
+            {
+                storyboard.Begin(this);
             }
         }
     }
