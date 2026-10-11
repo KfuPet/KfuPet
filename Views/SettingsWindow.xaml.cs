@@ -157,12 +157,12 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 窗口重新获得焦点时，若停在记忆页则从磁盘重载并刷新统计，
+        /// 窗口重新获得焦点时，若停在预览面板页（承载记忆内容）则从磁盘重载并刷新统计，
         /// 覆盖「删除后把备份文件复制回来」这类应用无法感知的外部文件变动。
         /// </summary>
         private void SettingsWindow_Activated(object? sender, EventArgs e)
         {
-            if (NavList.SelectedIndex == 3)
+            if (NavList.SelectedIndex == 0)
             {
                 RefreshMemoryStatistics();
             }
@@ -207,7 +207,7 @@ namespace KfuPet.Views
         /// </summary>
         public void ShowModelConfigPage()
         {
-            NavList.SelectedIndex = 1;
+            NavList.SelectedIndex = 2;
         }
 
         /// <summary>
@@ -260,17 +260,18 @@ namespace KfuPet.Views
 
             var currentPanel = NavList.SelectedIndex switch
             {
-                1 => ModelConfigPanel,
-                2 => ModelFeaturesPanel,
-                3 => MemoryPanel,
-                4 => DeveloperPanel,
-                5 => AboutPanel,
+                0 => MemoryPanel,          // 预览面板
+                1 => GeneralPanel,         // 通用
+                2 => ModelConfigPanel,     // 模型
+                3 => ModelFeaturesPanel,   // 模型功能
+                4 => DeveloperPanel,       // 开发者模式
+                5 => AboutPanel,           // 关于
                 _ => GeneralPanel
             };
             ShowOnlyPanel(currentPanel);
             PlayPageEnterAnimation(currentPanel);
 
-            if (NavList.SelectedIndex == 3)
+            if (NavList.SelectedIndex == 0)
             {
                 PlayMemoryPageEntrance();
             }

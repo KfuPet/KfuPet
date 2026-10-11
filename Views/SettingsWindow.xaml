@@ -1023,6 +1023,15 @@
                                  SelectionChanged="NavList_SelectionChanged">
                             <ListBoxItem>
                                 <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE7B3;"
+                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                               FontSize="{StaticResource FontSizeIcon}" Width="26"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="预览面板" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ListBoxItem>
+                            <ListBoxItem>
+                                <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE713;"
                                                FontFamily="{StaticResource FontFamilyIcon}"
                                                FontSize="{StaticResource FontSizeIcon}" Width="26"
@@ -1046,15 +1055,6 @@
                                                FontSize="{StaticResource FontSizeIcon}" Width="26"
                                                VerticalAlignment="Center"/>
                                     <TextBlock Text="模型功能" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </ListBoxItem>
-                            <ListBoxItem>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE823;"
-                                               FontFamily="{StaticResource FontFamilyIcon}"
-                                               FontSize="{StaticResource FontSizeIcon}" Width="26"
-                                               VerticalAlignment="Center"/>
-                                    <TextBlock Text="记忆" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </ListBoxItem>
                             <!-- 开发者模式入口：默认隐藏，通过“关于”页版本徽章连续点击 5 次唤出 -->
@@ -2006,7 +2006,7 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- 记忆页 -->
+                    <!-- 预览面板页（当前承载原“记忆”页的全部内容） -->
                     <ScrollViewer x:Name="MemoryPanel"
                                   Style="{StaticResource OverlayScrollViewerStyle}"
                                   Visibility="Collapsed"
@@ -2017,7 +2017,7 @@
                         </ScrollViewer.RenderTransform>
 
                         <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="记忆" Style="{StaticResource SectionTitleStyle}"/>
+                            <TextBlock Text="预览面板" Style="{StaticResource SectionTitleStyle}"/>
 
                             <!-- 记忆概览：三级记忆状态卡片（数字滚动 + 进度条缓动填充） -->
                             <Grid Margin="0,16,0,0">
