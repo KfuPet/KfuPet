@@ -7,7 +7,8 @@ namespace KfuPet.Services
     /// 角色反应文案服务：为触摸反应、拖动越界回正（snapBack）与主动搭话提供两类文案。
     /// 一、事件提示：把"发生了什么"整理成发给 AI 的用户消息（<see cref="BuildEventPrompt"/>、<see cref="BuildSnapBackEventPrompt"/>、<see cref="BuildProactiveEventPrompt"/>），
     ///     文案取自角色包 reactions.json 的 eventPrompt 段；
-    /// 二、备用台词：从角色包 reactions.json 的 reactions 段读取，未接入 AI 或 AI 请求失败时使用。
+    /// 二、备用台词：从角色包 reactions.json 的 reactions 段读取，未接入 AI 或 AI 请求失败时使用；
+    ///     其中 thinking 键额外作为"发送消息后、AI 回复到达前"的气泡占位台词。
     /// 两类文案均完全由角色包提供，代码不再内置默认；启动时 <see cref="Load"/> 会检测配置完整性并记录日志。
     /// 左右与骨骼命名一致，指画面上的左右（Left 为画面左侧）。
     /// </summary>
@@ -47,6 +48,9 @@ namespace KfuPet.Services
         /// <summary>晚上问候的事件键。</summary>
         public const string EventEveningGreeting = "eveningGreeting";
 
+        /// <summary>思考中占位台词的事件键：主人发消息后、AI 回复到达前显示的一句过渡台词（仅 reactions 段使用）。</summary>
+        public const string EventThinking = "thinking";
+
         // ── 事件提示键（与 reactions.json 里 eventPrompt 的键一致）────
 
         /// <summary>抚摸头部（按住头部来回滑动）的事件键。</summary>
@@ -69,7 +73,7 @@ namespace KfuPet.Services
         private static readonly string[] RequiredReactionKeys =
         {
             PartHead, PartArmLeft, PartArmRight, PartLegLeft, PartLegRight, PartBody, EventSnapBack,
-            EventIdleChat, EventWelcomeBack, EventMorningGreeting, EventEveningGreeting
+            EventIdleChat, EventWelcomeBack, EventMorningGreeting, EventEveningGreeting, EventThinking
         };
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -348,6 +352,7 @@ namespace KfuPet.Services
                 "welcomeback" => EventWelcomeBack,
                 "morninggreeting" => EventMorningGreeting,
                 "eveninggreeting" => EventEveningGreeting,
+                "thinking" => EventThinking,
                 _ => null
             };
         }

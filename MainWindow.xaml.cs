@@ -1278,7 +1278,14 @@ namespace KfuPet
 
             _isSending = true;
             ChatInputBox.Clear();
-            ShowBubbleBatches(new List<string> { "唔……" });
+
+            // 等待回复期间的占位台词取自角色包 reactions.json（thinking 键），代码不再内置默认
+            var thinking = _touchReactions.PickLine(TouchReactionService.EventThinking);
+            if (!string.IsNullOrEmpty(thinking))
+            {
+                ShowBubbleBatches(new List<string> { thinking });
+            }
+
             Log.Info($"[对话] 用户发送消息 {text.Length} 字，使用模型 {model.ModelId}（{model.ModelName}）");
             try
             {
