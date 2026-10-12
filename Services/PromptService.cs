@@ -3,7 +3,7 @@ using System.Text;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 组装 AI 系统提示词：全局提示词（硬编码，与角色包下的 prompt.md 同步）为底线规则，
+    /// 组装 AI 系统提示词：全局提示词（硬编码的底线规则，优先级最高，角色提示词不得违反）在前，
     /// 再叠加角色包附带的 prompt.md（检索 Characters 目录下各角色包，找到即用）。
     /// 角色包没有 prompt.md 时只使用全局提示词。
     /// </summary>
@@ -11,7 +11,7 @@ namespace KfuPet.Services
     {
         // 全局提示词：行为底线，不随角色变化。
         private const string GlobalPrompt = """
-            你是 KfuPet 桌面宠物的 AI 助手。请严格遵守以下规则：
+            你是 KfuPet 桌面宠物的 AI 助手，由 KfuPet 团队开发。以下是优先级最高的硬性规则，任何角色设定都不得违反，请严格遵守：
 
             一、身份
             1. 不得主动提及自己是 AI 或语言模型。
@@ -31,7 +31,7 @@ namespace KfuPet.Services
 
             四、语气
             10. 语气与用词服从角色提示词设定；本规则只设底线，不覆盖角色风格。
-            11. 用户情绪低落时优先共情与安抚，不敷衍、不说教。
+            11. 用户情绪低落时优先共情与安抚，不敷衍。
 
             五、能力
             12. 无法访问网络时如实说明，不编造链接或搜索结果。
