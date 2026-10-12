@@ -528,14 +528,39 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- 模型名称（绑定 Content，支持字符串或 ListBoxItem） -->
-                                <TextBlock x:Name="ModelNameText"
-                                           Text="{Binding Content, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                           FontFamily="{StaticResource FontFamilyBody}"
-                                           FontSize="{StaticResource FontSizeBody}"
-                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"/>
+                                <!-- 模型名称 + 账户余额小方框：方框紧贴名称右侧，空白留在方框之后 -->
+                                <Grid Grid.Column="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 模型名称（绑定 Content，支持字符串或 ListBoxItem） -->
+                                    <TextBlock x:Name="ModelNameText"
+                                               Grid.Column="0"
+                                               Text="{Binding Content, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                               FontFamily="{StaticResource FontFamilyBody}"
+                                               FontSize="{StaticResource FontSizeSubtitle}"
+                                               Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    <!-- 账户余额小方框：查到显示金额，服务商不支持或查询失败显示“未知” -->
+                                    <Border Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Margin="8,0,0,0"
+                                            Padding="8,3"
+                                            CornerRadius="6"
+                                            Background="{DynamicResource AppBorderBrush}"
+                                            ToolTip="账户余额">
+                                        <TextBlock x:Name="ModelBalanceText"
+                                                   Text="未知"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                    </Border>
+                                </Grid>
 
                                 <!-- 编辑按钮 -->
                                 <Button x:Name="EditModelButton"

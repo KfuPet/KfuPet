@@ -1319,6 +1319,9 @@ namespace KfuPet.Views
                     toggle.Checked += (s2, e2) => OnModelToggleChanged(item, true);
                     toggle.Unchecked += (s2, e2) => OnModelToggleChanged(item, false);
                 }
+
+                // 模板就绪后异步查询账户余额（只对已知服务商有结果）
+                RefreshModelBalance(model, item);
             };
 
             ModelList.Items.Add(item);
@@ -1333,6 +1336,28 @@ namespace KfuPet.Views
                 translate.BeginAnimation(TranslateTransform.YProperty,
                     new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
             }
+        }
+
+        /// <summary>
+        /// 在卡片上异步刷新该模型的账户余额；服务商不支持或查询失败时显示“未知”。
+        /// </summary>
+        private void RefreshModelBalance(ModelConfig model, ListBoxItem item)
+        {
+            if (item.Template.FindName("ModelBalanceText", item) is TextBlock balanceText)
+            {
+                _ = LoadModelBalanceAsync(model, balanceText);
+            }
+        }
+
+        /// <summary>
+        /// 查询余额并把结果显示到卡片的小方框里，查不到统一显示“未知”。
+        /// </summary>
+        private static async Task LoadModelBalanceAsync(ModelConfig model, TextBlock target)
+        {
+            target.Text = "查询中";
+
+            var text = await ModelBalanceService.QueryAsync(model.BaseUrl, model.ApiKey);
+            target.Text = string.IsNullOrEmpty(text) ? "未知" : text;
         }
 
         /// <summary>
@@ -1418,6 +1443,7 @@ namespace KfuPet.Views
             {
                 ModelConfigService.Update(model.Id, args.BaseUrl, args.ApiKey, args.ModelName, args.ModelId);
                 item.Content = args.ModelName;
+                RefreshModelBalance(model, item);
             };
             dialog.Show();
         }
