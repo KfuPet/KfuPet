@@ -242,7 +242,7 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = $"当前用户话题：{userMessage}\n\n记忆列表：\n{sb}" }
             };
 
-            var reply = await _chatService.SendRawAsync(model, messages);
+            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
             return ParseStringArray(reply).Take(topK).ToList();
         }
 
@@ -289,7 +289,7 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = $"当前用户消息：{userMessage}\n\n归档记录：\n{sb}" }
             };
 
-            var reply = await _chatService.SendRawAsync(model, messages);
+            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
             return ParseStringArray(reply);
         }
 
@@ -418,7 +418,7 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = $"用户说：{user}\n助手回复：{assistant}" }
             };
 
-            var reply = await _chatService.SendRawAsync(model, messages);
+            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
             return ParseItems(reply);
         }
 
@@ -593,7 +593,7 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = sb.ToString() }
             };
 
-            var reply = await _chatService.SendRawAsync(model, messages);
+            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
             return ParseItems(reply);
         }
 
@@ -613,7 +613,7 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = $"信息：{content}" }
             };
 
-            var reply = await _chatService.SendRawAsync(model, messages);
+            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
             return ParseScore(reply);
         }
 
@@ -633,7 +633,7 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = joined }
             };
 
-            return (await _chatService.SendRawAsync(model, messages)).Trim();
+            return (await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory)).Trim();
         }
 
         /// <summary>解析信息点数组 JSON（失败时返回空列表）。</summary>

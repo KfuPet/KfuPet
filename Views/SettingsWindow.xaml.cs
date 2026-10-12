@@ -847,6 +847,7 @@ namespace KfuPet.Views
 
             RefreshChatHistoryPreview();
             RefreshLongTermMemoryPreview();
+            PlayTokenUsageEntrance();
         }
 
         /// <summary>把当前聊天记录数量显示在卡片预览里。</summary>
@@ -887,7 +888,38 @@ namespace KfuPet.Views
 
             RefreshChatHistoryPreview();
             RefreshLongTermMemoryPreview();
+            RefreshTokenUsageStatistics();
         }
+
+        /// <summary>直接刷新用量区的 token 与花费数字（不播动画）。</summary>
+        private void RefreshTokenUsageStatistics()
+        {
+            var usage = TokenUsageService.Instance.GetSnapshot();
+            TokenConversationText.Text = FormatTokenCount(usage.ConversationTokens);
+            TokenLastTurnText.Text = FormatTokenCount(usage.LastTurnTokens);
+            TokenOtherText.Text = FormatTokenCount(usage.OtherTokens);
+            TokenCostText.Text = FormatCost(usage.EstimatedCostCny);
+        }
+
+        /// <summary>用量区三个 token 数字与花费从 0 滚动到当前值，节奏比记忆卡片稍晚。</summary>
+        private void PlayTokenUsageEntrance()
+        {
+            var usage = TokenUsageService.Instance.GetSnapshot();
+            PlayCountUpAnimation(TokenConversationText, usage.ConversationTokens, TimeSpan.FromMilliseconds(150),
+                value => FormatTokenCount((long)Math.Round(value)));
+            PlayCountUpAnimation(TokenLastTurnText, usage.LastTurnTokens, TimeSpan.FromMilliseconds(210),
+                value => FormatTokenCount((long)Math.Round(value)));
+            PlayCountUpAnimation(TokenOtherText, usage.OtherTokens, TimeSpan.FromMilliseconds(270),
+                value => FormatTokenCount((long)Math.Round(value)));
+            PlayCountUpAnimation(TokenCostText, (double)usage.EstimatedCostCny, TimeSpan.FromMilliseconds(330),
+                value => FormatCost((decimal)value));
+        }
+
+        /// <summary>token 数量显示：千位分隔。</summary>
+        private static string FormatTokenCount(long value) => value.ToString("N0");
+
+        /// <summary>花费显示：约等于 + 两位小数。</summary>
+        private static string FormatCost(decimal value) => $"≈ ¥{value:0.00}";
 
         /// <summary>清除进行中的动画后，把进度条直接设置为当前占比。</summary>
         private static void SetProgressFill(ScaleTransform fill, int count, int capacity)

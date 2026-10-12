@@ -26,8 +26,10 @@ namespace KfuPet.Services
         /// 发送对话请求：使用调用方提供的系统提示词 + 历史 + 当前用户消息，返回 AI 回复文本。
         /// </summary>
         /// <param name="history">短期记忆（会话上下文），不含当前用户消息。</param>
+        /// <param name="category">调用来源分类，用于 token 用量统计。</param>
         public async Task<string> SendAsync(
-            ModelConfig model, string systemPrompt, IReadOnlyList<ChatMessage> history, string userMessage)
+            ModelConfig model, string systemPrompt, IReadOnlyList<ChatMessage> history, string userMessage,
+            TokenUsageCategory category = TokenUsageCategory.Other)
         {
             var messages = new List<ChatMessage>
             {
@@ -36,16 +38,18 @@ namespace KfuPet.Services
             messages.AddRange(history);
             messages.Add(new ChatMessage { Role = "user", Content = userMessage });
 
-            return await SendRawAsync(model, messages);
+            return await SendRawAsync(model, messages, category);
         }
 
         /// <summary>
         /// 发送消息列表并返回第一条回复文本，供记忆分析等内部流程复用（不带工具）。
         /// </summary>
-        internal async Task<string> SendRawAsync(ModelConfig model, IReadOnlyList<ChatMessage> messages)
+        internal async Task<string> SendRawAsync(
+            ModelConfig model, IReadOnlyList<ChatMessage> messages,
+            TokenUsageCategory category = TokenUsageCategory.Other)
         {
             var payload = BuildPayload(model, messages, null);
-            var body = await PostAsync(model, payload);
+            var body = await PostAsync(model, payload, category);
             return ExtractReply(body);
         }
 
@@ -56,13 +60,15 @@ namespace KfuPet.Services
         /// <param name="history">短期记忆（会话上下文），不含当前用户消息。</param>
         /// <param name="tools">提供给模型的工具定义列表。</param>
         /// <param name="executeToolAsync">工具执行器：接收（工具名，参数 JSON），返回结果文本。</param>
+        /// <param name="category">调用来源分类，用于 token 用量统计。</param>
         public async Task<string> SendWithToolsAsync(
             ModelConfig model,
             string systemPrompt,
             IReadOnlyList<ChatMessage> history,
             string userMessage,
             IReadOnlyList<ToolDefinition> tools,
-            Func<string, string, Task<string>> executeToolAsync)
+            Func<string, string, Task<string>> executeToolAsync,
+            TokenUsageCategory category = TokenUsageCategory.Conversation)
         {
             var messages = new List<ChatMessage>
             {
@@ -76,13 +82,13 @@ namespace KfuPet.Services
 
             try
             {
-                return await RunToolLoopAsync(model, messages, tools, executeToolAsync);
+                return await RunToolLoopAsync(model, messages, tools, executeToolAsync, category);
             }
             catch (InvalidOperationException ex) when (IsToolUnsupportedError(ex.Message))
             {
                 // 模型不支持工具调用（或工具相关参数错误）时，降级为普通对话。
                 Log.Warning($"[对话] 工具调用不可用，降级为普通对话：{ex.Message}");
-                return await SendRawAsync(model, messages);
+                return await SendRawAsync(model, messages, category);
             }
         }
 
@@ -91,11 +97,12 @@ namespace KfuPet.Services
             ModelConfig model,
             List<ChatMessage> messages,
             IReadOnlyList<ToolDefinition> tools,
-            Func<string, string, Task<string>> executeToolAsync)
+            Func<string, string, Task<string>> executeToolAsync,
+            TokenUsageCategory category)
         {
             for (var round = 0; round < MaxToolRounds; round++)
             {
-                var response = await SendMessagesAsync(model, messages, tools);
+                var response = await SendMessagesAsync(model, messages, tools, category);
 
                 if (response.ToolCalls.Count == 0)
                 {
@@ -148,10 +155,11 @@ namespace KfuPet.Services
 
         /// <summary>发送带工具的消息列表并解析回复（文本 + 工具调用）。</summary>
         private async Task<ChatResponse> SendMessagesAsync(
-            ModelConfig model, IReadOnlyList<ChatMessage> messages, IReadOnlyList<ToolDefinition>? tools)
+            ModelConfig model, IReadOnlyList<ChatMessage> messages,
+            IReadOnlyList<ToolDefinition>? tools, TokenUsageCategory category)
         {
             var payload = BuildPayload(model, messages, tools);
-            var body = await PostAsync(model, payload);
+            var body = await PostAsync(model, payload, category);
             return ExtractResponse(body);
         }
 
@@ -239,7 +247,7 @@ namespace KfuPet.Services
         }
 
         /// <summary>发起 POST 请求并返回响应体文本；非成功状态码抛出异常。</summary>
-        private async Task<string> PostAsync(ModelConfig model, JsonObject payload)
+        private async Task<string> PostAsync(ModelConfig model, JsonObject payload, TokenUsageCategory category)
         {
             var endpoint = model.BaseUrl.Trim().TrimEnd('/') + "/chat/completions";
             var stopwatch = Stopwatch.StartNew();
@@ -264,7 +272,42 @@ namespace KfuPet.Services
 
             Log.Debug($"[对话] 请求成功：HTTP {(int)response.StatusCode}，" +
                       $"耗时 {stopwatch.ElapsedMilliseconds} ms，响应 {body.Length} 字符");
+
+            // 记录本次调用的 token 用量（服务商未返回 usage 时按 0 计，仅累计请求次数）
+            var usage = ExtractUsage(body);
+            TokenUsageService.Instance.Record(
+                model, category, usage?.Prompt ?? 0, usage?.Completion ?? 0);
+
             return body;
+        }
+
+        /// <summary>
+        /// 从 OpenAI 兼容响应中解析 usage（prompt_tokens / completion_tokens）；缺失时返回 null。
+        /// </summary>
+        private static (long Prompt, long Completion)? ExtractUsage(string body)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(body);
+                if (!doc.RootElement.TryGetProperty("usage", out var usage) ||
+                    usage.ValueKind != JsonValueKind.Object)
+                {
+                    return null;
+                }
+
+                var prompt = usage.TryGetProperty("prompt_tokens", out var p) && p.TryGetInt64(out var promptValue)
+                    ? promptValue
+                    : 0;
+                var completion = usage.TryGetProperty("completion_tokens", out var c) && c.TryGetInt64(out var completionValue)
+                    ? completionValue
+                    : 0;
+
+                return (prompt, completion);
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
         }
 
         /// <summary>

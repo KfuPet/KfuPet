@@ -283,7 +283,8 @@ namespace KfuPet
                     model,
                     _mainWindow.MemorySystem.BuildBaseSystemPrompt(),
                     Array.Empty<ChatMessage>(),
-                    UpdateNotificationService.BuildEventPrompt(result));
+                    UpdateNotificationService.BuildEventPrompt(result),
+                    TokenUsageCategory.Notification);
 
                 var line = UpdateNotificationService.NormalizeLine(reply);
                 if (!string.IsNullOrEmpty(line))
@@ -493,6 +494,9 @@ namespace KfuPet
             _logPipeServer?.Dispose();
             _mutex?.Dispose();
             Services.SkeletonService.CleanupCache();
+
+            // token 用量统计收尾：把去抖窗口内尚未落盘的记录写出
+            TokenUsageService.Instance.Flush();
 
             // 落盘最后收尾，让上面的清理日志也能写进文件
             _logFileWriter?.Dispose();

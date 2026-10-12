@@ -860,7 +860,7 @@ namespace KfuPet
                     {
                         var reply = await _chatService.SendAsync(
                             model, _memorySystem.BuildBaseSystemPrompt(),
-                            Array.Empty<ChatMessage>(), eventPrompt);
+                            Array.Empty<ChatMessage>(), eventPrompt, TokenUsageCategory.SnapBack);
                         line = NormalizeReactionLine(reply);
                         source = "AI";
                     }
@@ -997,7 +997,7 @@ namespace KfuPet
                 {
                     var reply = await _chatService.SendAsync(
                         model, _memorySystem.BuildBaseSystemPrompt(),
-                        Array.Empty<ChatMessage>(), eventPrompt);
+                        Array.Empty<ChatMessage>(), eventPrompt, TokenUsageCategory.TouchReaction);
                     line = NormalizeReactionLine(reply);
                     source = "AI";
                 }
@@ -1289,11 +1289,15 @@ namespace KfuPet
             Log.Info($"[对话] 用户发送消息 {text.Length} 字，使用模型 {model.ModelId}（{model.ModelName}）");
             try
             {
+                // 新一轮对话开始：清零「上一轮对话消耗」，本轮各次调用（含工具轮次）重新累加
+                TokenUsageService.Instance.BeginConversationTurn();
+
                 var systemPrompt = await _memorySystem.BuildContextAsync(model, text);
                 var history = _memorySystem.GetShortTermMessages();
                 var reply = await _chatService.SendWithToolsAsync(
                     model, systemPrompt, history, text,
-                    _toolRegistry.GetDefinitions(), _toolRegistry.ExecuteAsync);
+                    _toolRegistry.GetDefinitions(), _toolRegistry.ExecuteAsync,
+                    TokenUsageCategory.Conversation);
                 ShowBubbleBatches(SplitIntoBatches(reply));
                 Log.Debug($"[对话] 回复已显示：{reply.Length} 字");
 
@@ -1490,7 +1494,8 @@ namespace KfuPet
                         Log.Debug($"[主动搭话] {e.Type} 请求 AI：历史 {history.Count} 条，事件消息：{eventPrompt}");
                         var stopwatch = Stopwatch.StartNew();
                         var reply = await _chatService.SendAsync(
-                            model, _memorySystem.BuildBaseSystemPrompt(), history, eventPrompt);
+                            model, _memorySystem.BuildBaseSystemPrompt(), history, eventPrompt,
+                            TokenUsageCategory.ProactiveChat);
                         line = NormalizeReactionLine(reply);
                         source = "AI";
                         Log.Debug($"[主动搭话] {e.Type} AI 回复（{stopwatch.ElapsedMilliseconds} ms，{line.Length} 字）：{line}");
