@@ -330,7 +330,7 @@
                                            FontFamily="{StaticResource FontFamilyBody}"
                                            FontSize="{StaticResource FontSizeBody}"
                                            Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-                                <TextBlock Text="模型、通用设置与停用词"
+                                <TextBlock Text="模型、通用设置、停用词与用量统计"
                                            Margin="0,2,0,0"
                                            FontFamily="{StaticResource FontFamilyBody}"
                                            FontSize="{StaticResource FontSizeCaption}"

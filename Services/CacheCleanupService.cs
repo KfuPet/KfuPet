@@ -12,7 +12,8 @@ namespace KfuPet.Services
         {
             "settings.json",
             "models.json",
-            "stopwords.json"
+            "stopwords.json",
+            "tokenusage.json"
         };
 
         /// <summary>

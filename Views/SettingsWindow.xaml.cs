@@ -993,7 +993,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 软件配置清理后的值复位：内存中的设置、模型与停用词回到初始值。
+        /// 软件配置清理后的值复位：内存中的设置、模型、停用词与用量统计回到初始值。
         /// 只做值复位——等待重启的这段时间里，任何一次保存都会把当前值写回配置文件，
         /// 若不复位就会把旧值写回去；界面与实时状态（主题、开发者模式等）交给重启自然恢复。
         /// </summary>
@@ -1002,6 +1002,7 @@ namespace KfuPet.Views
             SettingsService.Instance.ResetToDefaults();
             ModelConfigService.ResetToDefaults();
             _mainWindow.StopWordsService.ResetToDefaults();
+            TokenUsageService.Instance.ResetToDefaults();
 
             Log.Info("[清理] 软件配置已复位为初始值，等待重启生效");
         }

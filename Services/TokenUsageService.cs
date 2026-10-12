@@ -133,6 +133,23 @@ namespace KfuPet.Services
             }
         }
 
+        /// <summary>
+        /// 恢复初始状态：清空内存中的全部用量统计（磁盘上的 tokenusage.json 由“缓存清理”删除，
+        /// 之后有新的调用会重新生成）。清空后不主动落盘，避免把空数据重新写回刚删掉的配置文件。
+        /// </summary>
+        public void ResetToDefaults()
+        {
+            lock (_gate)
+            {
+                _modelUsages.Clear();
+                _categoryUsages.Clear();
+                _lastConversationTokens = 0;
+                _dirty = false;
+            }
+
+            Log.Info("[用量] token 统计已清空，恢复初始状态");
+        }
+
         /// <summary>取当前用量快照，供界面展示。</summary>
         public TokenUsageSnapshot GetSnapshot()
         {
