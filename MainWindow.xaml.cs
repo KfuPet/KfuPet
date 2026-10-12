@@ -242,6 +242,7 @@ namespace KfuPet
             _memorySystem = new MemorySystem(_chatService, LogService, StopWordsService);
             _toolRegistry = new ToolRegistry();
             _toolRegistry.Register(new WebSearchTool());
+            _toolRegistry.Register(new BalanceTool(ModelConfigService));
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
