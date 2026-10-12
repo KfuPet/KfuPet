@@ -2014,6 +2014,11 @@
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="预览面板" Style="{StaticResource SectionTitleStyle}"/>
 
+                            <!-- 记忆：预览面板内的记忆分组子标题 -->
+                            <TextBlock Text="记忆"
+                                       Style="{StaticResource SubSectionTitleStyle}"
+                                       Margin="0,24,0,0"/>
+
                             <!-- 记忆概览：三级记忆状态卡片（数字滚动 + 进度条缓动填充） -->
                             <Grid Margin="0,16,0,0">
                                 <Grid.ColumnDefinitions>
