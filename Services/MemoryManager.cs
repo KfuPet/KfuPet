@@ -31,12 +31,14 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 本地关键词检索：从查询提取关键词，返回内容包含这些关键词的记忆，零 API 开销。
+        /// 本地检索：先从查询提取关键词精确匹配，再补一层字符级二元组（bigram）模糊匹配，
+        /// 尽量在本地命中记忆、减少跌落到模型判断的次数，零 API 开销。
         /// </summary>
         public IReadOnlyList<string> KeywordSearch(string query, int topK)
         {
             var keywords = ExtractKeywords(query);
-            if (keywords.Count == 0)
+            var bigrams = ExtractBigrams(query);
+            if (keywords.Count == 0 && bigrams.Count == 0)
             {
                 return Array.Empty<string>();
             }
@@ -48,11 +50,18 @@ namespace KfuPet.Services
             }
 
             return snapshot
-                .Where(e => keywords.Any(k => e.Content.Contains(k, StringComparison.OrdinalIgnoreCase)))
-                .OrderByDescending(e => keywords.Count(k => e.Content.Contains(k, StringComparison.OrdinalIgnoreCase)))
-                .ThenByDescending(e => e.Importance)
+                .Select(e => new
+                {
+                    Entry = e,
+                    KeywordHits = keywords.Count(k => e.Content.Contains(k, StringComparison.OrdinalIgnoreCase)),
+                    BigramHits = bigrams.Count(b => e.Content.Contains(b, StringComparison.OrdinalIgnoreCase))
+                })
+                // 关键词精确命中，或命中 ≥2 个二元组（过滤单个常见片段带来的噪声）
+                .Where(x => x.KeywordHits > 0 || x.BigramHits >= 2)
+                .OrderByDescending(x => x.KeywordHits * 2 + x.BigramHits)
+                .ThenByDescending(x => x.Entry.Importance)
                 .Take(topK)
-                .Select(e => e.Content)
+                .Select(x => x.Entry.Content)
                 .ToList();
         }
 
@@ -68,8 +77,8 @@ namespace KfuPet.Services
 
             var normalized = sb.ToString();
 
-            // 停用词 → 空格（作为切分点）
-            foreach (var w in _stopWordsService.Words)
+            // 停用词 → 空格（作为切分点）；按词长降序替换，避免「你」先切断「你们」这类长词
+            foreach (var w in _stopWordsService.Words.OrderByDescending(w => w.Length))
             {
                 normalized = normalized.Replace(w, " ");
             }
@@ -80,6 +89,38 @@ namespace KfuPet.Services
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
+
+        /// <summary>
+        /// 提取字符级二元组（bigram）：中文无空格、词边界难以还原，
+        /// 用相邻两字片段作为模糊匹配单元，弥补关键词切分的漏召；仅对含中文的片段生成，避免英文噪声。
+        /// </summary>
+        private static List<string> ExtractBigrams(string text)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in text)
+            {
+                sb.Append(char.IsLetterOrDigit(c) ? c : ' ');
+            }
+
+            var result = new List<string>();
+            foreach (var run in sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!run.Any(IsCjk))
+                {
+                    continue;
+                }
+
+                for (var i = 0; i + 1 < run.Length; i++)
+                {
+                    result.Add(run.Substring(i, 2));
+                }
+            }
+
+            return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        /// <summary>是否为基本区中日韩统一表意文字（常用于识别中文片段）。</summary>
+        private static bool IsCjk(char c) => c >= '\u4E00' && c <= '\u9FFF';
 
         /// <summary>
         /// 写入一条新记忆：去重后落盘。
