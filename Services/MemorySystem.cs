@@ -27,6 +27,9 @@ namespace KfuPet.Services
         private readonly object _archiveLock = new();
         private volatile bool _isAnalyzing;
 
+        /// <summary>长期记忆压缩的并发闸门：0 = 空闲，1 = 压缩进行中，避免实时通道与归档分析同时触发。</summary>
+        private int _longCompactionRunning;
+
         public MemorySystem(ChatService chatService, LogService logService, StopWordsService stopWordsService)
         {
             _chatService = chatService;
@@ -387,6 +390,9 @@ namespace KfuPet.Services
                     await _memoryManager.StoreAsync(item.Content, item.Importance);
                     _logService.Info($"[记忆] 实时入库核心信息：{item.Content}（重要性 {item.Importance}）");
                 }
+
+                // 实时入库后同样检查长期记忆上限，避免只在归档分析末尾才压缩
+                TryTriggerLongMemoryCompaction(model);
             }
             catch (Exception ex)
             {
@@ -529,10 +535,7 @@ namespace KfuPet.Services
             _logService.Debug($"[记忆] 归档分析完成：入选 {longTermItems.Count} 条，总结/暂留 {lowItems.Count} 条");
 
             // 6. 长期记忆满 500 时去重 + 压缩
-            if (_memoryManager.Count >= LongMemoryLimit)
-            {
-                await HandleLongMemoryOverflowAsync(model);
-            }
+            TryTriggerLongMemoryCompaction(model);
         }
 
         /// <summary>长期记忆超限处理：先去重，再对最旧 100 条总结成一条。</summary>
@@ -561,6 +564,40 @@ namespace KfuPet.Services
             }
 
             _logService.Info($"[记忆] 长期记忆整理：去重并总结最旧 {oldest.Count} 条");
+        }
+
+        /// <summary>长期记忆达到上限时后台触发去重压缩；已在压缩中或未超限则跳过。</summary>
+        private void TryTriggerLongMemoryCompaction(ModelConfig model)
+        {
+            if (_memoryManager.Count < LongMemoryLimit)
+            {
+                return;
+            }
+
+            // 并发闸门：实时通道与归档分析可能同时走到这里，只允许一个压缩任务在跑
+            if (Interlocked.CompareExchange(ref _longCompactionRunning, 1, 0) != 0)
+            {
+                return;
+            }
+
+            _ = Task.Run(() => RunLongMemoryCompactionAsync(model));
+        }
+
+        /// <summary>长期记忆压缩的外层包装：吞掉异常并复位并发闸门。</summary>
+        private async Task RunLongMemoryCompactionAsync(ModelConfig model)
+        {
+            try
+            {
+                await HandleLongMemoryOverflowAsync(model);
+            }
+            catch (Exception ex)
+            {
+                _logService.Warning($"[记忆] 长期记忆整理失败：{ex.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _longCompactionRunning, 0);
+            }
         }
 
         /// <summary>从原始对话中提炼值得长期记住的信息点并评分。</summary>
