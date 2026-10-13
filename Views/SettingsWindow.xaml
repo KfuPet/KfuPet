@@ -2039,6 +2039,163 @@
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="预览面板" Style="{StaticResource SectionTitleStyle}"/>
 
+                            <!-- 情绪：预览面板内的情绪分组（三维进度条 + 状态词） -->
+                            <TextBlock Text="情绪"
+                                       Style="{StaticResource SubSectionTitleStyle}"
+                                       Margin="0,24,0,0"/>
+
+                            <Grid Margin="0,16,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 愉悦卡片 -->
+                                <Border x:Name="JoyEmotionCard"
+                                        Grid.Column="0"
+                                        Padding="14,12"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <StackPanel>
+                                        <TextBlock Text="愉悦"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <TextBlock x:Name="JoyValueText"
+                                                       Text="0"
+                                                       FontFamily="{StaticResource FontFamilyDisplay}"
+                                                       FontSize="{StaticResource FontSizeTitle}"
+                                                       FontWeight="{StaticResource FontWeightSemiBold}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Text="/ 100"
+                                                       Margin="4,0,0,2"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextDisabledBrush}"
+                                                       VerticalAlignment="Bottom"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="JoyMoodText"
+                                                   Text="—"
+                                                   Margin="0,2,0,8"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppAccentBrush}"/>
+                                        <!-- 情绪进度条：ScaleX 变换填充，避免布局抖动 -->
+                                        <Border Height="4"
+                                                CornerRadius="2"
+                                                Background="{DynamicResource AppBorderBrush}">
+                                            <Border CornerRadius="2"
+                                                    Background="{DynamicResource AppPinkBrush}"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform x:Name="JoyProgressFill" ScaleX="0"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 精力卡片 -->
+                                <Border x:Name="EnergyEmotionCard"
+                                        Grid.Column="1"
+                                        Margin="8,0,0,0"
+                                        Padding="14,12"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <StackPanel>
+                                        <TextBlock Text="精力"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <TextBlock x:Name="EnergyValueText"
+                                                       Text="0"
+                                                       FontFamily="{StaticResource FontFamilyDisplay}"
+                                                       FontSize="{StaticResource FontSizeTitle}"
+                                                       FontWeight="{StaticResource FontWeightSemiBold}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Text="/ 100"
+                                                       Margin="4,0,0,2"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextDisabledBrush}"
+                                                       VerticalAlignment="Bottom"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="EnergyMoodText"
+                                                   Text="—"
+                                                   Margin="0,2,0,8"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppAccentBrush}"/>
+                                        <Border Height="4"
+                                                CornerRadius="2"
+                                                Background="{DynamicResource AppBorderBrush}">
+                                            <Border CornerRadius="2"
+                                                    Background="{DynamicResource AppInfoBrush}"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform x:Name="EnergyProgressFill" ScaleX="0"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 亲密卡片 -->
+                                <Border x:Name="IntimacyEmotionCard"
+                                        Grid.Column="2"
+                                        Margin="8,0,0,0"
+                                        Padding="14,12"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <StackPanel>
+                                        <TextBlock Text="亲密"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <TextBlock x:Name="IntimacyValueText"
+                                                       Text="0"
+                                                       FontFamily="{StaticResource FontFamilyDisplay}"
+                                                       FontSize="{StaticResource FontSizeTitle}"
+                                                       FontWeight="{StaticResource FontWeightSemiBold}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Text="/ 100"
+                                                       Margin="4,0,0,2"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextDisabledBrush}"
+                                                       VerticalAlignment="Bottom"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="IntimacyMoodText"
+                                                   Text="—"
+                                                   Margin="0,2,0,8"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppAccentBrush}"/>
+                                        <Border Height="4"
+                                                CornerRadius="2"
+                                                Background="{DynamicResource AppBorderBrush}">
+                                            <Border CornerRadius="2"
+                                                    Background="{DynamicResource AppSuccessBrush}"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform x:Name="IntimacyProgressFill" ScaleX="0"/>
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
                             <!-- 记忆：预览面板内的记忆分组子标题 -->
                             <TextBlock Text="记忆"
                                        Style="{StaticResource SubSectionTitleStyle}"

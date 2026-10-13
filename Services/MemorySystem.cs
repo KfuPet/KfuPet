@@ -161,18 +161,18 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 构建基础系统提示词（全局 + 角色 + 当前时间，不含记忆检索）。
+        /// 构建基础系统提示词（全局 + 角色 + 当前时间 + 当前情绪，不含记忆检索）。
         /// 供触摸反应等轻量请求复用，避免为一句短回应触发记忆检索。
         /// </summary>
         public string BuildBaseSystemPrompt()
         {
-            return _promptService.BuildSystemPrompt();
+            return _promptService.BuildSystemPrompt() + EmotionService.Instance.BuildPromptContext();
         }
 
-        /// <summary>构建系统提示词（全局 + 角色）并注入检索到的长期记忆。</summary>
+        /// <summary>构建系统提示词（全局 + 角色 + 当前情绪）并注入检索到的长期记忆。</summary>
         public async Task<string> BuildContextAsync(ModelConfig model, string userMessage)
         {
-            var systemPrompt = _promptService.BuildSystemPrompt();
+            var systemPrompt = BuildBaseSystemPrompt();
 
             var memories = await RetrieveMemoriesAsync(model, userMessage);
             if (memories.Count > 0)

@@ -184,7 +184,7 @@ namespace KfuPet
 
         internal SkeletonService SkeletonService { get; } = new SkeletonService();
 
-        internal EmotionService EmotionService { get; } = new EmotionService();
+        internal EmotionService EmotionService => EmotionService.Instance;
 
         internal VisionService VisionService { get; } = new VisionService();
 
@@ -243,6 +243,7 @@ namespace KfuPet
             _toolRegistry = new ToolRegistry();
             _toolRegistry.Register(new WebSearchTool());
             _toolRegistry.Register(new BalanceTool(ModelConfigService));
+            _toolRegistry.Register(new EmotionTool());
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
@@ -304,6 +305,7 @@ namespace KfuPet
         {
             Log.Info("[窗口] 主窗口正在关闭，停止命名管道");
             SaveCharacterAttachments();
+            EmotionService.Save(force: true);
             _proactiveChat.Stop();
             _bubbleCts?.Cancel();
             _snapTimer?.Stop();
@@ -816,6 +818,7 @@ namespace KfuPet
             {
                 _isDragging = false;
                 _proactiveChat.NotifyPetInteraction();
+                EmotionService.OnUserInteraction(EmotionEventKind.Drag, "拖动");
 
                 var snapTarget = GetSnapBackTarget();
                 if (snapTarget.HasValue)
@@ -845,6 +848,8 @@ namespace KfuPet
         /// </summary>
         private async Task RunSnapBackReactionAsync()
         {
+            EmotionService.OnUserInteraction(EmotionEventKind.SnapBack, "越界回正");
+
             // 节省模式：不请求 AI，直接走下方的文案兜底
             var useAi = SettingsService.Instance.SnapBackUseAi;
             var model = useAi ? ModelConfigService.Models.FirstOrDefault(m => m.IsActive) : null;
@@ -974,6 +979,8 @@ namespace KfuPet
 
             _lastTouchReactionTime = DateTime.UtcNow;
             _proactiveChat.NotifyPetInteraction();
+            EmotionService.OnUserInteraction(
+                isPetting ? EmotionEventKind.Petting : EmotionEventKind.Touch, isPetting ? "抚摸头部" : "双击部位");
             _ = RunTouchReactionAsync(boneId, partKey, isPetting);
         }
 
@@ -1267,6 +1274,7 @@ namespace KfuPet
             if (text.Length == 0) return;
 
             _proactiveChat.NotifyPetInteraction();
+            EmotionService.OnUserInteraction(EmotionEventKind.Chat, "主对话消息");
 
             var model = ModelConfigService.Models.FirstOrDefault(m => m.IsActive);
             if (model == null)

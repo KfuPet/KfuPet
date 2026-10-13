@@ -2,7 +2,7 @@ namespace KfuPet.Services
 {
     /// <summary>
     /// 缓存清理服务：负责删除可清理的本地文件（历史日志、软件配置文件）。
-    /// 记忆的清空由 <see cref="MemorySystem"/> 负责，设置 / 模型 / 停用词的内存复位
+    /// 记忆的清空由 <see cref="MemorySystem"/> 负责，设置 / 模型 / 停用词 / 情绪的内存复位
     /// 由各服务自身的 ResetToDefaults 负责，调用方（设置窗口）按需组合。
     /// </summary>
     internal static class CacheCleanupService
@@ -13,7 +13,8 @@ namespace KfuPet.Services
             "settings.json",
             "models.json",
             "stopwords.json",
-            "tokenusage.json"
+            "tokenusage.json",
+            "emotion.json"
         };
 
         /// <summary>

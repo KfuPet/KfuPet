@@ -32,6 +32,9 @@ namespace KfuPet.Views
         /// <summary>停用词卡片预览最多显示多少个词，其余用省略号代替。</summary>
         private const int StopWordsPreviewMaxWords = 10;
 
+        /// <summary>情绪维度的满值（愉悦 / 精力 / 亲密均为 0–100 的整数刻度）。</summary>
+        private const int EmotionMax = 100;
+
         private readonly MainWindow _mainWindow;
         private readonly UpdateService _updateService = new();
         private readonly StartupService _startupService = new();
@@ -153,6 +156,7 @@ namespace KfuPet.Views
             _mainWindow.DeveloperModeService.EnabledChanged -= OnDeveloperModeChanged;
             _mainWindow.ToolStatusChanged -= OnToolStatusChanged;
             _mainWindow.SkeletonService.DebugSkeletonChanged -= OnDebugSkeletonChanged;
+            EmotionService.Instance.Changed -= OnEmotionChanged;
         }
 
         /// <summary>
@@ -164,6 +168,7 @@ namespace KfuPet.Views
             if (NavList.SelectedIndex == 0)
             {
                 RefreshMemoryStatistics();
+                RefreshEmotionPanel();
             }
         }
 
@@ -848,6 +853,7 @@ namespace KfuPet.Views
             RefreshChatHistoryPreview();
             RefreshLongTermMemoryPreview();
             PlayTokenUsageEntrance();
+            PlayEmotionEntrance();
         }
 
         /// <summary>把当前聊天记录数量显示在卡片预览里。</summary>
@@ -928,6 +934,68 @@ namespace KfuPet.Views
             fill.ScaleX = capacity > 0 ? Math.Clamp((double)count / capacity, 0, 1) : 0;
         }
 
+        /// <summary>刷新情绪区的三维数值、状态词与进度条（不播动画）。</summary>
+        private void RefreshEmotionPanel()
+        {
+            var emotion = EmotionService.Instance;
+
+            // 情绪是 0–100 的整数刻度，直接复用记忆卡片那套按数量占比填充的进度条
+            var joy = (int)Math.Round(emotion.Joy);
+            var energy = (int)Math.Round(emotion.Energy);
+            var intimacy = (int)Math.Round(emotion.Intimacy);
+
+            JoyValueText.Text = joy.ToString();
+            EnergyValueText.Text = energy.ToString();
+            IntimacyValueText.Text = intimacy.ToString();
+
+            JoyMoodText.Text = emotion.MoodWord;
+            EnergyMoodText.Text = emotion.EnergyMoodWord;
+            IntimacyMoodText.Text = emotion.IntimacyMoodWord;
+
+            SetProgressFill(JoyProgressFill, joy, EmotionMax);
+            SetProgressFill(EnergyProgressFill, energy, EmotionMax);
+            SetProgressFill(IntimacyProgressFill, intimacy, EmotionMax);
+        }
+
+        /// <summary>情绪区入场：三个数值从 0 滚动到当前值，进度条同时缓动填充。</summary>
+        private void PlayEmotionEntrance()
+        {
+            var emotion = EmotionService.Instance;
+
+            JoyMoodText.Text = emotion.MoodWord;
+            EnergyMoodText.Text = emotion.EnergyMoodWord;
+            IntimacyMoodText.Text = emotion.IntimacyMoodWord;
+
+            PlayCountUpAnimation(JoyValueText, (int)Math.Round(emotion.Joy),
+                TimeSpan.FromMilliseconds(120));
+            PlayCountUpAnimation(EnergyValueText, (int)Math.Round(emotion.Energy),
+                TimeSpan.FromMilliseconds(180));
+            PlayCountUpAnimation(IntimacyValueText, (int)Math.Round(emotion.Intimacy),
+                TimeSpan.FromMilliseconds(240));
+
+            PlayProgressAnimation(JoyProgressFill, (int)Math.Round(emotion.Joy), EmotionMax,
+                TimeSpan.FromMilliseconds(150));
+            PlayProgressAnimation(EnergyProgressFill, (int)Math.Round(emotion.Energy), EmotionMax,
+                TimeSpan.FromMilliseconds(210));
+            PlayProgressAnimation(IntimacyProgressFill, (int)Math.Round(emotion.Intimacy), EmotionMax,
+                TimeSpan.FromMilliseconds(270));
+        }
+
+        /// <summary>
+        /// 情绪变化时刷新情绪区。情绪结算可能由后台线程（模型工具循环）触发，
+        /// 因此需要先切回 UI 线程再更新控件。
+        /// </summary>
+        private void OnEmotionChanged(object? sender, EventArgs e)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.Invoke(RefreshEmotionPanel);
+                return;
+            }
+
+            RefreshEmotionPanel();
+        }
+
         /// <summary>点击“查看”打开聊天记录窗口。</summary>
         private void ViewChatHistoryButton_Click(object sender, RoutedEventArgs e)
         {
@@ -993,7 +1061,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 软件配置清理后的值复位：内存中的设置、模型、停用词与用量统计回到初始值。
+        /// 软件配置清理后的值复位：内存中的设置、模型、停用词、用量统计与情绪回到初始值。
         /// 只做值复位——等待重启的这段时间里，任何一次保存都会把当前值写回配置文件，
         /// 若不复位就会把旧值写回去；界面与实时状态（主题、开发者模式等）交给重启自然恢复。
         /// </summary>
@@ -1003,6 +1071,7 @@ namespace KfuPet.Views
             ModelConfigService.ResetToDefaults();
             _mainWindow.StopWordsService.ResetToDefaults();
             TokenUsageService.Instance.ResetToDefaults();
+            EmotionService.Instance.ResetToDefaults();
 
             Log.Info("[清理] 软件配置已复位为初始值，等待重启生效");
         }
@@ -1496,6 +1565,7 @@ namespace KfuPet.Views
             _mainWindow.DeveloperModeService.EnabledChanged += OnDeveloperModeChanged;
             _mainWindow.ToolStatusChanged += OnToolStatusChanged;
             _mainWindow.SkeletonService.DebugSkeletonChanged += OnDebugSkeletonChanged;
+            EmotionService.Instance.Changed += OnEmotionChanged;
 
             _suppressToggleEvents = true;
             DeveloperModeToggle.IsChecked = _mainWindow.DeveloperModeService.IsEnabled;

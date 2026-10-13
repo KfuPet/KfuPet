@@ -272,11 +272,19 @@ namespace KfuPet.Services
             }
 
             var profile = GetProfile(settings.ProactiveChatFrequency);
+
+            // 情绪修正：越亲近越爱开口；被冷落到心情低落时反而更少搭话（闹别扭）。
+            // 只修正概率与独处阈值，冷却时长保持档位原值，避免破坏低/中/高三档的节奏。
+            var emotionFactor = EmotionService.Instance.GetProactiveFactor();
+            var intimacy = EmotionService.Instance.Intimacy;
+            var probability = Math.Clamp(profile.Probability * emotionFactor, 0.05, 0.75);
+            var idleThreshold = profile.IdleThresholdMinutes * Math.Clamp(1.15 - intimacy / 100 * 0.4, 0.75, 1.2);
+
             var idleMinutes = (now - _lastPetInteractionTime).TotalMinutes;
             var sinceLastMinutes = (now - _lastProactiveTime).TotalMinutes;
-            if (idleMinutes < profile.IdleThresholdMinutes)
+            if (idleMinutes < idleThreshold)
             {
-                Log.Debug($"[主动搭话] {status}｜未到独处阈值（{idleMinutes:F1}/{profile.IdleThresholdMinutes} 分钟）");
+                Log.Debug($"[主动搭话] {status}｜未到独处阈值（{idleMinutes:F1}/{idleThreshold:F0} 分钟，情绪因子 {emotionFactor:F2}）");
                 return;
             }
             if (sinceLastMinutes < profile.CooldownMinutes)
@@ -285,14 +293,14 @@ namespace KfuPet.Services
                 return;
             }
 
-            if (Random.Shared.NextDouble() < profile.Probability)
+            if (Random.Shared.NextDouble() < probability)
             {
-                Log.Debug($"[主动搭话] {status}｜触发：独处搭话（概率 {profile.Probability:P0} 命中）");
+                Log.Debug($"[主动搭话] {status}｜触发：独处搭话（概率 {probability:P0} 命中，情绪因子 {emotionFactor:F2}）");
                 Fire(ProactiveTriggerType.IdleChat, now);
             }
             else
             {
-                Log.Debug($"[主动搭话] {status}｜条件满足，概率未命中（{profile.Probability:P0}），等下次心跳");
+                Log.Debug($"[主动搭话] {status}｜条件满足，概率未命中（{probability:P0}，情绪因子 {emotionFactor:F2}），等下次心跳");
             }
         }
 
