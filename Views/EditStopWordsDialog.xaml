@@ -181,12 +181,14 @@
 
             <!-- 内容 -->
             <StackPanel Grid.Row="1" Margin="20,20,20,0">
-                <TextBlock Text="这里列出我回忆时用来过滤虚词的关键词。用中英文逗号或换行分隔，保存后立即生效。"
+                <TextBlock x:Name="DialogDescriptionText"
+                           Text="这里列出我回忆时用来过滤虚词的关键词。用中英文逗号或换行分隔，保存后立即生效。"
                            FontFamily="{StaticResource FontFamilyBody}"
                            FontSize="{StaticResource FontSizeCaption}"
                            Foreground="{DynamicResource AppTextSecondaryBrush}"
                            TextWrapping="Wrap"/>
-                <TextBlock Text="停用词"
+                <TextBlock x:Name="FieldLabelText"
+                           Text="停用词"
                            Margin="0,16,0,4"
                            Style="{StaticResource FieldLabelStyle}"/>
                 <TextBox x:Name="StopWordsEditor"

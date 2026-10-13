@@ -21,6 +21,7 @@ namespace KfuPet.Services
         private readonly PromptService _promptService = new();
         private readonly ChatService _chatService;
         private readonly LogService _logService;
+        private readonly MemoryTriggerService _triggerService;
 
         private readonly List<ShortMemoryEntry> _shortEntries;
         private readonly List<ArchiveEntry> _archiveEntries;
@@ -30,10 +31,11 @@ namespace KfuPet.Services
         /// <summary>长期记忆压缩的并发闸门：0 = 空闲，1 = 压缩进行中，避免实时通道与归档分析同时触发。</summary>
         private int _longCompactionRunning;
 
-        public MemorySystem(ChatService chatService, LogService logService, StopWordsService stopWordsService)
+        public MemorySystem(ChatService chatService, LogService logService, StopWordsService stopWordsService, MemoryTriggerService triggerService)
         {
             _chatService = chatService;
             _logService = logService;
+            _triggerService = triggerService;
             _memoryManager = new MemoryManager(stopWordsService);
             _shortEntries = _shortStore.Load();
             _archiveEntries = _archiveStore.Load();
@@ -306,8 +308,16 @@ namespace KfuPet.Services
             _logService.Debug($"[记忆] 记录一轮对话：短期 {shortCount}/{ShortMemoryLimit}" +
                               (overflowCount > 0 ? $"，溢出 {overflowCount} 条到归档（归档 {archiveCount}/{ArchiveMemoryLimit}）" : string.Empty));
 
-            // 实时通道：核心信息（生日、姓名、重要偏好等）立即入库，不等归档批处理
-            _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant));
+            // 实时通道：核心信息（生日、姓名、重要偏好等）立即入库，不等归档批处理；
+            // 仅当消息命中“记忆触发词”时才发起，避免每轮对话都额外消耗一次模型
+            if (_triggerService.Matches(user))
+            {
+                _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant));
+            }
+            else
+            {
+                _logService.Debug("[记忆] 实时通道：未命中触发词，跳过核心信息提取（仍由归档批处理兜底）");
+            }
 
             // 归档满 40 条，后台异步分析
             if (_archiveEntries.Count >= ArchiveMemoryLimit && !_isAnalyzing)

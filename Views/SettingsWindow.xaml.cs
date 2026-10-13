@@ -67,6 +67,7 @@ namespace KfuPet.Views
             LoadDeveloperState();
             LoadModels();
             RefreshStopWordsPreview();
+            RefreshMemoryTriggerPreview();
             UpdateToolStatus();
             LoadSettingsIntoControls();
 
@@ -202,10 +203,23 @@ namespace KfuPet.Views
         /// </summary>
         private void RefreshStopWordsPreview()
         {
-            var words = _mainWindow.StopWordsService.Words;
+            StopWordsPreviewText.Text = BuildWordPreview(_mainWindow.StopWordsService.Words);
+        }
+
+        /// <summary>
+        /// 把当前记忆触发词以中文逗号拼接显示在卡片预览里，规则与停用词预览一致。
+        /// </summary>
+        private void RefreshMemoryTriggerPreview()
+        {
+            MemoryTriggerPreviewText.Text = BuildWordPreview(_mainWindow.MemoryTriggerService.Words);
+        }
+
+        /// <summary>把词表拼成卡片预览文本：最多显示前若干个词，其余用省略号代替。</summary>
+        private static string BuildWordPreview(IReadOnlyList<string> words)
+        {
             var previewCount = Math.Min(words.Count, StopWordsPreviewMaxWords);
             var preview = string.Join("，", words.Take(previewCount));
-            StopWordsPreviewText.Text = words.Count > previewCount ? preview + "…" : preview;
+            return words.Count > previewCount ? preview + "…" : preview;
         }
 
         /// <summary>
@@ -217,14 +231,32 @@ namespace KfuPet.Views
             dialog.LoadWords(_mainWindow.StopWordsService.Words);
             dialog.StopWordsConfirmed += text =>
             {
-                _mainWindow.StopWordsService.Save(ParseStopWords(text));
+                _mainWindow.StopWordsService.Save(ParseWordList(text));
                 RefreshStopWordsPreview();
             };
             dialog.Show();
         }
 
+        /// <summary>
+        /// 点击“编辑”打开触发词编辑对话框（复用同一对话框、替换文案），确认后保存并刷新预览。
+        /// </summary>
+        private void EditMemoryTriggerButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new EditStopWordsDialog(
+                "编辑记忆触发词",
+                "这里列出会让我立刻去记住个人信息的触发词。消息命中任一触发词时，我才会额外发起一次核心信息提取；未命中则交给归档批处理兜底。用中英文逗号或换行分隔，保存后立即生效。",
+                "触发词");
+            dialog.LoadWords(_mainWindow.MemoryTriggerService.Words);
+            dialog.StopWordsConfirmed += text =>
+            {
+                _mainWindow.MemoryTriggerService.Save(ParseWordList(text));
+                RefreshMemoryTriggerPreview();
+            };
+            dialog.Show();
+        }
+
         /// <summary>把编辑框文本按中英文逗号或换行拆分、去空白、去空项。</summary>
-        private static IReadOnlyList<string> ParseStopWords(string text)
+        private static IReadOnlyList<string> ParseWordList(string text)
         {
             return text
                 .Split(new[] { '，', ',', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
@@ -1084,6 +1116,7 @@ namespace KfuPet.Views
             SettingsService.Instance.ResetToDefaults();
             ModelConfigService.ResetToDefaults();
             _mainWindow.StopWordsService.ResetToDefaults();
+            _mainWindow.MemoryTriggerService.ResetToDefaults();
             TokenUsageService.Instance.ResetToDefaults();
             EmotionService.Instance.ResetToDefaults();
 
