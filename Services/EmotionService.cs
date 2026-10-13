@@ -40,11 +40,23 @@ namespace KfuPet.Services
         private const double EnergyDecayMinutes = 90;
         private const double IntimacyDecayMinutes = 1440;
 
-        // ── 被冷落：主人久不互动时情绪持续下降 ─────────────────
-        private const double NeglectAfterMinutes = 45;
+        // ── 长时间没人互动：情绪缓慢下滑 ───────────────────────
+        // 只管两小时以上的长时间离开；短时间的"它开口了你没理"交给下面的"被无视"机制，
+        // 两者职责错开，不会对同一次冷落重复扣分。
+        private const double NeglectAfterMinutes = 120;
         private const double NeglectPenaltyCapMinutes = 240;
         private const double NeglectJoyPerHour = 12;
         private const double NeglectIntimacyPerHour = 3;
+
+        // ── 被无视：主动搭话后规定时间内没得到任何回应 ─────────────
+        private const double IgnoredJoyPenalty = 4;
+        private const double IgnoredIntimacyPenalty = 3;
+
+        /// <summary>连续被无视时，每次扣分在上一次基础上上浮的比例。</summary>
+        private const double IgnoredStreakStep = 0.5;
+
+        /// <summary>连续被无视时扣分倍数的上限（基础值的 3 倍）。</summary>
+        private const double IgnoredMaxFactor = 3.0;
 
         // ── 单次事件的增减量 ─────────────────────────────
         private const double PettingJoy = 3;
@@ -265,6 +277,37 @@ namespace KfuPet.Services
             }
 
             Log.Info($"[情绪] {reason} → 愉悦 {joy:F0}、精力 {energy:F0}、亲密 {intimacy:F0}");
+            RaiseChanged();
+            Save();
+        }
+
+        /// <summary>
+        /// 主动搭话后规定时间内没有得到任何互动（被无视）：按连续被无视的次数加重下调愉悦与亲密，精力不受影响。
+        /// 刻意不计入 <see cref="AdjustCount"/>——这是被动惩罚，不是模型对主人态度的判断，
+        /// 否则可能让同轮对话误判为"已由模型调整过"而跳过对话后的态度判断。
+        /// </summary>
+        /// <param name="streak">连续被无视的次数，从 1 开始；被回应一次即清零。</param>
+        public void OnIgnored(int streak)
+        {
+            var times = Math.Max(streak, 1);
+            var factor = Math.Min(1 + (times - 1) * IgnoredStreakStep, IgnoredMaxFactor);
+            double joy, energy, intimacy;
+
+            lock (_sync)
+            {
+                ApplyElapsedLocked();
+
+                _state.Joy = Math.Clamp(_state.Joy - IgnoredJoyPenalty * factor, 0, 100);
+                _state.Intimacy = Math.Clamp(_state.Intimacy - IgnoredIntimacyPenalty * factor, 0, 100);
+                _dirty = true;
+
+                joy = _state.Joy;
+                energy = _state.Energy;
+                intimacy = _state.Intimacy;
+            }
+
+            Log.Info($"[情绪] 连续第 {times} 次被无视（扣分 ×{factor:F1}）→ " +
+                     $"愉悦 {joy:F0}、精力 {energy:F0}、亲密 {intimacy:F0}");
             RaiseChanged();
             Save();
         }

@@ -67,6 +67,9 @@ namespace KfuPet.Services
         /// <summary>任意两次主动搭话之间的最小间隔（分钟）。</summary>
         private const int MIN_GAP_MINUTES = 10;
 
+        /// <summary>主动搭话后等待回应的时长（分钟）：超过仍未得到任何互动即判定"被无视"。</summary>
+        private const int IGNORE_CHECK_MINUTES = 3;
+
         // ── 定时问候窗口（一天内的分钟数）────────────
 
         /// <summary>早上问候窗口起点：8:00。</summary>
@@ -101,6 +104,15 @@ namespace KfuPet.Services
 
         /// <summary>上次主动搭话触发时间。</summary>
         private DateTime _lastProactiveTime;
+
+        /// <summary>本次开口等待回应窗口的起点（开口时刻）。</summary>
+        private DateTime _pendingReplySince;
+
+        /// <summary>是否正处于"开口后等待回应"的窗口内。</summary>
+        private bool _awaitingReply;
+
+        /// <summary>连续被无视的次数；得到任何一次互动后清零，用于加重扣分。</summary>
+        private int _ignoredStreak;
 
         /// <summary>上次欢迎回来的时间。</summary>
         private DateTime _lastWelcomeTime = DateTime.MinValue;
@@ -146,6 +158,8 @@ namespace KfuPet.Services
             _lastWelcomeTime = DateTime.MinValue;
             _wasAway = false;
             _pendingWelcomeUntil = null;
+            _awaitingReply = false;
+            _ignoredStreak = 0;
             _morningGreetedDate = null;
             _eveningGreetedDate = null;
             _morningTargetTime = null;
@@ -189,6 +203,17 @@ namespace KfuPet.Services
             _lastPetInteractionTime = now;
         }
 
+        /// <summary>
+        /// 台词真正显示给主人之后调用：开始计算"开口后有没有得到回应"的等待窗口。
+        /// 由主窗口在气泡显示之后调用，而不是在触发时——避免台词生成失败、最终没有开口却被计为被无视。
+        /// </summary>
+        public void NotifyProactiveLineShown()
+        {
+            _pendingReplySince = DateTime.Now;
+            _awaitingReply = true;
+            Log.Debug($"[主动搭话] 台词已显示，开始计算回应等待（{IGNORE_CHECK_MINUTES} 分钟）");
+        }
+
         private void OnHeartbeatTick(object? sender, EventArgs e)
         {
             try
@@ -216,6 +241,9 @@ namespace KfuPet.Services
             }
 
             var status = BuildStatusText(now, idleSeconds);
+
+            // 先结算上一次开口的等待结果（被回应 → 连击清零；超时无互动 → 判定被无视）
+            CheckIgnored(now, status);
 
             // 共用闸门：总开关 → 安静时段 → 界面忙闲
             if (!settings.ProactiveChatEnabled)
@@ -474,6 +502,48 @@ namespace KfuPet.Services
             var contextNote = BuildContextNote(type, now);
             Log.Info($"[主动搭话] 触发 {type}｜{contextNote}");
             Triggered?.Invoke(this, new ProactiveTriggerEventArgs(type, eventKey, contextNote));
+        }
+
+        /// <summary>
+        /// 结算"开口后等待回应"的结果：窗口内主人有互动则连击清零；
+        /// 到期仍无互动则按连续次数加重扣一次情绪；主人不在电脑前时不计为无视。
+        /// 判定信号取自 <see cref="NotifyPetInteraction"/> 刷新的互动时刻，因此不需要额外定时器。
+        /// </summary>
+        private void CheckIgnored(DateTime now, string status)
+        {
+            if (!_awaitingReply)
+            {
+                return;
+            }
+
+            // 窗口内主人有互动 → 不是无视，连击清零
+            if (_lastPetInteractionTime > _pendingReplySince)
+            {
+                var previous = _ignoredStreak;
+                _ignoredStreak = 0;
+                _awaitingReply = false;
+                Log.Debug($"[主动搭话] {status}｜开口后已得到互动，被无视连击清零（此前 {previous} 次）");
+                return;
+            }
+
+            if (now - _pendingReplySince < TimeSpan.FromMinutes(IGNORE_CHECK_MINUTES))
+            {
+                return;
+            }
+
+            _awaitingReply = false;
+
+            // 主人不在电脑前（系统长时间空闲）时不视为无视，本次窗口作废
+            if (_wasAway)
+            {
+                Log.Debug($"[主动搭话] {status}｜开口后未得到互动，但主人不在电脑前，不计为被无视");
+                return;
+            }
+
+            _ignoredStreak++;
+            Log.Info($"[主动搭话] {status}｜开口后 {IGNORE_CHECK_MINUTES} 分钟未得到互动，" +
+                     $"判定被无视（连续第 {_ignoredStreak} 次）");
+            EmotionService.Instance.OnIgnored(_ignoredStreak);
         }
 
         /// <summary>拼动态语境：把当前时间与间隔时长告诉模型，避免它凭空想象。</summary>

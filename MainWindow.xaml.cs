@@ -1590,6 +1590,9 @@ namespace KfuPet
             ShowBubbleBatches(new List<string> { line });
             Log.Info($"[主动搭话] {e.Type}（{source}）：{line}");
 
+            // 真正开口之后才开始计算"有没有得到回应"，未回应则再由心跳判定被无视
+            _proactiveChat.NotifyProactiveLineShown();
+
             // 记录到短期记忆，让之后的对话里角色"记得"自己主动说过什么
             _memorySystem.AddProactiveLine(line);
         }
