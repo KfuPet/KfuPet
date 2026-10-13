@@ -40,6 +40,22 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
+        <!-- 说明问号：悬停显示对应设置的说明，悬停时由次要色变主色 -->
+        <Style x:Key="HelpIconStyle" TargetType="TextBlock">
+            <Setter Property="Text" Value="&#xE9CE;"/>
+            <Setter Property="FontFamily" Value="{StaticResource FontFamilyIcon}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeIconSmall}"/>
+            <Setter Property="Cursor" Value="Help"/>
+            <Setter Property="Margin" Value="6,1,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- 标题栏关闭按钮：悬停时红色背景淡入，右上角跟随窗口圆角 -->
         <Style x:Key="TitleBarCloseStyle" TargetType="Button">
             <Setter Property="Width" Value="46"/>
@@ -1321,22 +1337,7 @@
                                                    VerticalAlignment="Center"/>
 
                                         <!-- 说明问号：悬停显示各档位的含义 -->
-                                        <TextBlock Text="&#xE9CE;"
-                                                   FontFamily="{StaticResource FontFamilyIcon}"
-                                                   FontSize="{StaticResource FontSizeIconSmall}"
-                                                   Cursor="Help"
-                                                   Margin="6,1,0,0"
-                                                   VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
-                                                    <Style.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-                                                        </Trigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
+                                        <TextBlock Style="{StaticResource HelpIconStyle}">
                                             <TextBlock.ToolTip>
                                                 <ToolTip MaxWidth="320">
                                                     <TextBlock TextWrapping="Wrap"
@@ -1414,12 +1415,21 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
                                                     VerticalAlignment="Center"
                                                     Margin="0,0,16,0">
                                             <TextBlock Text="触摸反应"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="双击或抚摸角色时她的回应从哪来：AI 生成＝实时生成；角色台词＝从角色包预设台词里随机选一句。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
                                         </StackPanel>
 
                                         <ComboBox x:Name="TouchReactionSavingComboBox"
@@ -1446,12 +1456,21 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
                                                     VerticalAlignment="Center"
                                                     Margin="0,0,16,0">
                                             <TextBlock Text="更新通知文案"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="发现新版本时弹窗里那句话：AI 生成＝实时生成；内置文案＝用固定文案，不消耗模型。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
                                         </StackPanel>
 
                                         <ComboBox x:Name="UpdateNotificationSavingComboBox"
@@ -1478,12 +1497,21 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
                                                     VerticalAlignment="Center"
                                                     Margin="0,0,16,0">
                                             <TextBlock Text="越界回正文案"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="角色被拖出屏幕后拉回时说的话：AI 生成＝实时生成；角色台词＝用预设台词。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
                                         </StackPanel>
 
                                         <ComboBox x:Name="SnapBackSavingComboBox"
@@ -1510,12 +1538,21 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
                                                     VerticalAlignment="Center"
                                                     Margin="0,0,16,0">
                                             <TextBlock Text="主动搭话"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="角色主动开口说话时的内容：AI 生成＝实时生成；角色台词＝用预设台词。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
                                         </StackPanel>
 
                                         <ComboBox x:Name="ProactiveChatSavingComboBox"
@@ -1542,12 +1579,21 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
                                                     VerticalAlignment="Center"
                                                     Margin="0,0,16,0">
                                             <TextBlock Text="对话后情绪判断"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="聊完天后额外判断你这句话让她开心还是难过：AI 判断＝做一次判断；不判断＝跳过，省一次模型请求。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
                                         </StackPanel>
 
                                         <ComboBox x:Name="EmotionJudgeSavingComboBox"
@@ -1574,12 +1620,21 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
                                                     VerticalAlignment="Center"
                                                     Margin="0,0,16,0">
                                             <TextBlock Text="核心信息提取"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
                                                        Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="从聊天里挑出值得长期记住的个人信息（名字、生日、喜好等）：使用触发词＝仅命中关键词才提取，省模型请求；每轮提取＝每句话都提取，更及时但每轮多一次请求。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
                                         </StackPanel>
 
                                         <ComboBox x:Name="MemoryExtractionSavingComboBox"
