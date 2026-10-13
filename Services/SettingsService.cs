@@ -68,6 +68,9 @@ namespace KfuPet.Services
         /// <summary>自定义模式下越界回正文案是否使用 AI 生成；false 表示改用角色台词。</summary>
         public bool CustomSnapBackUseAi { get; private set; }
 
+        /// <summary>自定义模式下对话后的情绪判断是否使用 AI；false 表示不做判断。</summary>
+        public bool CustomEmotionJudgeUseAi { get; private set; }
+
         /// <summary>触摸反应是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
         public bool TouchReactionUseAi => ModelSavingMode switch
         {
@@ -89,6 +92,14 @@ namespace KfuPet.Services
         {
             SavingMode.Saving => false,
             SavingMode.Custom => CustomSnapBackUseAi,
+            _ => true
+        };
+
+        /// <summary>对话后的情绪判断是否使用 AI：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
+        public bool EmotionJudgeUseAi => ModelSavingMode switch
+        {
+            SavingMode.Saving => false,
+            SavingMode.Custom => CustomEmotionJudgeUseAi,
             _ => true
         };
 
@@ -169,6 +180,7 @@ namespace KfuPet.Services
             CustomTouchReactionUseAi = true;
             CustomUpdateNotificationUseAi = true;
             CustomSnapBackUseAi = true;
+            CustomEmotionJudgeUseAi = true;
             ProactiveChatEnabled = true;
             ProactiveChatFrequency = ProactiveFrequency.Medium;
             QuietHoursEnabled = true;
@@ -234,6 +246,13 @@ namespace KfuPet.Services
         public void SetCustomSnapBackUseAi(bool useAi)
         {
             CustomSnapBackUseAi = useAi;
+            Save();
+        }
+
+        /// <summary>保存自定义模式下对话后的情绪判断是否使用 AI。</summary>
+        public void SetCustomEmotionJudgeUseAi(bool useAi)
+        {
+            CustomEmotionJudgeUseAi = useAi;
             Save();
         }
 
@@ -424,6 +443,12 @@ namespace KfuPet.Services
                 {
                     CustomProactiveChatUseAi = proactiveAiElement.GetBoolean();
                 }
+
+                if (root.TryGetProperty("CustomEmotionJudgeUseAi", out var emotionJudgeAiElement) &&
+                    emotionJudgeAiElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    CustomEmotionJudgeUseAi = emotionJudgeAiElement.GetBoolean();
+                }
             }
             catch (Exception ex)
             {
@@ -456,7 +481,8 @@ namespace KfuPet.Services
                     ProactiveIdleEnabled,
                     ProactiveWelcomeBackEnabled,
                     ProactiveGreetingEnabled,
-                    CustomProactiveChatUseAi
+                    CustomProactiveChatUseAi,
+                    CustomEmotionJudgeUseAi
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

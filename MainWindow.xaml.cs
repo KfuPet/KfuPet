@@ -1264,6 +1264,47 @@ namespace KfuPet
         }
 
         /// <summary>
+        /// 对话后的情绪判断：单独发一次请求，让模型判断主人这句话里的态度并折算成情绪增减。
+        /// 与主对话里的 emotion_adjust 工具互补——工具负责本轮语气一致，这里保证每一轮都判过一次。
+        /// 由 <see cref="SettingsService.EmotionJudgeUseAi"/> 控制是否启用；失败只记日志，不影响对话。
+        /// </summary>
+        /// <param name="model">本轮对话使用的模型。</param>
+        /// <param name="userMessage">主人这一轮说的话。</param>
+        /// <param name="assistantReply">桌宠这一轮的回复。</param>
+        private async Task JudgeEmotionAfterChatAsync(ModelConfig model, string userMessage, string assistantReply)
+        {
+            if (!SettingsService.Instance.EmotionJudgeUseAi)
+            {
+                Log.Debug("[情绪] 对话后态度判断已在节省模式中关闭，本次跳过");
+                return;
+            }
+
+            try
+            {
+                var messages = EmotionJudgeService.BuildMessages(userMessage, assistantReply);
+                var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.EmotionJudge);
+
+                if (!EmotionJudgeService.TryParse(reply, out var result))
+                {
+                    Log.Warning($"[情绪] 对话后态度判断结果无法解析，已跳过：{reply}");
+                    return;
+                }
+
+                if (result.IsNoChange)
+                {
+                    Log.Debug("[情绪] 对话后态度判断：主人这句话与态度无关，情绪不变");
+                    return;
+                }
+
+                EmotionService.Adjust(result.Joy, result.Energy, result.Intimacy, "对话后态度判断");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[情绪] 对话后态度判断失败，本轮情绪不变：{ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// 发送用户输入：调用当前启用的模型，回复通过气泡分批显示。
         /// </summary>
         private async Task SendChatAsync()
@@ -1300,6 +1341,9 @@ namespace KfuPet
                 // 新一轮对话开始：清零「上一轮对话消耗」，本轮各次调用（含工具轮次）重新累加
                 TokenUsageService.Instance.BeginConversationTurn();
 
+                // 记录发送前的调整次数：本轮若已由模型工具改过情绪，就不再重复做对话后判断
+                var adjustCountBeforeSend = EmotionService.AdjustCount;
+
                 var systemPrompt = await _memorySystem.BuildContextAsync(model, text);
                 var history = _memorySystem.GetShortTermMessages();
                 var reply = await _chatService.SendWithToolsAsync(
@@ -1311,6 +1355,16 @@ namespace KfuPet
 
                 // 记录一轮对话到记忆系统（短期 + 溢出归档 + 后台分析）
                 _memorySystem.AddTurn(model, text, reply);
+
+                // 对话后态度判断：本轮若已由模型工具调整过情绪则跳过，避免同一句话被算两次
+                if (EmotionService.AdjustCount == adjustCountBeforeSend)
+                {
+                    _ = JudgeEmotionAfterChatAsync(model, text, reply);
+                }
+                else
+                {
+                    Log.Debug("[情绪] 本轮对话已由模型工具调整过情绪，跳过对话后态度判断");
+                }
             }
             catch (Exception ex)
             {

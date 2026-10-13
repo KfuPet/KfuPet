@@ -91,6 +91,12 @@ namespace KfuPet.Services
         /// <summary>情绪发生变化（事件增减、模型调整或复位）时触发，用于让设置界面实时刷新。</summary>
         public event EventHandler? Changed;
 
+        /// <summary>
+        /// 情绪被主动调整（模型工具或命令通道）的累计次数。
+        /// 主对话在发送前后比对该值，判断本轮是否已由模型工具调整过情绪，从而跳过对话后的重复判断。
+        /// </summary>
+        public long AdjustCount { get; private set; }
+
         /// <summary>当前愉悦度（0–100），读取时先结算流逝的时间。</summary>
         public double Joy
         {
@@ -251,6 +257,7 @@ namespace KfuPet.Services
                 _state.Energy = Math.Clamp(_state.Energy + Math.Clamp(energyDelta, -MaxSingleAdjust, MaxSingleAdjust), 0, 100);
                 _state.Intimacy = Math.Clamp(_state.Intimacy + Math.Clamp(intimacyDelta, -MaxSingleAdjust, MaxSingleAdjust), 0, 100);
                 _dirty = true;
+                AdjustCount++;
 
                 joy = _state.Joy;
                 energy = _state.Energy;

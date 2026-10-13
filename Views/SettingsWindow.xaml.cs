@@ -117,6 +117,7 @@ namespace KfuPet.Views
             UpdateNotificationSavingComboBox.SelectedIndex = SettingsService.Instance.CustomUpdateNotificationUseAi ? 0 : 1;
             SnapBackSavingComboBox.SelectedIndex = SettingsService.Instance.CustomSnapBackUseAi ? 0 : 1;
             ProactiveChatSavingComboBox.SelectedIndex = SettingsService.Instance.CustomProactiveChatUseAi ? 0 : 1;
+            EmotionJudgeSavingComboBox.SelectedIndex = SettingsService.Instance.CustomEmotionJudgeUseAi ? 0 : 1;
             _suppressSavingEvents = false;
             UpdateCustomSavingOptionsVisibility();
 
@@ -825,6 +826,19 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetCustomProactiveChatUseAi(ProactiveChatSavingComboBox.SelectedIndex == 0);
+        }
+
+        /// <summary>
+        /// 自定义细分：对话后的情绪判断是否使用 AI（0 AI 判断 / 1 不判断）。
+        /// </summary>
+        private void EmotionJudgeSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressSavingEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetCustomEmotionJudgeUseAi(EmotionJudgeSavingComboBox.SelectedIndex == 0);
         }
 
         /// <summary>

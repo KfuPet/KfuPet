@@ -24,6 +24,9 @@ namespace KfuPet.Services
         /// <summary>记忆整理（检索、提炼、归档与长期记忆分析等内部调用）。</summary>
         Memory,
 
+        /// <summary>对话后对主人态度的情绪判断。</summary>
+        EmotionJudge,
+
         /// <summary>其他未分类的调用。</summary>
         Other
     }
