@@ -71,6 +71,9 @@ namespace KfuPet.Services
         /// <summary>自定义模式下对话后的情绪判断是否使用 AI；false 表示不做判断。</summary>
         public bool CustomEmotionJudgeUseAi { get; private set; }
 
+        /// <summary>自定义模式下核心信息提取是否走触发词门控；false 表示每轮对话都提取。</summary>
+        public bool CustomMemoryExtractionGated { get; private set; }
+
         /// <summary>触摸反应是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
         public bool TouchReactionUseAi => ModelSavingMode switch
         {
@@ -101,6 +104,14 @@ namespace KfuPet.Services
             SavingMode.Saving => false,
             SavingMode.Custom => CustomEmotionJudgeUseAi,
             _ => true
+        };
+
+        /// <summary>核心信息提取是否走触发词门控：关闭模式每轮都提取；节省模式始终门控；自定义模式按细分开关。</summary>
+        public bool MemoryExtractionGated => ModelSavingMode switch
+        {
+            SavingMode.Saving => true,
+            SavingMode.Custom => CustomMemoryExtractionGated,
+            _ => false
         };
 
         /// <summary>是否启用主动搭话（总开关，默认开启）。</summary>
@@ -181,6 +192,7 @@ namespace KfuPet.Services
             CustomUpdateNotificationUseAi = true;
             CustomSnapBackUseAi = true;
             CustomEmotionJudgeUseAi = true;
+            CustomMemoryExtractionGated = false;
             ProactiveChatEnabled = true;
             ProactiveChatFrequency = ProactiveFrequency.Medium;
             QuietHoursEnabled = true;
@@ -253,6 +265,13 @@ namespace KfuPet.Services
         public void SetCustomEmotionJudgeUseAi(bool useAi)
         {
             CustomEmotionJudgeUseAi = useAi;
+            Save();
+        }
+
+        /// <summary>保存自定义模式下核心信息提取是否走触发词门控。</summary>
+        public void SetCustomMemoryExtractionGated(bool gated)
+        {
+            CustomMemoryExtractionGated = gated;
             Save();
         }
 
@@ -449,6 +468,12 @@ namespace KfuPet.Services
                 {
                     CustomEmotionJudgeUseAi = emotionJudgeAiElement.GetBoolean();
                 }
+
+                if (root.TryGetProperty("CustomMemoryExtractionGated", out var memoryExtractionGatedElement) &&
+                    memoryExtractionGatedElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    CustomMemoryExtractionGated = memoryExtractionGatedElement.GetBoolean();
+                }
             }
             catch (Exception ex)
             {
@@ -482,7 +507,8 @@ namespace KfuPet.Services
                     ProactiveWelcomeBackEnabled,
                     ProactiveGreetingEnabled,
                     CustomProactiveChatUseAi,
-                    CustomEmotionJudgeUseAi
+                    CustomEmotionJudgeUseAi,
+                    CustomMemoryExtractionGated
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

@@ -309,14 +309,14 @@ namespace KfuPet.Services
                               (overflowCount > 0 ? $"，溢出 {overflowCount} 条到归档（归档 {archiveCount}/{ArchiveMemoryLimit}）" : string.Empty));
 
             // 实时通道：核心信息（生日、姓名、重要偏好等）立即入库，不等归档批处理；
-            // 仅当消息命中“记忆触发词”时才发起，避免每轮对话都额外消耗一次模型
-            if (_triggerService.Matches(user))
+            // 节省模式下走触发词门控，仅命中触发词才发起，避免每轮对话都额外消耗一次模型
+            if (!SettingsService.Instance.MemoryExtractionGated || _triggerService.Matches(user))
             {
                 _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant));
             }
             else
             {
-                _logService.Debug("[记忆] 实时通道：未命中触发词，跳过核心信息提取（仍由归档批处理兜底）");
+                _logService.Debug("[记忆] 实时通道：节省模式下未命中触发词，跳过核心信息提取（仍由归档批处理兜底）");
             }
 
             // 归档满 40 条，后台异步分析

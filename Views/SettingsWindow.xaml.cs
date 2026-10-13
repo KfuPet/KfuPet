@@ -119,8 +119,10 @@ namespace KfuPet.Views
             SnapBackSavingComboBox.SelectedIndex = SettingsService.Instance.CustomSnapBackUseAi ? 0 : 1;
             ProactiveChatSavingComboBox.SelectedIndex = SettingsService.Instance.CustomProactiveChatUseAi ? 0 : 1;
             EmotionJudgeSavingComboBox.SelectedIndex = SettingsService.Instance.CustomEmotionJudgeUseAi ? 0 : 1;
+            MemoryExtractionSavingComboBox.SelectedIndex = SettingsService.Instance.CustomMemoryExtractionGated ? 1 : 0;
             _suppressSavingEvents = false;
             UpdateCustomSavingOptionsVisibility();
+            UpdateMemoryTriggerCardVisibility();
 
             // 主动搭话：读取总开关与各项参数（控件事件在此期间忽略）
             _suppressProactiveEvents = true;
@@ -451,6 +453,7 @@ namespace KfuPet.Views
             SettingsService.Instance.SetModelSavingMode(mode);
             UpdateSavingThumb(animate: true);
             UpdateCustomSavingOptionsVisibility();
+            UpdateMemoryTriggerCardVisibility();
         }
 
         /// <summary>滑块位置同步：播放滑动动画；首次布局或尺寸变化时直接落位。</summary>
@@ -552,6 +555,38 @@ namespace KfuPet.Views
             else if (CustomSavingOptionsPanel.Visibility == Visibility.Visible)
             {
                 CustomSavingOptionsPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>
+        /// 按当前核心信息提取方式刷新「记忆触发词」卡片的显隐：
+        /// 使用触发词时展开（淡入 + 上滑），每轮提取（不依赖触发词）时收起。
+        /// </summary>
+        private void UpdateMemoryTriggerCardVisibility()
+        {
+            if (SettingsService.Instance.MemoryExtractionGated)
+            {
+                if (MemoryTriggerCard.Visibility == Visibility.Visible)
+                {
+                    return;
+                }
+
+                MemoryTriggerCard.Visibility = Visibility.Visible;
+
+                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                MemoryTriggerCard.BeginAnimation(OpacityProperty,
+                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+
+                var translate = FindTranslateTransform(MemoryTriggerCard);
+                if (translate != null)
+                {
+                    translate.BeginAnimation(TranslateTransform.YProperty,
+                        new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+                }
+            }
+            else if (MemoryTriggerCard.Visibility == Visibility.Visible)
+            {
+                MemoryTriggerCard.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -871,6 +906,20 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetCustomEmotionJudgeUseAi(EmotionJudgeSavingComboBox.SelectedIndex == 0);
+        }
+
+        /// <summary>
+        /// 自定义细分：核心信息提取方式（0 每轮提取 / 1 使用触发词）。
+        /// </summary>
+        private void MemoryExtractionSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressSavingEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetCustomMemoryExtractionGated(MemoryExtractionSavingComboBox.SelectedIndex == 1);
+            UpdateMemoryTriggerCardVisibility();
         }
 
         /// <summary>
