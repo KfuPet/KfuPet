@@ -509,15 +509,16 @@ namespace KfuPet.Services
                 {
                     Type = "summary",
                     Content = lowItems[0],
-                    IsSummary = false
+                    IsSummary = true
                 };
                 _logService.Debug("[记忆] 1 条未入选信息暂留归档");
             }
 
-            // 5. 归档重建
+            // 5. 归档重建：只移除本轮已处理的快照条目，保留分析期间新产生的对话，避免数据丢失
             lock (_archiveLock)
             {
-                _archiveEntries.Clear();
+                var processed = new HashSet<ArchiveEntry>(snapshot);
+                _archiveEntries.RemoveAll(e => processed.Contains(e));
                 if (remaining != null)
                 {
                     _archiveEntries.Add(remaining);
