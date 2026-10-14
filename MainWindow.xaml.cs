@@ -246,6 +246,7 @@ namespace KfuPet
             _toolRegistry.Register(new WebSearchTool());
             _toolRegistry.Register(new BalanceTool(ModelConfigService));
             _toolRegistry.Register(new EmotionTool());
+            _toolRegistry.Register(new FeedTool());
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
