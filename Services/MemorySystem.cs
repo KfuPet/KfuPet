@@ -127,6 +127,18 @@ namespace KfuPet.Services
                 .ToList();
         }
 
+        /// <summary>
+        /// 本地关键词检索长期记忆（零模型开销），供 memory_search 工具主动回忆使用。
+        /// </summary>
+        /// <param name="query">检索关键词。</param>
+        /// <param name="topK">最多返回条数。</param>
+        public IReadOnlyList<string> SearchLongTerm(string query, int topK)
+        {
+            var hits = _memoryManager.KeywordSearch(query, topK);
+            _logService.Info($"[记忆] 工具检索长期记忆「{query}」，命中 {hits.Count} 条");
+            return hits;
+        }
+
         /// <summary>清空短期记忆并落盘。</summary>
         public void ClearShortTerm()
         {
