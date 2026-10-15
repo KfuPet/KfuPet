@@ -3,19 +3,185 @@ using Microsoft.Win32;
 namespace KfuPet.Services
 {
     /// <summary>
-    /// 应用名称 → 可执行文件路径 的解析，仅在“完全访问”模式下使用。
-    /// 依次尝试：注册表 App Paths → 开始菜单快捷方式（含按快捷方式目标名匹配）。
-    /// 全程不新增第三方依赖：注册表用 Microsoft.Win32，快捷方式解析用系统自带的 WScript.Shell COM。
-    /// 解析不到时返回 null，由调用方决定是否再交给 ShellExecute。
+    /// 应用名称 → 可启动目标 的解析，仅在“完全访问”模式下使用。
+    /// 不再本地硬猜并直接打开，而是分成两件事：
+    /// 1) 精确匹配（归一化后相等）→ 返回可直接打开的路径；
+    /// 2) 未精确匹配时，按近似规则（子串 / 首字母缩写 / 跳字）给出候选名称列表，
+    ///    交给模型（有世界知识的那个）自行判断该用哪个确切名称，避免本地猜错开错程序。
+    /// 不新增第三方依赖：注册表用 Microsoft.Win32，开始菜单快捷方式直接以 .lnk 路径交给 ShellExecute 打开
+    /// （这样连快捷方式自带的参数与工作目录也能正确生效）。
     /// </summary>
     internal static class AppResolveService
     {
-        /// <summary>开始菜单第二遍（按快捷方式目标名匹配）最多解析的快捷方式数量，避免异常环境下过慢。</summary>
-        private const int MaxShortcutResolve = 300;
+        /// <summary>开始菜单最多扫描的快捷方式数量，避免异常环境下过慢。</summary>
+        private const int MaxStartMenuShortcuts = 800;
+
+        /// <summary>进入候选名单的最低分值，低于此分视为毫不相干。</summary>
+        private const int MinGuessScore = 30;
+
+        /// <summary>本地“敢自己开”的最低分值：只有精确（100）或首字母缩写（70）且唯一时才直接打开。</summary>
+        private const int ConfidentScore = 70;
 
         /// <summary>
-        /// 把名称归一化：只保留字母数字与中日韩文字并转小写，用于宽容比较（忽略空格、符号、大小写差异）。
+        /// 解析结果：
+        /// <see cref="Path"/> 非空表示本地已能确定要打开的目标（精确或高置信猜测）；
+        /// 否则 <see cref="Candidates"/> 为近似候选名称，交给模型兜底挑选。
         /// </summary>
+        public readonly record struct MatchResult(string? Path, string? MatchedName, IReadOnlyList<string> Candidates);
+
+        /// <summary>
+        /// 解析名称：精确命中、或“唯一且高置信”的近似命中时给出可直接打开的路径；
+        /// 其余情况给出候选名称交由模型判断（模型当本地猜不出来时的备用选项）。
+        /// </summary>
+        public static MatchResult Match(string name, int maxCandidates = 8)
+        {
+            name = name?.Trim() ?? string.Empty;
+            if (name.Length == 0)
+            {
+                return new MatchResult(null, null, Array.Empty<string>());
+            }
+
+            // 名称本身就是一个存在的文件时直接使用
+            if (File.Exists(name))
+            {
+                return new MatchResult(name, name, Array.Empty<string>());
+            }
+
+            var query = Normalize(name);
+            if (query.Length == 0)
+            {
+                return new MatchResult(null, null, Array.Empty<string>());
+            }
+
+            var scored = new List<(string Name, string Path, int Score)>();
+            foreach (var candidate in CollectCandidates())
+            {
+                var score = Score(name, candidate.Name);
+                if (score > 0)
+                {
+                    scored.Add((candidate.Name, candidate.Path, score));
+                }
+            }
+
+            if (scored.Count == 0)
+            {
+                return new MatchResult(null, null, Array.Empty<string>());
+            }
+
+            // 精确匹配优先
+            var exact = scored.Where(x => x.Score >= 100).ToList();
+            if (exact.Count > 0)
+            {
+                return new MatchResult(exact[0].Path, exact[0].Name, Array.Empty<string>());
+            }
+
+            // 高置信猜测：唯一最高分且达到 ConfidenceScore 才敢本地直接开
+            var bestScore = scored.Max(x => x.Score);
+            var bestList = scored.Where(x => x.Score == bestScore).ToList();
+            if (bestScore >= ConfidentScore && bestList.Count == 1)
+            {
+                return new MatchResult(bestList[0].Path, bestList[0].Name, Array.Empty<string>());
+            }
+
+            // 猜不准：把候选交回给模型
+            var candidates = scored
+                .Where(x => x.Score >= MinGuessScore)
+                .OrderByDescending(x => x.Score)
+                .ThenBy(x => x.Name.Length)
+                .Select(x => x.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(maxCandidates)
+                .ToList();
+
+            return new MatchResult(null, null, candidates);
+        }
+
+        /// <summary>
+        /// 给“查询名”与“候选名”打分：100 完全匹配 / 70 首字母缩写 / 55 子串 / 35 跳字 / 0 不匹配。
+        /// </summary>
+        private static int Score(string queryName, string candidateName)
+        {
+            var query = Normalize(queryName);
+            var candidate = Normalize(candidateName);
+            if (query.Length == 0 || candidate.Length == 0)
+            {
+                return 0;
+            }
+
+            if (query == candidate)
+            {
+                return 100;
+            }
+
+            // 首字母缩写：Visual Studio Code → vsc
+            if (Initials(candidateName) == query)
+            {
+                return 70;
+            }
+
+            // 子串：vscode 含 code / 双向都试，过短的候选不参与以免误判
+            if (Math.Min(query.Length, candidate.Length) >= 3 &&
+                (candidate.Contains(query, StringComparison.Ordinal) || query.Contains(candidate, StringComparison.Ordinal)))
+            {
+                return 55;
+            }
+
+            // 跳字：vscode 是 visualstudiocode 的子序列
+            if (query.Length >= 3 && IsSubsequence(query, candidate))
+            {
+                return 35;
+            }
+
+            return 0;
+        }
+
+        /// <summary>取名字的首字母缩写（按非字母数字字符分词），例如 “Visual Studio Code” → “vsc”。</summary>
+        private static string Initials(string text)
+        {
+            var builder = new System.Text.StringBuilder();
+            var atWordStart = true;
+
+            foreach (var c in text)
+            {
+                if (char.IsLetterOrDigit(c))
+                {
+                    if (atWordStart)
+                    {
+                        builder.Append(char.ToLowerInvariant(c));
+                    }
+
+                    atWordStart = false;
+                }
+                else
+                {
+                    atWordStart = true;
+                }
+            }
+
+            return builder.ToString();
+        }
+
+        /// <summary>needle 的字符是否按顺序出现在 haystack 中（跳字匹配）。</summary>
+        private static bool IsSubsequence(string needle, string haystack)
+        {
+            var index = 0;
+            foreach (var c in haystack)
+            {
+                if (index < needle.Length && needle[index] == c)
+                {
+                    index++;
+                }
+
+                if (index == needle.Length)
+                {
+                    return true;
+                }
+            }
+
+            return index == needle.Length;
+        }
+
+        /// <summary>归一化：只保留字母数字与中日韩文字并转小写，用于忽略空格、符号、大小写的比较。</summary>
         private static string Normalize(string text)
         {
             var builder = new System.Text.StringBuilder();
@@ -30,144 +196,121 @@ namespace KfuPet.Services
             return builder.ToString();
         }
 
-        /// <summary>把应用名称解析为可执行文件路径；解析不到返回 null。</summary>
-        public static string? Resolve(string name)
+        /// <summary>收集全部候选：注册表 App Paths 条目 + 开始菜单快捷方式。</summary>
+        private static List<Candidate> CollectCandidates()
         {
-            name = name?.Trim() ?? string.Empty;
-            if (name.Length == 0)
-            {
-                return null;
-            }
+            var candidates = CollectAppPathCandidates();
+            var appPathCount = candidates.Count;
+            candidates.AddRange(CollectStartMenuCandidates());
 
-            // 名称本身就是一个存在的可执行文件时直接使用
-            if (File.Exists(name))
-            {
-                return name;
-            }
-
-            return ResolveFromAppPaths(name) ?? ResolveFromStartMenu(name);
+            Log.Debug($"[打开应用] 候选池：App Paths {appPathCount} 条，开始菜单 {candidates.Count - appPathCount} 条");
+            return candidates;
         }
 
-        /// <summary>
-        /// 注册表 App Paths：HKLM / HKCU 下（含 32 位 WOW6432Node 视图）的 {name}.exe 默认值。
-        /// </summary>
-        private static string? ResolveFromAppPaths(string name)
+        /// <summary>注册表 App Paths：HKLM / HKCU（含 32 位 WOW6432Node 视图）下的全部条目。</summary>
+        private static List<Candidate> CollectAppPathCandidates()
         {
-            var exeName = name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name : name + ".exe";
+            var list = new List<Candidate>();
             var hives = new[] { Registry.LocalMachine, Registry.CurrentUser };
 
             foreach (var prefix in new[] { string.Empty, @"WOW6432Node\" })
             {
-                var subPath = @"SOFTWARE\" + prefix + @"Microsoft\Windows\CurrentVersion\App Paths\" + exeName;
+                var rootPath = @"SOFTWARE\" + prefix + @"Microsoft\Windows\CurrentVersion\App Paths";
                 foreach (var hive in hives)
                 {
                     try
                     {
-                        using var key = hive.OpenSubKey(subPath);
-                        if (key?.GetValue(null) is string path && path.Length > 0 && File.Exists(path))
+                        using var root = hive.OpenSubKey(rootPath);
+                        if (root == null)
                         {
-                            return path;
+                            continue;
+                        }
+
+                        foreach (var subKey in root.GetSubKeyNames())
+                        {
+                            using var appKey = root.OpenSubKey(subKey);
+                            if (appKey?.GetValue(null) is string path && path.Length > 0 && File.Exists(path))
+                            {
+                                list.Add(new Candidate(Path.GetFileNameWithoutExtension(subKey), path));
+                            }
                         }
                     }
                     catch
                     {
-                        // 单个注册表项读取失败不影响其它尝试
+                        // 注册表读取异常不影响其它来源
                     }
                 }
             }
 
-            return null;
+            return list;
         }
 
         /// <summary>
-        /// 扫描开始菜单（用户 + 公共）里的 .lnk：先按快捷方式文件名匹配，再按快捷方式目标文件名匹配。
+        /// 开始菜单（用户 + 公共）里的 .lnk，名称取快捷方式文件名，路径直接给 .lnk。
+        /// 采用逐目录递归 + 单目录容错：某个子目录无权限或枚举失败时跳过它，不影响其它目录，
+        /// 避免整轮扫描因一处异常而全部落空。
         /// </summary>
-        private static string? ResolveFromStartMenu(string name)
+        private static List<Candidate> CollectStartMenuCandidates()
         {
-            var target = Normalize(name);
-            if (target.Length == 0)
-            {
-                return null;
-            }
+            var list = new List<Candidate>();
+            var scanned = 0;
 
-            var shortcuts = new List<string>();
             foreach (var root in new[]
                      {
                          Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
                          Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu)
                      })
             {
-                try
-                {
-                    if (Directory.Exists(root))
-                    {
-                        shortcuts.AddRange(Directory.GetFiles(root, "*.lnk", SearchOption.AllDirectories));
-                    }
-                }
-                catch
-                {
-                    // 目录不可读时跳过
-                }
+                CollectShortcutsRecursive(root, list, ref scanned);
             }
 
-            // 第一遍：快捷方式文件名匹配（便宜，无需解析目标）
-            foreach (var shortcut in shortcuts)
-            {
-                if (Normalize(Path.GetFileNameWithoutExtension(shortcut)) == target)
-                {
-                    var resolved = ResolveShortcutTarget(shortcut);
-                    if (resolved != null)
-                    {
-                        return resolved;
-                    }
-                }
-            }
-
-            // 第二遍：解析快捷方式目标文件名匹配（设数量上限，避免过慢）
-            var resolvedCount = 0;
-            foreach (var shortcut in shortcuts)
-            {
-                if (resolvedCount >= MaxShortcutResolve)
-                {
-                    break;
-                }
-
-                var resolved = ResolveShortcutTarget(shortcut);
-                resolvedCount++;
-                if (resolved != null && Normalize(Path.GetFileNameWithoutExtension(resolved)) == target)
-                {
-                    return resolved;
-                }
-            }
-
-            return null;
+            return list;
         }
 
-        /// <summary>用 WScript.Shell 解析 .lnk 的目标；非可执行文件或解析失败时返回 null。</summary>
-        private static string? ResolveShortcutTarget(string shortcutPath)
+        /// <summary>递归收集一个目录下的 .lnk；文件枚举与子目录枚举各自容错。</summary>
+        private static void CollectShortcutsRecursive(string directory, List<Candidate> list, ref int scanned)
         {
+            if (scanned >= MaxStartMenuShortcuts || string.IsNullOrEmpty(directory))
+            {
+                return;
+            }
+
             try
             {
-                var shellType = Type.GetTypeFromProgID("WScript.Shell");
-                if (shellType == null)
+                foreach (var file in Directory.GetFiles(directory, "*.lnk"))
                 {
-                    return null;
+                    if (scanned++ >= MaxStartMenuShortcuts)
+                    {
+                        return;
+                    }
+
+                    list.Add(new Candidate(Path.GetFileNameWithoutExtension(file), file));
                 }
-
-                dynamic shell = Activator.CreateInstance(shellType)!;
-                dynamic link = shell.CreateShortcut(shortcutPath);
-                string path = link.TargetPath;
-
-                return !string.IsNullOrWhiteSpace(path) &&
-                       path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
-                       File.Exists(path)
-                    ? path
-                    : null;
             }
             catch
             {
-                return null;
+                // 单个目录的文件枚举失败不影响其它目录
+            }
+
+            try
+            {
+                foreach (var subDirectory in Directory.GetDirectories(directory))
+                {
+                    if (scanned >= MaxStartMenuShortcuts)
+                    {
+                        return;
+                    }
+
+                    CollectShortcutsRecursive(subDirectory, list, ref scanned);
+                }
+            }
+            catch
+            {
+                // 单个目录的子目录枚举失败不影响其它目录
             }
         }
+
+        /// <summary>一个候选：显示名 + 可启动路径（exe 或 .lnk）。</summary>
+        private readonly record struct Candidate(string Name, string Path);
     }
 }

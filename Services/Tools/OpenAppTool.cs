@@ -30,7 +30,10 @@ namespace KfuPet.Services.Tools
                 {
                     return "帮主人打开电脑上的应用程序。" +
                            "只有当主人明确要求你打开某个应用（例如“帮我打开微信”）时才调用。" +
-                           "应用名称就按主人说的来即可，不用去猜别的名字。";
+                           "应用名称就按主人说的来即可。" +
+                           "如果本工具返回“没有找到，你是不是想开这些之一”并给出候选名称，" +
+                           "请结合你自己的判断从中挑出最可能的那个，用它的确切名称再调用一次本工具；" +
+                           "都确定不了就如实告诉主人你没找到。";
                 }
 
                 var names = settings.AllowedApps
@@ -92,14 +95,32 @@ namespace KfuPet.Services.Tools
                 return Task.FromResult($"主人没有允许打开「{name}」，我不能打开它。");
             }
 
-            // 3) 完全访问模式：本地解析名称 → 路径（注册表 App Paths / 开始菜单快捷方式）
-            var resolved = AppResolveService.Resolve(name);
-            if (resolved != null)
+            // 3) 完全访问模式：本地先自己判断——精确匹配，或“唯一且高置信”的近似猜测
+            var match = AppResolveService.Match(name);
+            if (match.Path != null)
             {
-                return Launch(resolved, name);
+                if (!string.Equals(match.MatchedName, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Info($"[打开应用] 名称「{name}」未精确匹配，本地按近似猜中「{match.MatchedName}」并直接打开");
+                }
+
+                return Launch(match.Path, match.MatchedName ?? name);
             }
 
-            // 4) 兜底：交给 ShellExecute，让 Windows 自行按 PATH / 已注册项解析
+            // 4) 本地猜不出来（只有弱匹配或出现并列）：把候选交给模型兜底挑选
+            if (match.Candidates.Count > 0)
+            {
+                var list = string.Join("、", match.Candidates);
+                Log.Info($"[打开应用] 名称「{name}」本地无法确定，交给模型判断候选：{list}");
+                return Task.FromResult(
+                    $"本地没能直接确定叫「{name}」的程序。相关程序有这些：{list}。" +
+                    "请结合你自己的知识判断：如果主人说的就是这个软件、而它常被叫作清单里的某个名字，" +
+                    "就直接用那个名字再调用一次本工具；" +
+                    "如果清单里都不像，但你确定这个软件在本机常用的名称或可执行名（例如 VS Code 的可执行名是 code），" +
+                    "也可以直接用那个名字再调一次本工具；实在判断不了，才如实告诉主人你没找到。");
+            }
+
+            // 5) 兜底：交给 ShellExecute，让 Windows 自行按 PATH / 已注册项解析
             return TryShellExecute(name);
         }
 
