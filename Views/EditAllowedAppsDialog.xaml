@@ -114,6 +114,7 @@
 
                 <ScrollViewer MaxHeight="260"
                               Margin="0,14,0,0"
+                              Style="{StaticResource OverlayScrollViewerStyle}"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl x:Name="AppListControl">

@@ -2356,7 +2356,7 @@
                                 </Grid>
                             </Border>
 
-                            <!-- 打开应用白名单：仅总开关开启时显示 -->
+                            <!-- 打开应用白名单：仅总开关开启且未启用完全访问时显示 -->
                             <StackPanel x:Name="OpenAppOptionsPanel"
                                         Visibility="Collapsed"
                                         Opacity="0">
@@ -2364,7 +2364,8 @@
                                     <TranslateTransform/>
                                 </StackPanel.RenderTransform>
 
-                                <Border Margin="0,16,0,0"
+                                <Border x:Name="AllowedAppsCard"
+                                        Margin="0,16,0,0"
                                         Padding="14,12"
                                         Background="{DynamicResource AppSurfaceBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}"

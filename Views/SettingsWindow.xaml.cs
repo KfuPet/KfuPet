@@ -168,7 +168,7 @@ namespace KfuPet.Views
             _suppressFullAccessEvents = true;
             OpenAppFullAccessToggle.IsChecked = SettingsService.Instance.OpenAppFullAccess;
             _suppressFullAccessEvents = false;
-            UpdateFullAccessWarning();
+            UpdateOpenAppSectionVisibility();
         }
 
         private void SettingsWindow_Closed(object? sender, EventArgs e)
@@ -329,6 +329,7 @@ namespace KfuPet.Views
 
             SettingsService.Instance.SetOpenAppEnabled(OpenAppToggle.IsChecked == true);
             UpdateOpenAppOptionsVisibility();
+            UpdateOpenAppSectionVisibility();
         }
 
         /// <summary>
@@ -375,7 +376,7 @@ namespace KfuPet.Views
             if (OpenAppFullAccessToggle.IsChecked != true)
             {
                 SettingsService.Instance.SetOpenAppFullAccess(false);
-                UpdateFullAccessWarning();
+                UpdateOpenAppSectionVisibility();
                 return;
             }
 
@@ -396,14 +397,19 @@ namespace KfuPet.Views
                 _suppressFullAccessEvents = false;
             }
 
-            UpdateFullAccessWarning();
+            UpdateOpenAppSectionVisibility();
         }
 
-        /// <summary>按完全访问开关刷新红色警示文案显隐。</summary>
-        private void UpdateFullAccessWarning()
+        /// <summary>
+        /// 按完全访问开关刷新“打开应用”各区块的显隐：
+        /// 完全访问开启时隐藏白名单卡片（此时白名单已不生效、工具也不会读它），
+        /// 但保留红色警示文案与开关本身，用户随时能关回去。
+        /// </summary>
+        private void UpdateOpenAppSectionVisibility()
         {
-            OpenAppFullAccessWarningText.Visibility =
-                OpenAppFullAccessToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            var fullAccess = OpenAppFullAccessToggle.IsChecked == true;
+            AllowedAppsCard.Visibility = fullAccess ? Visibility.Collapsed : Visibility.Visible;
+            OpenAppFullAccessWarningText.Visibility = fullAccess ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
