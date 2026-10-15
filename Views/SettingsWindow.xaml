@@ -2300,6 +2300,276 @@
                                     </Grid>
                                 </Border>
                             </StackPanel>
+
+                            <!-- 打开应用：总开关默认关闭，白名单随总开关显隐；作为“模型功能”页内的子标题 -->
+                            <TextBlock Text="打开应用"
+                                       Style="{StaticResource SubSectionTitleStyle}"
+                                       Margin="0,24,0,0"/>
+
+                            <Border Margin="0,16,0,0"
+                                    Padding="14,10"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,16,0">
+                                        <TextBlock Text="允许桌宠帮你打开应用"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <TextBlock Text="&#xE9CE;"
+                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                   Cursor="Help"
+                                                   Margin="6,1,0,0"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                            <TextBlock.ToolTip>
+                                                <ToolTip MaxWidth="320">
+                                                    <TextBlock TextWrapping="Wrap"
+                                                               Text="开启后，桌宠可以按你的要求打开下面已允许的应用。默认关闭、白名单默认为空，未允许的程序它绝不会打开。"/>
+                                                </ToolTip>
+                                            </TextBlock.ToolTip>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <ToggleButton x:Name="OpenAppToggle"
+                                                  Style="{StaticResource ToggleSwitchStyle}"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center"
+                                                  Checked="OpenAppToggle_Changed"
+                                                  Unchecked="OpenAppToggle_Changed"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- 打开应用白名单：仅总开关开启时显示 -->
+                            <StackPanel x:Name="OpenAppOptionsPanel"
+                                        Visibility="Collapsed"
+                                        Opacity="0">
+                                <StackPanel.RenderTransform>
+                                    <TranslateTransform/>
+                                </StackPanel.RenderTransform>
+
+                                <Border Margin="0,16,0,0"
+                                        Padding="14,12"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!-- 用 Grid 约束文字宽度：预览过长时按宽度省略号裁切 -->
+                                        <Grid Margin="0,0,12,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Width="26" Height="26"
+                                                    CornerRadius="8"
+                                                    VerticalAlignment="Top"
+                                                    Background="{DynamicResource AppBorderBrush}">
+                                                <TextBlock Text="&#xE71D;"
+                                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                                           FontSize="{StaticResource FontSizeIconSmall}"
+                                                           Foreground="{DynamicResource AppAccentBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                <TextBlock Text="允许打开的应用"
+                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                           FontSize="{StaticResource FontSizeBody}"
+                                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                                <TextBlock x:Name="AllowedAppsPreviewText"
+                                                           Margin="0,4,0,0"
+                                                           Style="{StaticResource HintTextStyle}"
+                                                           TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <!-- 编辑按钮：悬停描边光环淡入 + 图标变色，按压轻微缩放 -->
+                                        <Button x:Name="EditAllowedAppsButton"
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Padding="14,7"
+                                                Background="{DynamicResource AppSurfaceBrush}"
+                                                Cursor="Hand"
+                                                FocusVisualStyle="{x:Null}"
+                                                Click="EditAllowedAppsButton_Click">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Grid RenderTransformOrigin="0.5,0.5">
+                                                        <Grid.RenderTransform>
+                                                            <ScaleTransform x:Name="BtnScale"/>
+                                                        </Grid.RenderTransform>
+                                                        <Border x:Name="BtnBg"
+                                                                Background="{TemplateBinding Background}"
+                                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="8"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock x:Name="BtnIcon"
+                                                                           Text="&#xE70F;"
+                                                                           FontFamily="{StaticResource FontFamilyIcon}"
+                                                                           FontSize="{StaticResource FontSizeIconSmall}"
+                                                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                                           VerticalAlignment="Center"
+                                                                           Margin="0,0,6,0"/>
+                                                                <TextBlock Text="编辑"
+                                                                           FontFamily="{StaticResource FontFamilyBody}"
+                                                                           FontSize="{StaticResource FontSizeBody}"
+                                                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                                           VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <!-- 悬停描边光环：叠加在按钮外侧，不挤压内容 -->
+                                                        <Border x:Name="BtnRing"
+                                                                BorderBrush="{DynamicResource AppAccentBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="8"
+                                                                Opacity="0"
+                                                                IsHitTestVisible="False"/>
+                                                    </Grid>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="BtnIcon"
+                                                                    Property="Foreground"
+                                                                    Value="{DynamicResource AppAccentBrush}"/>
+                                                            <Trigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnRing"
+                                                                                         Storyboard.TargetProperty="Opacity"
+                                                                                         To="1" Duration="0:0:0.12"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.EnterActions>
+                                                            <Trigger.ExitActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnRing"
+                                                                                         Storyboard.TargetProperty="Opacity"
+                                                                                         To="0" Duration="0:0:0.2"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.ExitActions>
+                                                        </Trigger>
+                                                        <Trigger Property="IsPressed" Value="True">
+                                                            <Trigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                         Storyboard.TargetProperty="ScaleX"
+                                                                                         To="0.94" Duration="0:0:0.08"/>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                         Storyboard.TargetProperty="ScaleY"
+                                                                                         To="0.94" Duration="0:0:0.08"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.EnterActions>
+                                                            <Trigger.ExitActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                         Storyboard.TargetProperty="ScaleX"
+                                                                                         To="1" Duration="0:0:0.25">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CubicEase EasingMode="EaseOut"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                        <DoubleAnimation Storyboard.TargetName="BtnScale"
+                                                                                         Storyboard.TargetProperty="ScaleY"
+                                                                                         To="1" Duration="0:0:0.25">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CubicEase EasingMode="EaseOut"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.ExitActions>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 完全访问：忽略白名单，红色警示；开启需二次确认 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="#E81123"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,16,0">
+                                            <TextBlock Text="完全访问（忽略白名单）"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="#E81123"
+                                                       VerticalAlignment="Center"/>
+
+                                            <TextBlock Text="&#xE9CE;"
+                                                       FontFamily="{StaticResource FontFamilyIcon}"
+                                                       FontSize="{StaticResource FontSizeIconSmall}"
+                                                       Foreground="#E81123"
+                                                       Cursor="Help"
+                                                       Margin="6,1,0,0"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="开启后不再受白名单限制，桌宠可以打开你电脑上的任意程序（含系统工具）。开启前会再确认一次；关掉开关即恢复白名单限制。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!-- 开关的“开启”色改为警示红（仅作用于本控件子树） -->
+                                        <ToggleButton x:Name="OpenAppFullAccessToggle"
+                                                      Style="{StaticResource ToggleSwitchStyle}"
+                                                      HorizontalAlignment="Right"
+                                                      VerticalAlignment="Center"
+                                                      Checked="OpenAppFullAccessToggle_Changed"
+                                                      Unchecked="OpenAppFullAccessToggle_Changed">
+                                            <ToggleButton.Resources>
+                                                <SolidColorBrush x:Key="AppSuccessBrush" Color="#E81123"/>
+                                            </ToggleButton.Resources>
+                                        </ToggleButton>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 完全访问已开启时的红色提示 -->
+                                <TextBlock x:Name="OpenAppFullAccessWarningText"
+                                           Margin="2,8,0,0"
+                                           Visibility="Collapsed"
+                                           Text="完全访问已开启：桌宠可打开任意程序，白名单不再生效。"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="#E81123"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
 

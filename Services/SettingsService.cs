@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KfuPet.Models;
 
 namespace KfuPet.Services
 {
@@ -149,6 +150,18 @@ namespace KfuPet.Services
             _ => true
         };
 
+        /// <summary>是否允许模型帮忙打开应用（总开关，默认关闭）。</summary>
+        public bool OpenAppEnabled { get; private set; }
+
+        /// <summary>允许模型打开的应用白名单（默认空；为空时模型无法打开任何程序）。</summary>
+        public IReadOnlyList<AllowedAppEntry> AllowedApps { get; private set; } = Array.Empty<AllowedAppEntry>();
+
+        /// <summary>
+        /// 完全访问：开启后忽略白名单，允许模型打开任意应用（含系统工具）。
+        /// 默认关闭；置为 true 需在界面经用户红色警示确认。
+        /// </summary>
+        public bool OpenAppFullAccess { get; private set; }
+
         private SettingsService()
         {
             ApplyDefaults();
@@ -202,6 +215,9 @@ namespace KfuPet.Services
             ProactiveWelcomeBackEnabled = true;
             ProactiveGreetingEnabled = true;
             CustomProactiveChatUseAi = true;
+            OpenAppEnabled = false;
+            AllowedApps = Array.Empty<AllowedAppEntry>();
+            OpenAppFullAccess = false;
         }
 
         /// <summary>保存用户的外观选择：true 深色，false 浅色，null 跟随系统。</summary>
@@ -329,6 +345,27 @@ namespace KfuPet.Services
         public void SetCustomProactiveChatUseAi(bool useAi)
         {
             CustomProactiveChatUseAi = useAi;
+            Save();
+        }
+
+        /// <summary>保存“允许模型帮忙打开应用”总开关状态。</summary>
+        public void SetOpenAppEnabled(bool enabled)
+        {
+            OpenAppEnabled = enabled;
+            Save();
+        }
+
+        /// <summary>保存允许打开的应用白名单（复制一份再存，避免界面直接改内存对象绕过落盘）。</summary>
+        public void SetAllowedApps(IReadOnlyList<AllowedAppEntry> apps)
+        {
+            AllowedApps = apps.ToList();
+            Save();
+        }
+
+        /// <summary>保存“完全访问”开关：开启后忽略白名单限制，可打开任意应用。</summary>
+        public void SetOpenAppFullAccess(bool enabled)
+        {
+            OpenAppFullAccess = enabled;
             Save();
         }
 
@@ -474,6 +511,44 @@ namespace KfuPet.Services
                 {
                     CustomMemoryExtractionGated = memoryExtractionGatedElement.GetBoolean();
                 }
+
+                if (root.TryGetProperty("OpenAppEnabled", out var openAppElement) &&
+                    openAppElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    OpenAppEnabled = openAppElement.GetBoolean();
+                }
+
+                if (root.TryGetProperty("OpenAppFullAccess", out var openAppFullElement) &&
+                    openAppFullElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    OpenAppFullAccess = openAppFullElement.GetBoolean();
+                }
+
+                if (root.TryGetProperty("AllowedApps", out var allowedAppsElement) &&
+                    allowedAppsElement.ValueKind == JsonValueKind.Array)
+                {
+                    var apps = new List<AllowedAppEntry>();
+                    foreach (var item in allowedAppsElement.EnumerateArray())
+                    {
+                        var appName = item.TryGetProperty("Name", out var nameElement) &&
+                                      nameElement.ValueKind == JsonValueKind.String
+                            ? nameElement.GetString()?.Trim() ?? string.Empty
+                            : string.Empty;
+
+                        var appPath = item.TryGetProperty("ExecutablePath", out var pathElement) &&
+                                      pathElement.ValueKind == JsonValueKind.String
+                            ? pathElement.GetString()?.Trim() ?? string.Empty
+                            : string.Empty;
+
+                        // 名称与路径都有效才算一条，避免残缺配置让工具拿到空值
+                        if (appName.Length > 0 && appPath.Length > 0)
+                        {
+                            apps.Add(new AllowedAppEntry { Name = appName, ExecutablePath = appPath });
+                        }
+                    }
+
+                    AllowedApps = apps;
+                }
             }
             catch (Exception ex)
             {
@@ -508,7 +583,10 @@ namespace KfuPet.Services
                     ProactiveGreetingEnabled,
                     CustomProactiveChatUseAi,
                     CustomEmotionJudgeUseAi,
-                    CustomMemoryExtractionGated
+                    CustomMemoryExtractionGated,
+                    OpenAppEnabled,
+                    OpenAppFullAccess,
+                    AllowedApps
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

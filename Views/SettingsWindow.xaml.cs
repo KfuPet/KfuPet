@@ -32,6 +32,9 @@ namespace KfuPet.Views
         /// <summary>停用词卡片预览最多显示多少个词，其余用省略号代替。</summary>
         private const int StopWordsPreviewMaxWords = 10;
 
+        /// <summary>打开应用白名单卡片预览最多显示多少个应用，其余用省略号代替。</summary>
+        private const int AllowedAppsPreviewMaxItems = 3;
+
         /// <summary>情绪维度的满值（愉悦 / 精力 / 亲密均为 0–100 的整数刻度）。</summary>
         private const int EmotionMax = 100;
 
@@ -49,6 +52,8 @@ namespace KfuPet.Views
         private bool _suppressAutoStartEvents;
         private bool _suppressSavingEvents;
         private bool _suppressProactiveEvents;
+        private bool _suppressOpenAppEvents;
+        private bool _suppressFullAccessEvents;
         private bool _isLoadingStorageUsage;
         private bool _hasLoadedStorageUsage;
         private AddModelProviderDialog? _addModelProviderDialog;
@@ -68,6 +73,7 @@ namespace KfuPet.Views
             LoadModels();
             RefreshStopWordsPreview();
             RefreshMemoryTriggerPreview();
+            RefreshAllowedAppsPreview();
             UpdateToolStatus();
             LoadSettingsIntoControls();
 
@@ -151,6 +157,18 @@ namespace KfuPet.Views
             _suppressProactiveEvents = false;
             UpdateProactiveOptionsVisibility();
             UpdateQuietHoursOptionsVisibility();
+
+            // 打开应用：读取总开关（控件事件在此期间忽略）
+            _suppressOpenAppEvents = true;
+            OpenAppToggle.IsChecked = SettingsService.Instance.OpenAppEnabled;
+            _suppressOpenAppEvents = false;
+            UpdateOpenAppOptionsVisibility();
+
+            // 完全访问：读取开关（控件事件在此期间忽略）
+            _suppressFullAccessEvents = true;
+            OpenAppFullAccessToggle.IsChecked = SettingsService.Instance.OpenAppFullAccess;
+            _suppressFullAccessEvents = false;
+            UpdateFullAccessWarning();
         }
 
         private void SettingsWindow_Closed(object? sender, EventArgs e)
@@ -265,6 +283,127 @@ namespace KfuPet.Views
                 .Select(w => w.Trim())
                 .Where(w => w.Length > 0)
                 .ToList();
+        }
+
+        /// <summary>
+        /// 把当前允许打开的应用名称以中文逗号拼接显示在卡片预览里：最多显示前若干个，其余用省略号代替。
+        /// </summary>
+        private void RefreshAllowedAppsPreview()
+        {
+            var apps = SettingsService.Instance.AllowedApps;
+            if (apps.Count == 0)
+            {
+                AllowedAppsPreviewText.Text = "尚未添加任何应用";
+                return;
+            }
+
+            var previewCount = Math.Min(apps.Count, AllowedAppsPreviewMaxItems);
+            var preview = string.Join("，", apps.Take(previewCount).Select(a => a.Name));
+            AllowedAppsPreviewText.Text = apps.Count > previewCount ? preview + "…" : preview;
+        }
+
+        /// <summary>
+        /// 点击“编辑”打开白名单编辑对话框，确认后保存并刷新预览。
+        /// </summary>
+        private void EditAllowedAppsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new EditAllowedAppsDialog { Owner = this };
+            dialog.Load(SettingsService.Instance.AllowedApps);
+            dialog.AllowedAppsConfirmed += apps =>
+            {
+                SettingsService.Instance.SetAllowedApps(apps);
+                RefreshAllowedAppsPreview();
+            };
+            dialog.Show();
+        }
+
+        /// <summary>
+        /// 打开应用总开关：保存并刷新白名单区显隐。
+        /// </summary>
+        private void OpenAppToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressOpenAppEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetOpenAppEnabled(OpenAppToggle.IsChecked == true);
+            UpdateOpenAppOptionsVisibility();
+        }
+
+        /// <summary>
+        /// 按总开关刷新白名单区显隐：开启展开（淡入 + 上滑），关闭收起。
+        /// </summary>
+        private void UpdateOpenAppOptionsVisibility()
+        {
+            if (OpenAppToggle.IsChecked == true)
+            {
+                if (OpenAppOptionsPanel.Visibility == Visibility.Visible)
+                {
+                    return;
+                }
+
+                OpenAppOptionsPanel.Visibility = Visibility.Visible;
+
+                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                OpenAppOptionsPanel.BeginAnimation(OpacityProperty,
+                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+
+                var translate = FindTranslateTransform(OpenAppOptionsPanel);
+                if (translate != null)
+                {
+                    translate.BeginAnimation(TranslateTransform.YProperty,
+                        new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
+                }
+            }
+            else if (OpenAppOptionsPanel.Visibility == Visibility.Visible)
+            {
+                OpenAppOptionsPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>
+        /// 完全访问开关：开启前弹出红色警示确认；取消则把开关拨回关闭状态。不做倒计时等待。
+        /// </summary>
+        private void OpenAppFullAccessToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressFullAccessEvents)
+            {
+                return;
+            }
+
+            if (OpenAppFullAccessToggle.IsChecked != true)
+            {
+                SettingsService.Instance.SetOpenAppFullAccess(false);
+                UpdateFullAccessWarning();
+                return;
+            }
+
+            var confirmed = false;
+            var dialog = new ConfirmFullAccessDialog { Owner = this };
+            dialog.Confirmed += () => confirmed = true;
+            dialog.ShowDialog();
+
+            if (confirmed)
+            {
+                SettingsService.Instance.SetOpenAppFullAccess(true);
+            }
+            else
+            {
+                // 用户取消：把开关拨回关闭（忽略由此产生的事件）
+                _suppressFullAccessEvents = true;
+                OpenAppFullAccessToggle.IsChecked = false;
+                _suppressFullAccessEvents = false;
+            }
+
+            UpdateFullAccessWarning();
+        }
+
+        /// <summary>按完全访问开关刷新红色警示文案显隐。</summary>
+        private void UpdateFullAccessWarning()
+        {
+            OpenAppFullAccessWarningText.Visibility =
+                OpenAppFullAccessToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)

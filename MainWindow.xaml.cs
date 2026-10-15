@@ -248,8 +248,24 @@ namespace KfuPet
             _toolRegistry.Register(new EmotionTool());
             _toolRegistry.Register(new FeedTool());
             _toolRegistry.Register(new MemorySearchTool(_memorySystem));
+            _toolRegistry.Register(new OpenAppTool());
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
+        }
+
+        /// <summary>
+        /// 工具对模型是否可见：open_app 仅在功能已开启、且（已允许应用 或 开启完全访问）时才向模型播报；
+        /// 其余工具始终可见（不改动播报范围）。
+        /// </summary>
+        private static bool ShouldAdvertiseTool(ITool tool)
+        {
+            if (tool is not OpenAppTool)
+            {
+                return true;
+            }
+
+            var settings = SettingsService.Instance;
+            return settings.OpenAppEnabled && (settings.OpenAppFullAccess || settings.AllowedApps.Count > 0);
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -1352,7 +1368,7 @@ namespace KfuPet
                 var history = _memorySystem.GetShortTermMessages();
                 var reply = await _chatService.SendWithToolsAsync(
                     model, systemPrompt, history, text,
-                    _toolRegistry.GetDefinitions(), _toolRegistry.ExecuteAsync,
+                    _toolRegistry.GetDefinitions(ShouldAdvertiseTool), _toolRegistry.ExecuteAsync,
                     TokenUsageCategory.Conversation);
                 ShowBubbleBatches(SplitIntoBatches(reply));
                 Log.Debug($"[对话] 回复已显示：{reply.Length} 字");

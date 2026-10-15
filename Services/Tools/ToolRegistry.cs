@@ -28,10 +28,14 @@ namespace KfuPet.Services.Tools
             _tools.Add(tool);
         }
 
-        /// <summary>生成全部已注册工具的定义列表，供请求携带。</summary>
-        public IReadOnlyList<ToolDefinition> GetDefinitions()
+        /// <summary>
+        /// 生成工具定义列表，供请求携带；传入 <paramref name="filter"/> 时只包含通过筛选的工具
+        /// （用于按用户设置对模型隐藏某些工具）。
+        /// </summary>
+        public IReadOnlyList<ToolDefinition> GetDefinitions(Func<ITool, bool>? filter = null)
         {
             return _tools
+                .Where(t => filter?.Invoke(t) ?? true)
                 .Select(t => new ToolDefinition
                 {
                     Name = t.Name,
