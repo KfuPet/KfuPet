@@ -46,10 +46,11 @@ namespace KfuPet.Services
         /// </summary>
         internal async Task<string> SendRawAsync(
             ModelConfig model, IReadOnlyList<ChatMessage> messages,
-            TokenUsageCategory category = TokenUsageCategory.Other)
+            TokenUsageCategory category = TokenUsageCategory.Other,
+            CancellationToken cancellationToken = default)
         {
             var payload = BuildPayload(model, messages, null);
-            var body = await PostAsync(model, payload, category);
+            var body = await PostAsync(model, payload, category, cancellationToken);
             return ExtractReply(body);
         }
 
@@ -247,7 +248,8 @@ namespace KfuPet.Services
         }
 
         /// <summary>发起 POST 请求并返回响应体文本；非成功状态码抛出异常。</summary>
-        private async Task<string> PostAsync(ModelConfig model, JsonObject payload, TokenUsageCategory category)
+        private async Task<string> PostAsync(
+            ModelConfig model, JsonObject payload, TokenUsageCategory category, CancellationToken cancellationToken = default)
         {
             var endpoint = model.BaseUrl.Trim().TrimEnd('/') + "/chat/completions";
             var stopwatch = Stopwatch.StartNew();
@@ -259,7 +261,7 @@ namespace KfuPet.Services
             }
             request.Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json");
 
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await HttpClient.SendAsync(request, cancellationToken);
             var body = await response.Content.ReadAsStringAsync();
             stopwatch.Stop();
 

@@ -15,6 +15,15 @@ namespace KfuPet.Services
         private const int ArchiveMemoryLimit = 40;
         private const int LongMemoryLimit = 500;
 
+        /// <summary>每轮固定注入的重要性最高的长期记忆条数（核心事实不依赖关键词命中也能带上）。</summary>
+        private const int AlwaysInjectMemoryCount = 5;
+
+        /// <summary>关键词命中时补充注入的相关记忆条数上限。</summary>
+        private const int KeywordMemoryCount = 5;
+
+        /// <summary>关键词未命中时，模型相关性判断的最长等待时间；超时即放弃本次注入，不拖慢回复。</summary>
+        private static readonly TimeSpan MemoryJudgeTimeout = TimeSpan.FromSeconds(3);
+
         private readonly ShortTermMemoryStore _shortStore = new();
         private readonly ArchiveMemoryStore _archiveStore = new();
         private readonly MemoryManager _memoryManager;
@@ -186,53 +195,89 @@ namespace KfuPet.Services
             return _promptService.BuildSystemPrompt() + EmotionService.Instance.BuildPromptContext();
         }
 
-        /// <summary>构建系统提示词（全局 + 角色 + 当前情绪）并注入检索到的长期记忆。</summary>
+        /// <summary>
+         /// 构建系统提示词（全局 + 角色 + 当前情绪）并注入长期记忆。
+         /// 先固定注入重要性最高的若干条（核心事实始终在场），再叠加关键词命中的相关记忆；
+         /// 关键词完全未命中时才用模型判断相关性兜底，且带超时保护，避免拖慢回复。
+         /// </summary>
         public async Task<string> BuildContextAsync(ModelConfig model, string userMessage)
         {
             var systemPrompt = BuildBaseSystemPrompt();
 
-            var memories = await RetrieveMemoriesAsync(model, userMessage);
-            if (memories.Count > 0)
+            // 1. 固定注入：重要性最高的若干条，姓名 / 生日 / 关键偏好等核心事实不依赖关键词命中
+            var important = _memoryManager.Snapshot()
+                .OrderByDescending(e => e.Importance)
+                .ThenByDescending(e => e.CreatedAt)
+                .Take(AlwaysInjectMemoryCount)
+                .Select(e => e.Content)
+                .ToList();
+
+            // 2. 关键词命中：补充与当前话题相关的记忆（本地检索，零模型开销）
+            var keywordHits = _memoryManager.KeywordSearch(userMessage, KeywordMemoryCount);
+            if (keywordHits.Count > 0)
             {
-                systemPrompt += "\n\n关于主人的记忆（你已知晓）：\n" + MemoryManager.BuildContext(memories);
+                _logService.Info($"[记忆] 关键词匹配命中 {keywordHits.Count} 条相关记忆");
             }
             else
             {
-                // 长期记忆未命中时，兜底检索归档记忆，避免归档内容白白浪费
-                var archiveHits = await SearchArchiveAsync(model, userMessage);
-                _logService.Debug($"[记忆] 长期记忆未命中，归档兜底检索到 {archiveHits.Count} 条相关记录");
-                if (archiveHits.Count > 0)
-                {
-                    systemPrompt += "\n\n最近对话中提到的相关信息（供参考）：\n" + MemoryManager.BuildContext(archiveHits);
-                }
+                // 3. 关键词未命中时才走模型判断兜底，带超时：超时或失败即放弃，不阻塞回复
+                keywordHits = await SearchByLlmWithTimeoutAsync(model, userMessage, KeywordMemoryCount);
+            }
+
+            var memories = MergeMemories(important, keywordHits);
+            if (memories.Count > 0)
+            {
+                systemPrompt += "\n\n关于主人的记忆（你已知晓）：\n" + MemoryManager.BuildContext(memories);
             }
 
             return systemPrompt;
         }
 
-        /// <summary>
-        /// 检索长期记忆，按优先级降级：关键词匹配 → 模型判断相关性。
-        /// </summary>
-        private async Task<IReadOnlyList<string>> RetrieveMemoriesAsync(ModelConfig model, string userMessage)
+        /// <summary>合并固定注入与关键词命中的记忆：按内容去重，固定项在前。</summary>
+        private static List<string> MergeMemories(IReadOnlyList<string> important, IReadOnlyList<string> keywordHits)
         {
-            // 1. 关键词匹配（本地，零成本）
-            var keywordHits = _memoryManager.KeywordSearch(userMessage, 5);
-            if (keywordHits.Count > 0)
+            var result = new List<string>(important);
+            var seen = new HashSet<string>(important, StringComparer.OrdinalIgnoreCase);
+            foreach (var hit in keywordHits)
             {
-                _logService.Info($"[记忆] 关键词匹配命中 {keywordHits.Count} 条相关记忆");
-                return keywordHits;
+                if (seen.Add(hit))
+                {
+                    result.Add(hit);
+                }
             }
 
-            // 2. 模型判断相关性（兜底，需要一次 API 调用）
-            var llmHits = await SearchByLlmAsync(model, userMessage, 5);
-            _logService.Info($"[记忆] 关键词未命中，改用模型判断相关性，命中 {llmHits.Count} 条");
-            return llmHits;
+            return result;
         }
 
         /// <summary>
-        /// 模型判断相关性：把长期记忆交给 AI，让它挑出与当前话题相关的记忆（关键词检索的兜底方案）。
-        /// </summary>
-        private async Task<IReadOnlyList<string>> SearchByLlmAsync(ModelConfig model, string userMessage, int topK)
+         /// 模型相关性兜底：带超时，超时或失败都返回空（本次不注入记忆），不阻塞主对话。
+         /// </summary>
+        private async Task<IReadOnlyList<string>> SearchByLlmWithTimeoutAsync(ModelConfig model, string userMessage, int topK)
+        {
+            using var cts = new CancellationTokenSource(MemoryJudgeTimeout);
+            try
+            {
+                var hits = await SearchByLlmAsync(model, userMessage, topK, cts.Token);
+                _logService.Info($"[记忆] 关键词未命中，模型判断相关性命中 {hits.Count} 条");
+                return hits;
+            }
+            catch (OperationCanceledException)
+            {
+                _logService.Info($"[记忆] 模型相关性判断超过 {MemoryJudgeTimeout.TotalSeconds:0.#} 秒未返回，本次不注入记忆");
+                return Array.Empty<string>();
+            }
+            catch (Exception ex)
+            {
+                _logService.Warning($"[记忆] 模型相关性判断失败，本次不注入记忆：{ex.Message}");
+                return Array.Empty<string>();
+            }
+        }
+
+        /// <summary>
+         /// 模型判断相关性：把长期记忆交给 AI，让它挑出与当前话题相关的记忆（关键词检索的兜底方案）。
+         /// </summary>
+        private async Task<IReadOnlyList<string>> SearchByLlmAsync(
+            ModelConfig model, string userMessage, int topK, CancellationToken cancellationToken)
         {
             var snapshot = _memoryManager.Snapshot();
             if (snapshot.Count == 0)
@@ -259,55 +304,8 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = $"当前用户话题：{userMessage}\n\n记忆列表：\n{sb}" }
             };
 
-            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
+            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory, cancellationToken);
             return ParseStringArray(reply).Take(topK).ToList();
-        }
-
-        /// <summary>
-        /// 归档兜底检索：长期记忆未命中时，从归档的原始对话/总结中找与当前话题相关的记录。
-        /// </summary>
-        private async Task<List<string>> SearchArchiveAsync(ModelConfig model, string userMessage)
-        {
-            List<ArchiveEntry> snapshot;
-            lock (_archiveLock)
-            {
-                snapshot = new List<ArchiveEntry>(_archiveEntries);
-            }
-
-            if (snapshot.Count == 0)
-            {
-                return new List<string>();
-            }
-
-            const string prompt = """
-                下面是用户最近的一些对话记录。请判断哪些记录与用户当前话题相关，
-                把相关的记录原文摘出来（可适度精简）。如果都不相关，输出空数组。
-                请只输出一个 JSON 字符串数组，不要包含其他任何文字或代码块标记，格式：["记录1", "记录2"]
-                """;
-
-            var sb = new System.Text.StringBuilder();
-            var index = 1;
-            foreach (var entry in snapshot)
-            {
-                if (entry.IsSummary)
-                {
-                    sb.AppendLine($"{index}. {entry.Content}");
-                }
-                else
-                {
-                    sb.AppendLine($"{index}. 用户：{entry.User}；助手：{entry.Assistant}");
-                }
-                index++;
-            }
-
-            var messages = new List<ChatMessage>
-            {
-                new() { Role = "system", Content = prompt },
-                new() { Role = "user", Content = $"当前用户消息：{userMessage}\n\n归档记录：\n{sb}" }
-            };
-
-            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
-            return ParseStringArray(reply);
         }
 
         /// <summary>
