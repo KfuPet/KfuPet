@@ -380,24 +380,28 @@ namespace KfuPet.Views
                 return;
             }
 
+            // 用非模态 Show()：ShowDialog 会禁用同一线程上的所有窗口（含桌宠），导致桌宠无法点击拖动。
+            // 确认与取消的处理分别放进 Confirmed 与 Closed，替换原先“阻塞后读 confirmed”的写法。
             var confirmed = false;
             var dialog = new ConfirmFullAccessDialog { Owner = this };
-            dialog.Confirmed += () => confirmed = true;
-            dialog.ShowDialog();
-
-            if (confirmed)
+            dialog.Confirmed += () =>
             {
+                confirmed = true;
                 SettingsService.Instance.SetOpenAppFullAccess(true);
-            }
-            else
+            };
+            dialog.Closed += (s, e) =>
             {
-                // 用户取消：把开关拨回关闭（忽略由此产生的事件）
-                _suppressFullAccessEvents = true;
-                OpenAppFullAccessToggle.IsChecked = false;
-                _suppressFullAccessEvents = false;
-            }
+                if (!confirmed)
+                {
+                    // 用户取消：把开关拨回关闭（忽略由此产生的事件）
+                    _suppressFullAccessEvents = true;
+                    OpenAppFullAccessToggle.IsChecked = false;
+                    _suppressFullAccessEvents = false;
+                }
 
-            UpdateOpenAppSectionVisibility();
+                UpdateOpenAppSectionVisibility();
+            };
+            dialog.Show();
         }
 
         /// <summary>
@@ -1297,7 +1301,8 @@ namespace KfuPet.Views
                 // 重新统计占用，让页面上的数字滚动到清理后的大小
                 _ = LoadStorageUsageAsync();
             };
-            dialog.ShowDialog();
+            // 用非模态 Show()：ShowDialog 会禁用同一线程上的所有窗口（含桌宠），导致桌宠无法点击拖动
+            dialog.Show();
         }
 
         /// <summary>
@@ -1746,7 +1751,8 @@ namespace KfuPet.Views
 
             var dialog = new DeleteModelDialog(model.ModelName);
             dialog.DeleteConfirmed += () => RemoveModelCardConfirmed(item, model);
-            dialog.ShowDialog();
+            // 用非模态 Show()：ShowDialog 会禁用同一线程上的所有窗口（含桌宠），导致桌宠无法点击拖动
+            dialog.Show();
         }
 
         /// <summary>

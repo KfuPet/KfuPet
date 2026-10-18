@@ -168,7 +168,8 @@ namespace KfuPet.Views
 
             var dialog = new DeleteCharacterDialog(package.Name);
             dialog.DeleteConfirmed += () => DeleteCharacterPackage(package);
-            dialog.ShowDialog();
+            // 用非模态 Show()：ShowDialog 会禁用同一线程上的所有窗口（含桌宠），导致桌宠无法点击拖动
+            dialog.Show();
         }
 
         /// <summary>删除角色包目录（限定在 Characters 目录内），完成后重新扫描列表。</summary>
