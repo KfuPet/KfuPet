@@ -7,7 +7,7 @@ namespace KfuPet.Services
     /// </summary>
     internal static class CachePathService
     {
-        /// <summary>缓存根目录下需要随迁移一起搬走的子目录（与存储占用页的统计口径一致）。</summary>
+        /// <summary>缓存根目录下需要随迁移一起搬走的子目录（与存储管理页的统计口径一致）。</summary>
         private static readonly string[] DataSubDirectories = { "Config", "Memory", "Logs" };
 
         /// <summary>

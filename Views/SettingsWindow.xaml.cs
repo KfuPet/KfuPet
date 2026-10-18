@@ -16,7 +16,7 @@ using KfuPet.Services;
 namespace KfuPet.Views
 {
     /// <summary>
-    /// 设置窗口，左侧导航在通用、模型、桌宠功能、记忆、开发者模式、关于与存储占用之间切换。
+    /// 设置窗口，左侧导航在通用、模型、桌宠功能、记忆、开发者模式、关于与存储管理之间切换。
     /// </summary>
     public partial class SettingsWindow : Window
     {
@@ -414,14 +414,14 @@ namespace KfuPet.Views
 
         private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // 选中底部“存储占用”入口时会清空功能导航的选中，此处不再处理
+            // 选中底部“存储管理”入口时会清空功能导航的选中，此处不再处理
             if (NavList.SelectedIndex < 0) return;
 
             if (GeneralPanel == null || ModelConfigPanel == null || ModelFeaturesPanel == null ||
                 MemoryPanel == null || DeveloperPanel == null || AboutPanel == null ||
                 StoragePanel == null || StorageNavList == null) return;
 
-            // 功能导航与底部“存储占用”入口互斥选中
+            // 功能导航与底部“存储管理”入口互斥选中
             StorageNavList.SelectedIndex = -1;
 
             var currentPanel = NavList.SelectedIndex switch
@@ -449,7 +449,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 底部“存储占用”入口选中：清空功能导航选中并切到存储占用页。
+        /// 底部“存储管理”入口选中：清空功能导航选中并切到存储管理页。
         /// 占用统计每个窗口会话只自动跑一次，重开设置窗口或点“刷新”时才会再统计。
         /// </summary>
         private void StorageNavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -467,7 +467,7 @@ namespace KfuPet.Views
             }
         }
 
-        /// <summary>点击“刷新”：重新统计一次存储占用。</summary>
+        /// <summary>点击“刷新”：重新统计一次存储使用情况。</summary>
         private void StorageRefreshButton_Click(object sender, RoutedEventArgs e)
         {
             _ = LoadStorageUsageAsync();
@@ -1445,7 +1445,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 统计并展示存储占用（软件本体、缓存目录、模型包）。
+        /// 统计并展示存储使用情况（软件本体、缓存目录、模型包）。
         /// 目录遍历在后台线程完成，不阻塞界面；统计期间刷新按钮禁用并旋转，避免重复统计。
         /// </summary>
         private async Task LoadStorageUsageAsync()
@@ -1482,7 +1482,7 @@ namespace KfuPet.Views
             }
         }
 
-        /// <summary>把统计结果填入存储占用页。</summary>
+        /// <summary>把统计结果填入存储管理页。</summary>
         private void ApplyStorageUsage(StorageUsageInfo usage)
         {
             // 模型包：合计占用；多于一个时再展示占用最大的 3 个
@@ -1547,7 +1547,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 存储占用页入场：卡片错峰淡入上滑，数字从 0 滚动到实际大小，
+        /// 存储管理页入场：卡片错峰淡入上滑，数字从 0 滚动到实际大小，
         /// 明细行占比条以占用最大的模型包为满格缓动填充。
         /// </summary>
         private void PlayStoragePageEntrance(StorageUsageInfo usage)

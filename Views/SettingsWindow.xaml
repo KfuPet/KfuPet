@@ -927,7 +927,7 @@
                         BorderThickness="0,0,1,0"
                         CornerRadius="0,0,0,11">
                     <DockPanel LastChildFill="True">
-                        <!-- 导航项样式：上方功能导航与底部“存储占用”入口共用 -->
+                        <!-- 导航项样式：上方功能导航与底部“存储管理”入口共用 -->
                         <DockPanel.Resources>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="Margin" Value="12,2"/>
@@ -1034,7 +1034,7 @@
                             </Style>
                         </DockPanel.Resources>
 
-                        <!-- 存储占用入口：固定在侧栏底部，不参与上方功能导航排序 -->
+                        <!-- 存储管理入口：固定在侧栏底部，不参与上方功能导航排序 -->
                         <ListBox x:Name="StorageNavList"
                                  DockPanel.Dock="Bottom"
                                  Margin="0,0,0,6"
@@ -1047,7 +1047,7 @@
                                                FontFamily="{StaticResource FontFamilyIcon}"
                                                FontSize="{StaticResource FontSizeIcon}" Width="26"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock Text="存储占用" VerticalAlignment="Center"/>
+                                    <TextBlock Text="存储管理" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </ListBoxItem>
                         </ListBox>
@@ -3738,7 +3738,7 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- 存储占用页 -->
+                    <!-- 存储管理页 -->
                     <ScrollViewer x:Name="StoragePanel"
                                   Style="{StaticResource OverlayScrollViewerStyle}"
                                   Visibility="Collapsed"
@@ -3757,7 +3757,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0"
-                                           Text="存储占用"
+                                           Text="存储管理"
                                            Style="{StaticResource SectionTitleStyle}"
                                            VerticalAlignment="Center"/>
                                 <!-- 刷新按钮：手动重新统计占用（统计中图标持续旋转） -->
@@ -3767,7 +3767,7 @@
                                         VerticalAlignment="Center"
                                         Margin="0,0,8,0"
                                         Padding="12,7"
-                                        ToolTip="重新统计存储占用"
+                                        ToolTip="重新统计存储使用情况"
                                         Click="StorageRefreshButton_Click">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock x:Name="StorageRefreshIcon"

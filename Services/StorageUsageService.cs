@@ -11,7 +11,7 @@ namespace KfuPet.Services
     }
 
     /// <summary>
-    /// 存储占用统计结果：软件本体（安装位置）、缓存目录与模型包目录的占用大小。
+    /// 存储使用统计结果：软件本体（安装位置）、缓存目录与模型包目录的占用大小。
     /// </summary>
     internal class StorageUsageInfo
     {
@@ -32,7 +32,7 @@ namespace KfuPet.Services
     }
 
     /// <summary>
-    /// 存储占用统计服务：统计软件本体、缓存目录与模型包目录的占用大小。
+    /// 存储使用统计服务：统计软件本体、缓存目录与模型包目录的占用大小。
     /// 目录遍历在后台线程完成；无权限或读取失败的条目自动跳过，不影响整体统计。
     /// </summary>
     internal static class StorageUsageService
@@ -42,7 +42,7 @@ namespace KfuPet.Services
         private const long Gigabyte = Megabyte * 1024;
         private const long Terabyte = Gigabyte * 1024;
 
-        /// <summary>在后台线程统计一次存储占用。</summary>
+        /// <summary>在后台线程统计一次存储使用情况。</summary>
         public static Task<StorageUsageInfo> LoadUsageAsync()
         {
             return Task.Run(() =>
