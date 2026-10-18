@@ -157,12 +157,21 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 卡片“删除”：弹一次“是否删除”提醒，确认后删除角色包目录并刷新列表。
+        /// 卡片“删除”：弹一次“是否删除”提醒，确认后删除角色包目录并刷新列表；
+        /// 只剩最后一个角色包时直接拒绝删除。
         /// </summary>
         private void DeleteCharacterButton_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not CharacterPackageInfo package)
             {
+                return;
+            }
+
+            if (IsLastRemainingPackage())
+            {
+                Log.Warning($"[角色] 拒绝删除最后一个角色模型：{package.Name}（{package.DirectoryPath}）");
+                MessageBox.Show(this, "至少要保留一个角色模型，已取消删除。", "角色模型",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -172,9 +181,18 @@ namespace KfuPet.Views
             dialog.Show();
         }
 
-        /// <summary>删除角色包目录（限定在 Characters 目录内），完成后重新扫描列表。</summary>
+        /// <summary>目录里是否只剩最后一个角色包（含无效包），是则不允许再删。</summary>
+        private bool IsLastRemainingPackage() => _packages.Count <= 1;
+
+        /// <summary>删除角色包目录（限定在 Characters 目录内），完成后重新扫描列表；只剩最后一个角色包时拒绝删除。</summary>
         private void DeleteCharacterPackage(CharacterPackageInfo package)
         {
+            if (IsLastRemainingPackage())
+            {
+                Log.Warning($"[角色] 拒绝删除最后一个角色模型：{package.Name}（{package.DirectoryPath}）");
+                return;
+            }
+
             // 只允许删除 Characters 目录内的模型包，避免异常路径误删其他位置
             var charactersDir = PromptService.FindCharactersDirectory();
             var root = charactersDir == null

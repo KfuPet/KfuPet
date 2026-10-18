@@ -51,6 +51,15 @@ namespace KfuPet.Services
                     ? (a.IsValid ? -1 : 1)
                     : string.Compare(a.Name, b.Name, StringComparison.CurrentCulture));
 
+                // 只剩最后一个角色模型时不允许删除：标记后由界面把该卡片的删除按钮置灰
+                if (packages.Count <= 1)
+                {
+                    foreach (var package in packages)
+                    {
+                        package.IsDeletable = false;
+                    }
+                }
+
                 Log.Info($"[角色] 模型扫描完成：共 {packages.Count} 个（有效 {packages.Count(p => p.IsValid)} 个）");
                 return packages;
             });

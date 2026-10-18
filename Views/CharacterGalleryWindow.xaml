@@ -622,7 +622,8 @@
                                                 <Button Style="{StaticResource HoverActionButtonStyle}"
                                                         Margin="0,8,0,0"
                                                         Content="详情"/>
-                                                <Button Style="{StaticResource HoverActionButtonStyle}"
+                                                <Button x:Name="DeleteButton"
+                                                        Style="{StaticResource HoverActionButtonStyle}"
                                                         Margin="0,8,0,0"
                                                         Content="删除"
                                                         Click="DeleteCharacterButton_Click"/>
@@ -695,6 +696,11 @@
                                             </BeginStoryboard>
                                         </Trigger.ExitActions>
                                     </Trigger>
+                                    <DataTrigger Binding="{Binding IsDeletable}" Value="False">
+                                        <Setter TargetName="DeleteButton" Property="Opacity" Value="0.45"/>
+                                        <Setter TargetName="DeleteButton" Property="Cursor" Value="No"/>
+                                        <Setter TargetName="DeleteButton" Property="ToolTip" Value="至少要保留一个角色模型"/>
+                                    </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

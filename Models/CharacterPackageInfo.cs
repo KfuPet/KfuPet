@@ -37,6 +37,9 @@ namespace KfuPet.Models
         /// <summary>无效原因说明，仅无效角色包使用。</summary>
         public string InvalidReason { get; init; } = string.Empty;
 
+        /// <summary>是否允许删除：目录里只剩最后一个角色包时为 false，界面把删除按钮置灰且不执行删除。</summary>
+        public bool IsDeletable { get; set; } = true;
+
         /// <summary>作者头像缺省占位文字：作者名首字。</summary>
         public string AuthorInitial =>
             string.IsNullOrWhiteSpace(Author) ? "?" : Author.Trim().Substring(0, 1);
