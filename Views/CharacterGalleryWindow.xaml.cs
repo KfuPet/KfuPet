@@ -20,13 +20,17 @@ namespace KfuPet.Views
     {
         private readonly CharacterCatalogService _catalogService = new();
 
+        /// <summary>主窗口引用：卡片「使用」需要主窗口立即切换角色包。</summary>
+        private readonly MainWindow _mainWindow;
+
         private IReadOnlyList<CharacterPackageInfo> _packages = new List<CharacterPackageInfo>();
         private ICollectionView? _packageView;
         private bool _isLoading;
 
-        public CharacterGalleryWindow()
+        public CharacterGalleryWindow(MainWindow mainWindow)
         {
             InitializeComponent();
+            _mainWindow = mainWindow;
 
             Loaded += (s, e) =>
             {
@@ -157,13 +161,51 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 卡片“删除”：弹一次“是否删除”提醒，确认后删除角色包目录并刷新列表；
-        /// 只剩最后一个角色包时直接拒绝删除。
+        /// 卡片「使用」：立即切换到该角色包（重挂部位图、切换提示词与台词）；
+        /// 角色包不完整时提示缺失项并中止。
+        /// </summary>
+        private void UseCharacterButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is not CharacterPackageInfo package)
+            {
+                return;
+            }
+
+            if (!package.CanUse)
+            {
+                var reason = string.IsNullOrWhiteSpace(package.IncompleteReason)
+                    ? "该角色包不可使用。"
+                    : $"角色包不完整，无法使用：{package.IncompleteReason}";
+                MessageBox.Show(this, reason, "角色模型", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // 已在使用的角色包不重复切换（此时按钮显示为「使用中」）
+            if (package.IsActiveCharacter)
+            {
+                return;
+            }
+
+            _mainWindow.SwitchCharacterPackage(package);
+            _ = ReloadAsync();
+        }
+
+        /// <summary>
+        /// 卡片「删除」：弹一次“是否删除”提醒，确认后删除角色包目录并刷新列表；
+        /// 正在使用的角色包与最后一个角色包都直接拒绝删除。
         /// </summary>
         private void DeleteCharacterButton_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not CharacterPackageInfo package)
             {
+                return;
+            }
+
+            if (package.IsActiveCharacter)
+            {
+                Log.Warning($"[角色] 拒绝删除正在使用的角色包：{package.Name}（{package.DirectoryPath}）");
+                MessageBox.Show(this, "该角色模型正在使用中，请先切换到其他角色再删除。", "角色模型",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -184,12 +226,15 @@ namespace KfuPet.Views
         /// <summary>目录里是否只剩最后一个角色包（含无效包），是则不允许再删。</summary>
         private bool IsLastRemainingPackage() => _packages.Count <= 1;
 
-        /// <summary>删除角色包目录（限定在 Characters 目录内），完成后重新扫描列表；只剩最后一个角色包时拒绝删除。</summary>
+        /// <summary>
+        /// 删除角色包目录（限定在 Characters 目录内）：先把目录改名到临时后缀再删，
+        /// 避免删除中途失败留下“包被掏空、目录还在”的半删状态；无论成功与否都重新扫描列表。
+        /// </summary>
         private void DeleteCharacterPackage(CharacterPackageInfo package)
         {
-            if (IsLastRemainingPackage())
+            if (package.IsActiveCharacter || IsLastRemainingPackage())
             {
-                Log.Warning($"[角色] 拒绝删除最后一个角色模型：{package.Name}（{package.DirectoryPath}）");
+                Log.Warning($"[角色] 拒绝删除角色包：{package.Name}（{package.DirectoryPath}）");
                 return;
             }
 
@@ -204,20 +249,53 @@ namespace KfuPet.Views
                 Log.Warning($"[角色] 拒绝删除模型包：目录不在 Characters 内（{package.DirectoryPath}）");
                 MessageBox.Show(this, "该模型不在 Characters 目录内，已取消删除。", "角色模型",
                     MessageBoxButton.OK, MessageBoxImage.Information);
+                _ = ReloadAsync();
+                return;
+            }
+
+            // 先改名：目录内有文件被占用（正在使用的角色、资源管理器预览、杀软扫描等）时改名会失败，
+            // 此时原角色包保持完整，不会出现删一半的状态
+            var temporaryPath = target + CharacterCatalogService.TemporaryDeleteSuffix;
+
+            // 上次删除残留的同名临时目录先清掉，否则改名会因目标已存在而失败
+            if (Directory.Exists(temporaryPath))
+            {
+                try
+                {
+                    Directory.Delete(temporaryPath, recursive: true);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning($"[角色] 残留临时目录清理失败：{temporaryPath}（{ex.Message}）");
+                }
+            }
+
+            try
+            {
+                Directory.Move(target, temporaryPath);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[角色] 角色包改名失败，原目录保持完整：{ex.Message}");
+                MessageBox.Show(this,
+                    $"删除失败：角色包可能正被占用，未做任何改动。\r\n{ex.Message}", "角色模型",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                _ = ReloadAsync();
                 return;
             }
 
             try
             {
-                Directory.Delete(target, recursive: true);
+                Directory.Delete(temporaryPath, recursive: true);
                 Log.Info($"[角色] 已删除角色包：{package.Name}（{target}）");
             }
             catch (Exception ex)
             {
-                Log.Error($"[角色] 角色包删除失败：{ex.Message}");
-                MessageBox.Show(this, $"删除失败：{ex.Message}", "角色模型",
+                // 改名后删除仍失败：角色包已从列表中消失，残留的临时目录会被各扫描入口忽略
+                Log.Error($"[角色] 角色包已移出列表，但残留临时目录未删净：{temporaryPath}（{ex.Message}）");
+                MessageBox.Show(this,
+                    $"角色包已移出列表，但残留临时目录未能删除，可稍后手动清理：\r\n{temporaryPath}", "角色模型",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
             }
 
             _ = ReloadAsync();

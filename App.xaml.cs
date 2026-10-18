@@ -387,10 +387,12 @@ namespace KfuPet
         /// </summary>
         internal void OpenCharacterGalleryWindow()
         {
+            if (_mainWindow == null) return;
+
             if (_characterGalleryWindow == null)
             {
                 Log.Info("[窗口] 打开角色模型窗口");
-                _characterGalleryWindow = new CharacterGalleryWindow();
+                _characterGalleryWindow = new CharacterGalleryWindow(_mainWindow);
                 _characterGalleryWindow.Closed += (s, e) => _characterGalleryWindow = null;
             }
 

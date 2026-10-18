@@ -24,10 +24,7 @@ namespace KfuPet.Services
         /// </summary>
         public static string? FindPackageWithAttachments()
         {
-            var charactersDir = PromptService.FindCharactersDirectory();
-            if (charactersDir == null) return null;
-
-            foreach (var packageDir in Directory.GetDirectories(charactersDir))
+            foreach (var packageDir in CharacterCatalogService.GetCharacterPackageDirectories())
             {
                 if (File.Exists(Path.Combine(packageDir, ManifestFileName)))
                 {

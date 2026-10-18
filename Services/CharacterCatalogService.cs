@@ -13,6 +13,9 @@ namespace KfuPet.Services
         /// <summary>角色包清单文件名。</summary>
         public const string ManifestFileName = "character.json";
 
+        /// <summary>删除流程的临时目录后缀：先改名到此后缀再删，避免删除中途失败留下“半删”的角色包；各处扫描都会跳过此后缀。</summary>
+        public const string TemporaryDeleteSuffix = ".deleting";
+
         /// <summary>预览图解码宽度上限，避免原图过大占用内存。</summary>
         private const int PreviewDecodeWidth = 480;
 
@@ -41,7 +44,7 @@ namespace KfuPet.Services
                 }
 
                 var packages = new List<CharacterPackageInfo>();
-                foreach (var packageDir in Directory.GetDirectories(charactersDir))
+                foreach (var packageDir in GetCharacterPackageDirectories())
                 {
                     packages.Add(LoadPackage(packageDir));
                 }
@@ -51,13 +54,14 @@ namespace KfuPet.Services
                     ? (a.IsValid ? -1 : 1)
                     : string.Compare(a.Name, b.Name, StringComparison.CurrentCulture));
 
-                // 只剩最后一个角色模型时不允许删除：标记后由界面把该卡片的删除按钮置灰
-                if (packages.Count <= 1)
+                // 当前使用的角色包（设置里记录，未记录时按默认角色）与删除限制一次标好：
+                // 正在使用的角色包不允许删除；目录里只剩最后一个角色包时也不允许删除
+                var activeDirectory = ResolveActivePackageDirectory();
+                foreach (var package in packages)
                 {
-                    foreach (var package in packages)
-                    {
-                        package.IsDeletable = false;
-                    }
+                    package.IsActiveCharacter = activeDirectory != null &&
+                        string.Equals(package.DirectoryPath, activeDirectory, StringComparison.OrdinalIgnoreCase);
+                    package.IsDeletable = packages.Count > 1 && !package.IsActiveCharacter;
                 }
 
                 Log.Info($"[角色] 模型扫描完成：共 {packages.Count} 个（有效 {packages.Count(p => p.IsValid)} 个）");
@@ -84,14 +88,19 @@ namespace KfuPet.Services
                     return InvalidPackage(packageDir, folderName, $"{ManifestFileName} 内容为空");
                 }
 
+                var (isComplete, incompleteReason) = CheckCompleteness(packageDir);
+
                 return new CharacterPackageInfo
                 {
                     Name = Clean(manifest.Name) is { Length: > 0 } name ? name : folderName,
+                    Id = Clean(manifest.Id) is { Length: > 0 } id ? id : folderName,
                     Version = Clean(manifest.Version),
                     Author = Clean(manifest.Author),
                     Description = Clean(manifest.Description),
                     Tags = manifest.Tags?.Where(t => !string.IsNullOrWhiteSpace(t)).ToList() ?? new List<string>(),
                     DirectoryPath = packageDir,
+                    IsComplete = isComplete,
+                    IncompleteReason = incompleteReason,
                     PreviewImage = LoadImage(packageDir, manifest.Preview, PreviewDecodeWidth),
                     AuthorAvatar = LoadImage(packageDir, manifest.AuthorAvatar, AvatarDecodeWidth)
                 };
@@ -109,10 +118,128 @@ namespace KfuPet.Services
             return new CharacterPackageInfo
             {
                 Name = folderName,
+                Id = folderName,
                 DirectoryPath = packageDir,
                 IsValid = false,
+                IsComplete = false,
+                IncompleteReason = $"缺少 {ManifestFileName}",
                 InvalidReason = reason
             };
+        }
+
+        /// <summary>
+        /// 角色包完整性判定：外层已确认 character.json 可用，这里再要求 prompt.md、attachments.json
+        /// 与 reactions.json 的必填项缺一不可；返回是否完整与缺失项说明。
+        /// </summary>
+        private static (bool IsComplete, string Reason) CheckCompleteness(string packageDir)
+        {
+            var missing = new List<string>();
+
+            if (!File.Exists(Path.Combine(packageDir, PromptService.PromptFileName)))
+            {
+                missing.Add(PromptService.PromptFileName);
+            }
+
+            if (!File.Exists(Path.Combine(packageDir, CharacterAttachmentService.ManifestFileName)))
+            {
+                missing.Add(CharacterAttachmentService.ManifestFileName);
+            }
+
+            var missingReactionKeys = TouchReactionService.FindMissingReactionKeys(packageDir);
+            if (missingReactionKeys.Count > 0)
+            {
+                missing.Add($"reactions.json 的 {missingReactionKeys.Count} 项必填内容");
+            }
+
+            return missing.Count == 0
+                ? (true, string.Empty)
+                : (false, "缺少 " + string.Join("、", missing));
+        }
+
+        /// <summary>是否为删除流程留下的临时目录（改名后尚未删净的残留）。</summary>
+        public static bool IsTemporaryDeleteDirectory(string packageDir) =>
+            packageDir.EndsWith(TemporaryDeleteSuffix, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// 列出 Characters 目录下的角色包目录，并过滤掉删除流程的临时目录；
+        /// 角色包检索、附件挂载、当前角色解析与角色模型列表共用此入口。
+        /// </summary>
+        public static string[] GetCharacterPackageDirectories()
+        {
+            var charactersDir = PromptService.FindCharactersDirectory();
+            if (charactersDir == null) return Array.Empty<string>();
+
+            try
+            {
+                return Directory.GetDirectories(charactersDir)
+                    .Where(directory => !IsTemporaryDeleteDirectory(directory))
+                    .ToArray();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[角色] 角色包目录读取失败：{ex.Message}");
+                return Array.Empty<string>();
+            }
+        }
+
+        /// <summary>
+        /// 解析当前生效的角色包目录：优先设置里记录的角色包，其次第一个含 attachments.json 的角色包，
+        /// 最后第一个含 character.json 的角色包；都找不到时返回 null。
+        /// 启动时挂载附件、构建提示词与角色模型窗口判定「使用中」共用此入口。
+        /// </summary>
+        public static string? ResolveActivePackageDirectory()
+        {
+            var packageDirs = GetCharacterPackageDirectories();
+            if (packageDirs.Length == 0) return null;
+
+            // 优先：设置里记录的角色包（角色模型窗口「使用」写入）
+            var activeId = SettingsService.Instance.ActiveCharacterId;
+            if (activeId.Length > 0)
+            {
+                foreach (var packageDir in packageDirs)
+                {
+                    if (string.Equals(ReadCharacterId(packageDir), activeId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return packageDir;
+                    }
+                }
+
+                Log.Warning($"[角色] 设置中记录的角色包已不存在，回退到默认角色：{activeId}");
+            }
+
+            // 回退：第一个带部位图配置的角色包，其次第一个有 character.json 的角色包
+            var withAttachments = CharacterAttachmentService.FindPackageWithAttachments();
+            if (withAttachments != null) return withAttachments;
+
+            foreach (var packageDir in packageDirs)
+            {
+                if (File.Exists(Path.Combine(packageDir, ManifestFileName)))
+                {
+                    return packageDir;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>读取角色包标识：character.json 的 id，缺失、解析失败或缺省时用文件夹名。</summary>
+        public static string ReadCharacterId(string packageDir)
+        {
+            var folderName = Path.GetFileName(packageDir);
+            try
+            {
+                var manifestPath = Path.Combine(packageDir, ManifestFileName);
+                if (!File.Exists(manifestPath)) return folderName;
+
+                var manifest = JsonSerializer.Deserialize<CharacterManifest>(
+                    File.ReadAllText(manifestPath), ManifestJsonOptions);
+                return Clean(manifest?.Id) is { Length: > 0 } id ? id : folderName;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[角色] 角色包标识读取失败（{folderName}）：{ex.Message}");
+                return folderName;
+            }
         }
 
         /// <summary>

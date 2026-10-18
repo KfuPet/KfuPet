@@ -335,21 +335,45 @@ namespace KfuPet
         }
 
         /// <summary>
-        /// 启动时从角色包加载部位图片附件（attachments.json），挂到已初始化的骨骼上。
-        /// 没有找到带附件配置的角色包时跳过，角色只显示骨骼调试线框。
+        /// 启动时从当前生效的角色包加载部位图片附件（attachments.json），挂到已初始化的骨骼上。
+        /// 生效角色包由设置里记录的角色决定，未记录时回退到默认角色；没有可用的角色包时跳过，只显示骨骼调试线框。
         /// </summary>
         private void LoadCharacterAttachments()
         {
-            var packageDir = CharacterAttachmentService.FindPackageWithAttachments();
+            var packageDir = CharacterCatalogService.ResolveActivePackageDirectory();
             if (packageDir == null)
             {
-                Log.Info("[附件] 未找到带附件配置的角色包，跳过部位挂载");
+                Log.Info("[附件] 未找到可用角色包，跳过部位挂载");
                 return;
             }
 
             _attachmentsPackageDir = packageDir;
             CharacterAttachmentService.Load(SkeletonService, packageDir);
             _touchReactions.Load(packageDir);
+        }
+
+        /// <summary>
+        /// 切换当前使用的角色包（角色模型窗口「使用」按钮调用）：记录选择、先把旧角色的附件位置固化，
+        /// 再清空骨骼、挂载新角色包的部位图与反应配置；提示词按当前角色包即时生效。
+        /// </summary>
+        internal void SwitchCharacterPackage(CharacterPackageInfo package)
+        {
+            SettingsService.Instance.SetActiveCharacterId(package.Id);
+
+            if (string.Equals(_attachmentsPackageDir, package.DirectoryPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Info($"[角色] 当前已在使用的角色包：{package.Name}");
+                return;
+            }
+
+            SaveCharacterAttachments();
+
+            SkeletonService.RemoveAllAttachments();
+            CharacterAttachmentService.Load(SkeletonService, package.DirectoryPath);
+            _attachmentsPackageDir = package.DirectoryPath;
+            _touchReactions.Load(package.DirectoryPath);
+
+            Log.Info($"[角色] 已切换使用角色包：{package.Name}（{package.DirectoryPath}）");
         }
 
         /// <summary>

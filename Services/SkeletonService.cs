@@ -312,6 +312,41 @@ namespace KfuPet.Services
         }
 
         /// <summary>
+        /// 清空骨骼上的全部附件：切换角色包时先卸掉上一个角色的部位图。返回移除的附件数量。
+        /// </summary>
+        public int RemoveAllAttachments()
+        {
+            if (_skeleton == null) return 0;
+
+            var attachmentIds = _skeleton.Bones
+                .SelectMany(bone => bone.Attachments)
+                .Select(attachment => attachment.Id)
+                .ToList();
+            if (attachmentIds.Count == 0) return 0;
+
+            var removed = 0;
+            foreach (var attachmentId in attachmentIds)
+            {
+                var attachment = _skeleton.FindAttachment(attachmentId);
+                var resourcePath = attachment?.GetCurrentResourcePath();
+
+                if (_skeleton.RemoveAttachment(attachmentId))
+                {
+                    TryCleanupResource(resourcePath);
+                    removed++;
+                }
+            }
+
+            if (removed > 0)
+            {
+                UpdateAndNotify();
+                Log.Info($"[骨骼] 已清空附件：{removed} 个");
+            }
+
+            return removed;
+        }
+
+        /// <summary>
         /// 如果缓存文件没有被其他附件引用，则删除之。
         /// </summary>
         private void TryCleanupResource(string? resourcePath)

@@ -10,6 +10,9 @@ namespace KfuPet.Models
         /// <summary>角色名称；无效角色包显示文件夹名。</summary>
         public string Name { get; init; } = string.Empty;
 
+        /// <summary>角色包标识（character.json 的 id，缺省时为文件夹名），用于记录当前使用的角色。</summary>
+        public string Id { get; init; } = string.Empty;
+
         /// <summary>角色包版本号。</summary>
         public string Version { get; init; } = string.Empty;
 
@@ -34,11 +37,28 @@ namespace KfuPet.Models
         /// <summary>是否为有效角色包（character.json 存在且可解析）。</summary>
         public bool IsValid { get; init; } = true;
 
+        /// <summary>是否为完整角色包：character.json、prompt.md、attachments.json 与 reactions.json 必填项缺一不可。</summary>
+        public bool IsComplete { get; init; }
+
+        /// <summary>不完整原因（列出缺失的文件或必填项）；完整时为空串。</summary>
+        public string IncompleteReason { get; init; } = string.Empty;
+
+        /// <summary>是否允许切换使用：角色包有效且完整。</summary>
+        public bool CanUse => IsValid && IsComplete;
+
+        /// <summary>是否为当前正在使用的角色包：正在使用的角色包不允许删除。</summary>
+        public bool IsActiveCharacter { get; set; }
+
         /// <summary>无效原因说明，仅无效角色包使用。</summary>
         public string InvalidReason { get; init; } = string.Empty;
 
-        /// <summary>是否允许删除：目录里只剩最后一个角色包时为 false，界面把删除按钮置灰且不执行删除。</summary>
+        /// <summary>是否允许删除：正在使用的角色包、或目录里只剩最后一个角色包时不允许删除。</summary>
         public bool IsDeletable { get; set; } = true;
+
+        /// <summary>删除按钮不可用时的悬停提示：按被拦的原因区分。</summary>
+        public string DeleteHint => IsActiveCharacter
+            ? "该角色正在使用，请先切换后再删除"
+            : "至少要保留一个角色模型";
 
         /// <summary>作者头像缺省占位文字：作者名首字。</summary>
         public string AuthorInitial =>

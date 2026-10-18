@@ -101,6 +101,12 @@ namespace KfuPet.Services
         /// </summary>
         public void Load(string packageDir)
         {
+            // 角色包可切换：先把上一角色的台词与事件提示清空，避免串到新角色上
+            _lines.Clear();
+            _lastLines.Clear();
+            _eventPromptOverrides.Clear();
+            _missingConfigKeys = Array.Empty<string>();
+
             var manifestPath = Path.Combine(packageDir, ManifestFileName);
             if (!File.Exists(manifestPath))
             {
@@ -175,15 +181,58 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 检测当前角色包反应配置是否完整：列出缺失的必填键并记录到 <see cref="MissingConfigKeys"/>，
-        /// 缺失时记录日志警告，完整时记录 Info。必填键见 <see cref="RequiredEventPromptKeys"/>、<see cref="RequiredReactionKeys"/>。
+        /// 检测任意角色包目录的 reactions.json 是否完整：返回缺失的必填键（eventPrompt.* / reactions.*），空表示完整。
+        /// 与 <see cref="Load"/> 共用同一套必填键定义，供角色模型窗口判断角色包能否切换使用。
         /// </summary>
-        private void CheckCompleteness(string packageDir)
+        public static IReadOnlyList<string> FindMissingReactionKeys(string packageDir)
         {
+            ReactionManifest? manifest = null;
+            var manifestPath = Path.Combine(packageDir, ManifestFileName);
+            if (File.Exists(manifestPath))
+            {
+                try
+                {
+                    manifest = JsonSerializer.Deserialize<ReactionManifest>(
+                        File.ReadAllText(manifestPath), JsonOptions);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning($"[触摸] {ManifestFileName} 解析失败（{Path.GetFileName(packageDir)}）：{ex.Message}");
+                }
+            }
+
+            // 已提供的 eventPrompt 键（值非空才算提供）
+            var providedEventPromptKeys = new HashSet<string>();
+            if (manifest?.EventPrompt != null)
+            {
+                foreach (var (key, text) in manifest.EventPrompt)
+                {
+                    var eventKey = ResolveEventKey(key);
+                    if (eventKey != null && !string.IsNullOrWhiteSpace(text))
+                    {
+                        providedEventPromptKeys.Add(eventKey);
+                    }
+                }
+            }
+
+            // 已提供的 reactions 键（至少一条非空台词才算提供）
+            var providedReactionKeys = new HashSet<string>();
+            if (manifest?.Reactions != null)
+            {
+                foreach (var (key, lines) in manifest.Reactions)
+                {
+                    var partKey = ResolveConfiguredKey(key);
+                    if (partKey != null && lines != null && lines.Any(line => !string.IsNullOrWhiteSpace(line)))
+                    {
+                        providedReactionKeys.Add(partKey);
+                    }
+                }
+            }
+
             var missing = new List<string>();
             foreach (var key in RequiredEventPromptKeys)
             {
-                if (!_eventPromptOverrides.ContainsKey(key))
+                if (!providedEventPromptKeys.Contains(key))
                 {
                     missing.Add($"eventPrompt.{key}");
                 }
@@ -191,22 +240,31 @@ namespace KfuPet.Services
 
             foreach (var key in RequiredReactionKeys)
             {
-                if (!_lines.TryGetValue(key, out var lines) || lines.Count == 0)
+                if (!providedReactionKeys.Contains(key))
                 {
                     missing.Add($"reactions.{key}");
                 }
             }
 
-            _missingConfigKeys = missing;
+            return missing;
+        }
+
+        /// <summary>
+        /// 检测当前角色包反应配置是否完整：列出缺失的必填键并记录到 <see cref="MissingConfigKeys"/>，
+        /// 缺失时记录日志警告，完整时记录 Info。必填键见 <see cref="RequiredEventPromptKeys"/>、<see cref="RequiredReactionKeys"/>。
+        /// </summary>
+        private void CheckCompleteness(string packageDir)
+        {
+            _missingConfigKeys = FindMissingReactionKeys(packageDir);
 
             var name = Path.GetFileName(packageDir);
-            if (missing.Count == 0)
+            if (_missingConfigKeys.Count == 0)
             {
                 Log.Info($"[触摸] 角色包反应配置完整：{name}");
                 return;
             }
 
-            Log.Warning($"[触摸] 角色包反应配置不完整，缺少 {missing.Count} 项：{string.Join("、", missing)}" +
+            Log.Warning($"[触摸] 角色包反应配置不完整，缺少 {_missingConfigKeys.Count} 项：{string.Join("、", _missingConfigKeys)}" +
                         $"（{name}，补全方法见 docs/角色包制作指南.md）");
         }
 

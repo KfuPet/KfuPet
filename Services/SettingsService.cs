@@ -31,7 +31,7 @@ namespace KfuPet.Services
 
     /// <summary>
     /// 应用通用设置，统一读写缓存目录下的 Config\settings.json（默认 %AppData%\KfuPet，可在设置中自定义）。
-    /// 目前包含主题偏好、开发者模式、骨骼调试线框、桌宠窗口位置、模型功能节省模式与主动搭话；后续通用设置继续在此扩展字段。
+    /// 目前包含主题偏好、开发者模式、骨骼调试线框、桌宠窗口位置、当前使用角色包、模型功能节省模式与主动搭话；后续通用设置继续在此扩展字段。
     /// </summary>
     internal class SettingsService
     {
@@ -56,6 +56,9 @@ namespace KfuPet.Services
 
         /// <summary>桌宠窗口左上角 Y 坐标（逻辑像素）；null 表示尚未记录，启动时居中。</summary>
         public double? WindowTop { get; private set; }
+
+        /// <summary>当前使用的角色包标识（character.json 的 id，缺省时为文件夹名）；空串表示未选择过，按默认角色启动。</summary>
+        public string ActiveCharacterId { get; private set; } = string.Empty;
 
         /// <summary>模型功能节省模式。</summary>
         public SavingMode ModelSavingMode { get; private set; }
@@ -200,6 +203,7 @@ namespace KfuPet.Services
             DebugBones = false;
             WindowLeft = null;
             WindowTop = null;
+            ActiveCharacterId = string.Empty;
             ModelSavingMode = SavingMode.Off;
             CustomTouchReactionUseAi = true;
             CustomUpdateNotificationUseAi = true;
@@ -246,6 +250,13 @@ namespace KfuPet.Services
         {
             WindowLeft = left;
             WindowTop = top;
+            Save();
+        }
+
+        /// <summary>保存当前使用的角色包标识（角色模型窗口「使用」按钮写入）。</summary>
+        public void SetActiveCharacterId(string characterId)
+        {
+            ActiveCharacterId = characterId?.Trim() ?? string.Empty;
             Save();
         }
 
@@ -418,6 +429,12 @@ namespace KfuPet.Services
                     WindowTop = windowTopElement.GetDouble();
                 }
 
+                if (root.TryGetProperty("ActiveCharacterId", out var activeCharacterElement) &&
+                    activeCharacterElement.ValueKind == JsonValueKind.String)
+                {
+                    ActiveCharacterId = activeCharacterElement.GetString()?.Trim() ?? string.Empty;
+                }
+
                 if (root.TryGetProperty("ModelSavingMode", out var savingModeElement) &&
                     savingModeElement.ValueKind == JsonValueKind.String &&
                     Enum.TryParse<SavingMode>(savingModeElement.GetString(), ignoreCase: true, out var savingMode) &&
@@ -569,6 +586,7 @@ namespace KfuPet.Services
                     DebugBones,
                     WindowLeft,
                     WindowTop,
+                    ActiveCharacterId,
                     ModelSavingMode = ModelSavingMode.ToString(),
                     CustomTouchReactionUseAi,
                     CustomUpdateNotificationUseAi,

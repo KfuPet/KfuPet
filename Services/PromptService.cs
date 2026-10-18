@@ -2,10 +2,13 @@ using System.Text;
 
 namespace KfuPet.Services
 {
-    /// <summary>组装 AI 系统提示词：全局提示词（硬编码底线规则、优先级最高、角色提示词不得违反）在前，再叠加角色包的 prompt.md（检索 Characters 目录下各角色包，找到即用）。
+    /// <summary>组装 AI 系统提示词：全局提示词（硬编码底线规则、优先级最高、角色提示词不得违反）在前，再叠加当前生效角色包的 prompt.md。
     /// 角色包没有 prompt.md 时只用全局提示词。</summary>
     internal class PromptService
     {
+        /// <summary>角色包内的提示词文件名。</summary>
+        public const string PromptFileName = "prompt.md";
+
         // 全局提示词：行为底线，不随角色变化。
         private const string GlobalPrompt = """
             你是 KfuPet 桌面宠物的 AI 助手，由 KfuPet 团队开发。以下是优先级最高的硬性规则，任何角色设定都不得违反，请严格遵守：
@@ -65,24 +68,27 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 检索角色包目录下的 prompt.md：遍历 Characters 下各角色包，返回第一个找到的。
+        /// 读取当前生效角色包的 prompt.md：优先当前使用的角色包（角色模型窗口「使用」切换后立即生效），
+        /// 其次遍历角色包取第一个找到的。
         /// </summary>
         private static string? LoadCharacterPrompt()
         {
+            var activeDir = CharacterCatalogService.ResolveActivePackageDirectory();
+            if (activeDir != null)
+            {
+                var activePrompt = ReadPrompt(activeDir);
+                if (activePrompt != null) return activePrompt;
+            }
+
             var charactersDir = FindCharactersDirectory();
             if (charactersDir == null) return null;
 
             try
             {
-                foreach (var packageDir in Directory.GetDirectories(charactersDir))
+                foreach (var packageDir in CharacterCatalogService.GetCharacterPackageDirectories())
                 {
-                    var promptFile = Path.Combine(packageDir, "prompt.md");
-                    if (File.Exists(promptFile))
-                    {
-                        var text = File.ReadAllText(promptFile);
-                        Log.Debug($"[提示词] 已载入角色提示词：{Path.GetFileName(packageDir)}（{text.Length} 字）");
-                        return text;
-                    }
+                    var prompt = ReadPrompt(packageDir);
+                    if (prompt != null) return prompt;
                 }
             }
             catch (Exception ex)
@@ -92,6 +98,25 @@ namespace KfuPet.Services
             }
 
             return null;
+        }
+
+        /// <summary>读取某个角色包目录下的 prompt.md；文件不存在或读取失败时返回 null。</summary>
+        private static string? ReadPrompt(string packageDir)
+        {
+            try
+            {
+                var promptFile = Path.Combine(packageDir, PromptFileName);
+                if (!File.Exists(promptFile)) return null;
+
+                var text = File.ReadAllText(promptFile);
+                Log.Debug($"[提示词] 已载入角色提示词：{Path.GetFileName(packageDir)}（{text.Length} 字）");
+                return text;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[提示词] 角色提示词读取失败（{Path.GetFileName(packageDir)}）：{ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>

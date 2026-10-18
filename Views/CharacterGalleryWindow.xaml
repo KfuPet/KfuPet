@@ -617,8 +617,10 @@
                                                 <StackPanel.RenderTransform>
                                                     <TranslateTransform x:Name="HoverActionsSlide" Y="8"/>
                                                 </StackPanel.RenderTransform>
-                                                <Button Style="{StaticResource HoverActionButtonStyle}"
-                                                        Content="使用"/>
+                                                <Button x:Name="UseButton"
+                                                        Style="{StaticResource HoverActionButtonStyle}"
+                                                        Content="使用"
+                                                        Click="UseCharacterButton_Click"/>
                                                 <Button Style="{StaticResource HoverActionButtonStyle}"
                                                         Margin="0,8,0,0"
                                                         Content="详情"/>
@@ -699,7 +701,20 @@
                                     <DataTrigger Binding="{Binding IsDeletable}" Value="False">
                                         <Setter TargetName="DeleteButton" Property="Opacity" Value="0.45"/>
                                         <Setter TargetName="DeleteButton" Property="Cursor" Value="No"/>
-                                        <Setter TargetName="DeleteButton" Property="ToolTip" Value="至少要保留一个角色模型"/>
+                                        <Setter TargetName="DeleteButton" Property="ToolTip" Value="{Binding DeleteHint}"/>
+                                    </DataTrigger>
+                                    <!-- 角色包不完整：不允许切换使用，按钮置灰并显示禁止光标 -->
+                                    <DataTrigger Binding="{Binding CanUse}" Value="False">
+                                        <Setter TargetName="UseButton" Property="Opacity" Value="0.45"/>
+                                        <Setter TargetName="UseButton" Property="Cursor" Value="No"/>
+                                        <Setter TargetName="UseButton" Property="ToolTip" Value="{Binding IncompleteReason, StringFormat=角色包不完整，无法使用：{0}}"/>
+                                    </DataTrigger>
+                                    <!-- 当前正在使用的角色：按钮显示为「使用中」 -->
+                                    <DataTrigger Binding="{Binding IsActiveCharacter}" Value="True">
+                                        <Setter TargetName="UseButton" Property="Content" Value="使用中"/>
+                                        <Setter TargetName="UseButton" Property="Opacity" Value="0.45"/>
+                                        <Setter TargetName="UseButton" Property="Cursor" Value="Arrow"/>
+                                        <Setter TargetName="UseButton" Property="ToolTip" Value="当前正在使用的角色"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
