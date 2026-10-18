@@ -23,11 +23,8 @@ namespace KfuPet.Services
         SnapBack
     }
 
-    /// <summary>
-    /// 情感服务：本地维护愉悦 / 精力 / 亲密三个维度（0–100），支持事件增减、随时间衰减与落盘持久化。
-    /// 不做轮询——所有时间结算都是惰性的，在每次读取 / 写入前依据时间游标补算，因此不占用定时器、不唤醒 UI 线程；
-    /// 情绪上下文可注入系统提示词，并影响主动搭话的触发概率。
-    /// </summary>
+    /// <summary>情感服务：本地维护愉悦/精力/亲密三维度（0–100），支持事件增减、随时间衰减与落盘持久化。
+    /// 不做轮询——时间结算惰性化，在读/写前按时间游标补算，不占定时器也不唤醒 UI 线程；情绪上下文可注入系统提示词并影响主动搭话概率。</summary>
     internal class EmotionService : ICommandService
     {
         // ── 基线 ───────────────────────────────────────
@@ -253,9 +250,6 @@ namespace KfuPet.Services
         }
 
         /// <summary>按给定增量调整情绪（供模型工具与命令通道使用），每个维度单次钳制在 ±15 以内。</summary>
-        /// <param name="joyDelta">愉悦度增量。</param>
-        /// <param name="energyDelta">精力增量。</param>
-        /// <param name="intimacyDelta">亲密度增量。</param>
         /// <param name="reason">用于日志的中文说明。</param>
         public void Adjust(double joyDelta, double energyDelta, double intimacyDelta, string reason)
         {
@@ -281,11 +275,8 @@ namespace KfuPet.Services
             Save();
         }
 
-        /// <summary>
-        /// 主动搭话后规定时间内没有得到任何互动（被无视）：按连续被无视的次数加重下调愉悦与亲密，精力不受影响。
-        /// 刻意不计入 <see cref="AdjustCount"/>——这是被动惩罚，不是模型对主人态度的判断，
-        /// 否则可能让同轮对话误判为"已由模型调整过"而跳过对话后的态度判断。
-        /// </summary>
+        /// <summary>主动搭话后规定时间内无任何互动（被无视）：按连续次数加重下调愉悦与亲密，精力不受影响。
+        /// 刻意不计入 <see cref="AdjustCount"/>——这是被动惩罚而非模型对主人态度的判断，计入会让同轮对话误判为"已调整过"而跳过态度判断。</summary>
         /// <param name="streak">连续被无视的次数，从 1 开始；被回应一次即清零。</param>
         public void OnIgnored(int streak)
         {

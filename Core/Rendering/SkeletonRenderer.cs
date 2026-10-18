@@ -20,11 +20,8 @@ namespace KfuPet.Core.Rendering
         private const double BONE_LINE_THICKNESS = 3;
         private const double JOINT_RADIUS = 4;
 
-        /// <summary>
-        /// 是否显示骨骼调试线框（默认关闭）。
-        /// 这是给创作者对照模型资源、定位骨骼摆放位置的参考工具，长期保留，不会移除。
-        /// 由开发工具端通过开关控制启用。
-        /// </summary>
+        /// <summary>是否显示骨骼调试线框（默认关闭）。这是给创作者对照模型资源、定位骨骼摆放位置的参考工具，长期保留；
+        /// 由开发工具端通过开关控制启用。</summary>
         public bool ShowDebugBones { get; set; }
 
         public SkeletonRenderer(RenderContext context) : base(context)

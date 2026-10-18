@@ -2,11 +2,8 @@ using System.Text;
 
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 组装 AI 系统提示词：全局提示词（硬编码的底线规则，优先级最高，角色提示词不得违反）在前，
-    /// 再叠加角色包附带的 prompt.md（检索 Characters 目录下各角色包，找到即用）。
-    /// 角色包没有 prompt.md 时只使用全局提示词。
-    /// </summary>
+    /// <summary>组装 AI 系统提示词：全局提示词（硬编码底线规则、优先级最高、角色提示词不得违反）在前，再叠加角色包的 prompt.md（检索 Characters 目录下各角色包，找到即用）。
+    /// 角色包没有 prompt.md 时只用全局提示词。</summary>
     internal class PromptService
     {
         // 全局提示词：行为底线，不随角色变化。

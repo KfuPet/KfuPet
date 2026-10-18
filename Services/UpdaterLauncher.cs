@@ -65,13 +65,8 @@ namespace KfuPet.Services
             }
         }
 
-        /// <summary>
-        /// 从注册表读取安装目录；未安装或读取失败时返回空。
-        /// 查找顺序与 KfuPetUpdate 一致：先机器级（HKLM，新安装程序写在这里），
-        /// 读不到再回退用户级（HKCU，早期版本写下的位置）。
-        /// 两处都固定用 64 位注册表视图，对应更新程序的 WOW64_64KEY：
-        /// 否则进程位数不同时会被系统重定向到 Wow6432Node，读不到同一条记录。
-        /// </summary>
+        /// <summary>从注册表读取安装目录，未安装或读取失败时返回空。顺序与 KfuPetUpdate 一致：先机器级（HKLM，新安装程序写入），读不到再回退用户级（HKCU，早期版本写入）。
+        /// 两处固定用 64 位注册表视图（对应更新程序的 WOW64_64KEY）：否则进程位数不同会被重定向到 Wow6432Node，读不到同一条记录。</summary>
         private static string ReadInstallPath()
         {
             string path = ReadInstallPath(RegistryHive.LocalMachine);

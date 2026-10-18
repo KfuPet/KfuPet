@@ -2,11 +2,8 @@ using Microsoft.Win32;
 
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 应用本地数据目录解析：缓存根目录（软件配置、记忆与日志的父目录）支持用户自定义，
-    /// 记录在当前用户注册表 HKCU\Software\KfuPet 的 CacheRoot 值里。
-    /// 启动时读取一次，进程内固定不变——更改缓存目录后需要重启软件才会生效。
-    /// </summary>
+    /// <summary>应用本地数据目录解析：缓存根目录（软件配置、记忆与日志的父目录）支持用户自定义，
+    /// 记录在 HKCU\Software\KfuPet 的 CacheRoot 值里；启动时读取一次、进程内固定，更改后需重启才生效。</summary>
     internal static class AppPaths
     {
         /// <summary>注册表项：存放用户级路径设置。</summary>

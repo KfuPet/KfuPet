@@ -2,12 +2,8 @@ using System.Text.Json;
 
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 管理“记忆触发词”：用于判断一条用户消息是否值得立即做核心信息提取，
-    /// 命中任一触发词才发起实时提取请求，避免每轮对话都额外消耗一次模型。
-    /// 加载 / 保存到缓存目录下的 Config\memory-triggers.json（默认 %AppData%\KfuPet），
-    /// 配置缺失或损坏时回退到内置默认触发词。
-    /// </summary>
+    /// <summary>管理“记忆触发词”：判断一条用户消息是否值得立即做核心信息提取——命中任一触发词才发起实时提取请求，避免每轮都多消耗一次模型。
+    /// 加载/保存到缓存目录下的 Config\memory-triggers.json（默认 %AppData%\KfuPet），配置缺失或损坏时回退到内置默认触发词。</summary>
     internal class MemoryTriggerService
     {
         private static readonly string ConfigFilePath = Path.Combine(AppPaths.ConfigDirectory, "memory-triggers.json");

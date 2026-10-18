@@ -1,10 +1,7 @@
 namespace KfuPet.Services.Tools
 {
-    /// <summary>
-    /// 联网搜索工具（占位实现）：当前搜索后端未接入，先返回固定提示，
-    /// 让模型据此诚实地告知用户"搜索功能暂未配置"，避免编造实时信息。
-    /// 后续接入真实后端（如 Tavily / Bing）时，仅替换本类的 ExecuteAsync 内部逻辑。
-    /// </summary>
+    /// <summary>联网搜索工具（占位实现）：搜索后端未接入，先返回固定提示，让模型如实告知用户"搜索功能暂未配置"、避免编造实时信息。
+    /// 后续接入真实后端（如 Tavily / Bing）时，仅替换本类的 ExecuteAsync 内部逻辑。</summary>
     internal class WebSearchTool : ITool
     {
         public string Name => "web_search";

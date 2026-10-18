@@ -95,13 +95,7 @@ namespace KfuPet.Services
             return bone.Children.Select(c => c.Id).ToList();
         }
 
-        /// <summary>
-        /// 设置骨骼的本地位置。
-        /// </summary>
-        /// <param name="boneId">骨骼 ID</param>
-        /// <param name="x">X 偏移（逻辑像素）</param>
-        /// <param name="y">Y 偏移（逻辑像素）</param>
-        /// <returns>是否设置成功</returns>
+        /// <summary>设置骨骼本地位置（逻辑像素），返回是否成功。</summary>
         public bool SetPosition(string boneId, double x, double y)
         {
             var bone = _skeleton?.FindBone(boneId);
@@ -120,13 +114,7 @@ namespace KfuPet.Services
             return _skeleton?.FindBone(boneId)?.LocalPosition;
         }
 
-        /// <summary>
-        /// 平移骨骼（相对当前位置偏移）。
-        /// </summary>
-        /// <param name="boneId">骨骼 ID</param>
-        /// <param name="deltaX">X 方向偏移量</param>
-        /// <param name="deltaY">Y 方向偏移量</param>
-        /// <returns>是否设置成功</returns>
+        /// <summary>平移骨骼（相对当前位置偏移，逻辑像素），返回是否成功。</summary>
         public bool Translate(string boneId, double deltaX, double deltaY)
         {
             var bone = _skeleton?.FindBone(boneId);
@@ -138,12 +126,7 @@ namespace KfuPet.Services
             return true;
         }
 
-        /// <summary>
-        /// 设置骨骼的本地旋转（角度制）。
-        /// </summary>
-        /// <param name="boneId">骨骼 ID</param>
-        /// <param name="degrees">旋转角度（度）</param>
-        /// <returns>是否设置成功</returns>
+        /// <summary>设置骨骼本地旋转（角度制），返回是否成功。</summary>
         public bool SetRotation(string boneId, double degrees)
         {
             var bone = _skeleton?.FindBone(boneId);
@@ -154,11 +137,7 @@ namespace KfuPet.Services
             return true;
         }
 
-        /// <summary>
-        /// 获取骨骼的本地旋转（角度制）。
-        /// </summary>
-        /// <param name="boneId">骨骼 ID</param>
-        /// <returns>旋转角度（度），如果骨骼不存在返回 null</returns>
+        /// <summary>获取骨骼本地旋转（角度制），骨骼不存在返回 null。</summary>
         public double? GetRotation(string boneId)
         {
             var bone = _skeleton?.FindBone(boneId);
@@ -166,12 +145,7 @@ namespace KfuPet.Services
             return bone.LocalRotation * 180.0 / Math.PI;
         }
 
-        /// <summary>
-        /// 旋转骨骼（相对当前角度旋转）。
-        /// </summary>
-        /// <param name="boneId">骨骼 ID</param>
-        /// <param name="deltaDegrees">相对旋转角度（度）</param>
-        /// <returns>是否设置成功</returns>
+        /// <summary>相对当前角度旋转骨骼（角度制），返回是否成功。</summary>
         public bool Rotate(string boneId, double deltaDegrees)
         {
             var bone = _skeleton?.FindBone(boneId);
@@ -182,13 +156,7 @@ namespace KfuPet.Services
             return true;
         }
 
-        /// <summary>
-        /// 设置骨骼的本地缩放。
-        /// </summary>
-        /// <param name="boneId">骨骼 ID</param>
-        /// <param name="scaleX">X 方向缩放</param>
-        /// <param name="scaleY">Y 方向缩放</param>
-        /// <returns>是否设置成功</returns>
+        /// <summary>设置骨骼本地缩放，返回是否成功。</summary>
         public bool SetScale(string boneId, double scaleX, double scaleY)
         {
             var bone = _skeleton?.FindBone(boneId);
@@ -207,12 +175,7 @@ namespace KfuPet.Services
             return _skeleton?.FindBone(boneId)?.LocalScale;
         }
 
-        /// <summary>
-        /// 设置骨骼的激活状态。
-        /// </summary>
-        /// <param name="boneId">骨骼 ID</param>
-        /// <param name="isActive">是否激活</param>
-        /// <returns>是否设置成功</returns>
+        /// <summary>设置骨骼激活状态，返回是否成功。</summary>
         public bool SetActive(string boneId, bool isActive)
         {
             var bone = _skeleton?.FindBone(boneId);
@@ -231,12 +194,7 @@ namespace KfuPet.Services
             return _skeleton?.FindBone(boneId)?.IsActive;
         }
 
-        /// <summary>
-        /// 恢复骨骼到默认状态（使用 Bone 自带的 Default* 值，
-        /// 这些值在骨骼首次 AddBone 时自动固化）。
-        /// </summary>
-        /// <param name="boneId">骨骼 ID</param>
-        /// <returns>是否恢复成功</returns>
+        /// <summary>恢复骨骼到默认状态（Bone 的 Default* 值，首次 AddBone 时固化），返回是否成功。</summary>
         public bool ResetBone(string boneId)
         {
             var bone = _skeleton?.FindBone(boneId);
@@ -530,11 +488,7 @@ namespace KfuPet.Services
             }
         }
 
-        /// <summary>
-        /// 上传图片资源到本地缓存，返回可用的文件路径。
-        /// </summary>
-        /// <param name="base64Data">base64 编码的图片数据</param>
-        /// <param name="boneId">可选骨骼 ID，传入后图片存入 Resources/Cache/{boneId}/ 子目录</param>
+        /// <summary>上传 base64 图片到本地缓存并返回文件路径；传入 boneId 时存入 Resources/Cache/{boneId}/ 子目录。</summary>
         public string? UploadResource(string base64Data, string? boneId = null)
         {
             try

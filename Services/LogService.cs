@@ -28,11 +28,8 @@ namespace KfuPet.Services
             _fileWriter = writer;
         }
 
-        /// <summary>
-        /// 订阅日志：在同一把锁内先回调历史日志、再挂上实时回调，
-        /// 保证历史与实时之间不重复、不遗漏、不乱序。
-        /// 回调内只做入队等轻量操作，不要做耗时或阻塞操作。
-        /// </summary>
+        /// <summary>订阅日志：同一把锁内先回调历史日志、再挂实时回调，保证历史与实时不重复、不遗漏、不乱序。
+        /// 回调内只做入队等轻量操作，不要做耗时或阻塞操作。</summary>
         /// <param name="handler">实时日志回调。</param>
         /// <param name="backlogCallback">历史日志回调，收到最近 <see cref="MaxEntries"/> 条（按时间顺序）。</param>
         /// <returns>订阅句柄，释放后不再接收实时日志。</returns>

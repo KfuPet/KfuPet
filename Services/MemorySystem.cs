@@ -4,11 +4,9 @@ using KfuPet.Models;
 
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 记忆系统门面：统一管理短期 → 归档 → 长期三级记忆的流转。
-    /// 短期记忆保存最近对话，满 20 条溢出到归档；归档满 40 条后后台异步触发
-    /// AI 分析筛选，重要信息进长期记忆，其余总结后留在归档继续循环。
-    /// </summary>
+    /// <summary>记忆系统门面：统一管理短期 → 归档 → 长期三级记忆的流转。
+    /// 短期记忆保存最近对话，满 20 条溢出到归档；归档满 40 条后后台异步触发 AI 分析筛选，
+    /// 重要信息进长期记忆，其余总结后留在归档继续循环。</summary>
     internal class MemorySystem
     {
         private const int ShortMemoryLimit = 20;
@@ -136,9 +134,7 @@ namespace KfuPet.Services
                 .ToList();
         }
 
-        /// <summary>
-        /// 本地关键词检索长期记忆（零模型开销），供 memory_search 工具主动回忆使用。
-        /// </summary>
+        /// <summary>本地关键词检索长期记忆（零模型开销），供 memory_search 工具主动回忆使用。</summary>
         /// <param name="query">检索关键词。</param>
         /// <param name="topK">最多返回条数。</param>
         public IReadOnlyList<string> SearchLongTerm(string query, int topK)
@@ -195,11 +191,9 @@ namespace KfuPet.Services
             return _promptService.BuildSystemPrompt() + EmotionService.Instance.BuildPromptContext();
         }
 
-        /// <summary>
-         /// 构建系统提示词（全局 + 角色 + 当前情绪）并注入长期记忆。
-         /// 先固定注入重要性最高的若干条（核心事实始终在场），再叠加关键词命中的相关记忆；
-         /// 关键词完全未命中时才用模型判断相关性兜底，且带超时保护，避免拖慢回复。
-         /// </summary>
+        /// <summary>构建系统提示词（全局 + 角色 + 当前情绪）并注入长期记忆。
+        /// 先固定注入重要性最高的若干条（核心事实始终在场），再叠加关键词命中的相关记忆；
+        /// 关键词完全未命中时才用模型判断相关性兜底，且带超时保护，避免拖慢回复。</summary>
         public async Task<string> BuildContextAsync(ModelConfig model, string userMessage)
         {
             var systemPrompt = BuildBaseSystemPrompt();

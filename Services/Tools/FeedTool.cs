@@ -2,11 +2,8 @@ using System.Text.Json;
 
 namespace KfuPet.Services.Tools
 {
-    /// <summary>
-    /// 投喂工具：主人明确表示要喂东西给你吃时由模型调用，
-    /// 复用 <see cref="EmotionService"/> 结算一次数值变化（愉悦 / 精力 / 亲密上升），
-    /// 无物品系统——投喂只做一次情绪结算，不扣减任何道具。
-    /// </summary>
+    /// <summary>投喂工具：主人明确表示要喂东西吃时由模型调用，复用 <see cref="EmotionService"/> 结算一次数值变化（愉悦/精力/亲密上升）。
+    /// 无物品系统——投喂只做一次情绪结算，不扣减任何道具。</summary>
     internal class FeedTool : ITool
     {
         /// <summary>一次投喂带来的愉悦度提升。</summary>

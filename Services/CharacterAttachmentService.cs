@@ -3,11 +3,8 @@ using KfuPet.Models;
 
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 角色包附件配置（attachments.json）的读写：把角色包里的部位图片挂载到骨骼上，
-    /// 以及把当前骨骼上的附件状态导出回角色包，供创作者用开发者工具调整后固化。
-    /// 位置遵循角色包约定：Characters/&lt;角色名&gt;/attachments.json，图片放在 images/ 下。
-    /// </summary>
+    /// <summary>角色包附件配置（attachments.json）的读写：把角色包里的部位图片挂载到骨骼上，或把当前骨骼上的附件状态导出回角色包，供创作者调整后固化。
+    /// 位置遵循角色包约定：Characters/&lt;角色名&gt;/attachments.json，图片放在 images/ 下。</summary>
     internal static class CharacterAttachmentService
     {
         /// <summary>附件配置文件名。</summary>

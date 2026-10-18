@@ -15,10 +15,7 @@ namespace KfuPet.Services
             Timeout = TimeSpan.FromSeconds(10)
         };
 
-        /// <summary>
-        /// 查询指定模型的账户余额，成功返回形如“¥12.34”的展示文本；
-        /// 服务商不支持或查询失败时返回 null（调用方显示“未知”）。
-        /// </summary>
+        /// <summary>查询指定模型的账户余额，成功返回形如“¥12.34”的展示文本；服务商不支持或查询失败时返回 null（调用方显示“未知”）。</summary>
         /// <param name="baseUrl">模型配置里的 API 基础地址，用于识别服务商。</param>
         /// <param name="apiKey">明文 API 密钥。</param>
         public static async Task<string?> QueryAsync(string baseUrl, string apiKey)

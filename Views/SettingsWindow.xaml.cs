@@ -404,11 +404,8 @@ namespace KfuPet.Views
             dialog.Show();
         }
 
-        /// <summary>
-        /// 按完全访问开关刷新“打开应用”各区块的显隐：
-        /// 完全访问开启时隐藏白名单卡片（此时白名单已不生效、工具也不会读它），
-        /// 但保留红色警示文案与开关本身，用户随时能关回去。
-        /// </summary>
+        /// <summary>按完全访问开关刷新“打开应用”各区块显隐：开启时隐藏白名单卡片（已不生效、工具也不读它），
+        /// 但保留红色警示与开关本身，用户随时能关回去。</summary>
         private void UpdateOpenAppSectionVisibility()
         {
             var fullAccess = OpenAppFullAccessToggle.IsChecked == true;
@@ -833,11 +830,8 @@ namespace KfuPet.Views
             UpdateProactiveFrequencyThumb(animate: false);
         }
 
-        /// <summary>
-        /// 重建安静时段下拉：候选项为 0–23 时，排除另一个下拉当前选中的小时（避免起止相同），
-        /// 并用指定的小时恢复选中。markNextDayBeforeExcluded 为 true 时（结束下拉），
-        /// 比排除小时更早的候选项会标注"次日"，表示该选择跨午夜。
-        /// </summary>
+        /// <summary>重建安静时段下拉：候选项 0–23 排除另一个下拉当前选中的小时（避免起止相同），再按 selectedHour 恢复选中。
+        /// markNextDayBeforeExcluded 为 true（结束下拉）时，比排除小时更早的候选项标注“次日”，表示跨午夜。</summary>
         private static void RebuildQuietHourOptions(ComboBox comboBox, int excludedHour, int selectedHour, bool markNextDayBeforeExcluded = false)
         {
             comboBox.Items.Clear();
@@ -1305,11 +1299,9 @@ namespace KfuPet.Views
             dialog.Show();
         }
 
-        /// <summary>
-        /// 软件配置清理后的值复位：内存中的设置、模型、停用词、用量统计与情绪回到初始值。
-        /// 只做值复位——等待重启的这段时间里，任何一次保存都会把当前值写回配置文件，
-        /// 若不复位就会把旧值写回去；界面与实时状态（主题、开发者模式等）交给重启自然恢复。
-        /// </summary>
+        /// <summary>软件配置清理后的值复位：设置、模型、停用词、用量统计与情绪的内存值回到初始值。
+        /// 只复位值——等待重启期间任何一次保存都会把当前值写回文件，不复位就会写回旧值；
+        /// 界面与实时状态（主题、开发者模式等）交给重启自然恢复。</summary>
         private void ResetSoftwareConfigValues()
         {
             SettingsService.Instance.ResetToDefaults();
@@ -1837,11 +1829,9 @@ namespace KfuPet.Views
             UpdateDebugBonesPanel();
         }
 
-        /// <summary>
-        /// 同步“开发者模式”导航入口的显隐：仅当开发者模式处于开启状态时显示。
-        /// 关闭开关后不立即隐藏，等设置窗口关闭、下次再打开时按开关状态重新判定；
-        /// 入口平时默认隐藏，只能通过“关于”页版本徽章连续点击 5 次唤出。
-        /// </summary>
+        /// <summary>同步“开发者模式”导航入口显隐：仅开发者模式开启时显示。
+        /// 关闭开关后不立即隐藏，等窗口关闭、下次打开时重新判定；入口默认隐藏，
+        /// 只能通过“关于”页版本徽章连续点击 5 次唤出。</summary>
         private void UpdateDeveloperNavVisibility()
         {
             DeveloperNavItem.Visibility = _mainWindow.DeveloperModeService.IsEnabled
@@ -1873,12 +1863,9 @@ namespace KfuPet.Views
             }
         }
 
-        /// <summary>
-        /// 在页面下方居中弹出飘窗提示
-        /// 重复调用会重置停留计时，不会叠加多个提示。
-        /// </summary>
+        /// <summary>在页面下方居中弹出飘窗提示；重复调用只重置停留计时，不会叠加多个提示。</summary>
         /// <param name="message">提示文本。</param>
-        /// <param name="isError">错误提示：图标换成红色叉号；默认是勾号的普通提示。</param>
+        /// <param name="isError">true 为错误提示（红色叉号），默认勾号普通提示。</param>
         private void ShowToast(string message, bool isError = false)
         {
             ToastText.Text = message;
@@ -2243,11 +2230,8 @@ namespace KfuPet.Views
                 new DoubleAnimation(to, duration) { EasingFunction = easing });
         }
 
-        /// <summary>
-        /// 拉取版本发布信息，填充“关于此版本 / 关于新版本”区块：
-        /// 检测到新版本时切换为“关于新版本”并展示新版本信息，否则展示本机版本信息。
-        /// 只在关于页首次显示时加载一次。
-        /// </summary>
+        /// <summary>拉取版本发布信息填充“关于此版本 / 关于新版本”区块：有新版本时展示新版本信息，否则展示本机版本。
+        /// 只在关于页首次显示时加载一次。</summary>
         private async Task LoadCurrentVersionInfoAsync()
         {
             if (_hasLoadedCurrentVersionInfo || _isLoadingCurrentVersionInfo)

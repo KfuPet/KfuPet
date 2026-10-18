@@ -557,11 +557,8 @@ namespace KfuPet
             }
         }
 
-        /// <summary>
-        /// 判断保存的位置与虚拟屏幕（全部显示器的并集）是否有足够重叠。
-        /// 换显示器、改分辨率或远程桌面后保存的坐标可能落在屏幕外，
-        /// 重叠低于 <see cref="MIN_RESTORE_VISIBLE_RATIO"/> 时视为失效，启动时回到屏幕中间。
-        /// </summary>
+        /// <summary>判断保存位置与虚拟屏幕（全部显示器并集）的重叠是否足够（<see cref="MIN_RESTORE_VISIBLE_RATIO"/>）。
+        /// 不足（换显示器、改分辨率或远程桌面后坐标落到屏外）即视为失效，启动时回到屏幕中间。</summary>
         private static bool IsSavedPositionVisible(double left, double top)
         {
             var virtualRight = SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth;
@@ -576,11 +573,8 @@ namespace KfuPet
                 && overlapHeight >= WINDOW_HEIGHT * MIN_RESTORE_VISIBLE_RATIO;
         }
 
-        /// <summary>
-        /// 显示前把根布局置为全透明：窗口出现后、淡入动画生效前，
-        /// 渲染线程可能先合成出一帧基础不透明度（1）的画面，看起来像"闪一下"，置 0 后提前合成的帧不可见。
-        /// 必须在 <see cref="Window.Show"/> 之前调用，随后立即调用 <see cref="PlayFadeInAnimation"/>。
-        /// </summary>
+        /// <summary>显示前把根布局置为全透明，避免窗口出现后、淡入动画生效前渲染线程合成出"闪一下"的帧。
+        /// 必须在 <see cref="Window.Show"/> 前调用，随后立即调用 <see cref="PlayFadeInAnimation"/>。</summary>
         public void PrepareFadeIn()
         {
             RootGrid.Opacity = 0;
@@ -974,11 +968,8 @@ namespace KfuPet
             _wiggleExtremeX = canvasPoint.X;
         }
 
-        /// <summary>
-        /// 触发一次触摸反应：优先让 AI 现场生成一句回应，未接入 AI 或请求失败时改用角色包的备用台词，
-        /// 两者都没有则不作声。冷却期间（2 秒）的触摸动作一律无效。
-        /// </summary>
-        /// <param name="isPetting">true 表示抚摸手势（按住头部来回滑动），false 表示双击。</param>
+        /// <summary>触发一次触摸反应：优先 AI 现场生成，失败则用角色包备用台词，都没有则不作声；冷却 2 秒内无效。</summary>
+        /// <param name="isPetting">true 为抚摸手势（按住头部来回滑动），false 为双击。</param>
         private void TriggerTouchReaction(string boneId, bool isPetting)
         {
             var partKey = TouchReactionService.ResolvePartKey(boneId);
@@ -1101,11 +1092,8 @@ namespace KfuPet
             ScheduleChatInputHide();
         }
 
-        /// <summary>
-        /// 计算输入框需要向上偏移的距离（逻辑像素，向上为负）。返回 0 表示无需偏移。
-        /// 用窗口在屏幕上的真实矩形与显示器工作区（都是设备像素、整数）做整数对齐，
-        /// 若改用 Window.Left/Top 会因请求值与系统实际取整后的位置存在亚像素差而产生抖动。
-        /// </summary>
+        /// <summary>计算输入框需向上偏移的距离（逻辑像素，向上为负），0 表示无需偏移。
+        /// 用窗口真实矩形与工作区（设备像素、整数）对齐：改用 Window.Left/Top 会因亚像素取整差导致抖动。</summary>
         private double GetChatInputBottomShift()
         {
             var hwnd = new WindowInteropHelper(this).Handle;
@@ -1135,11 +1123,8 @@ namespace KfuPet
             return Math.Floor(maxShiftDevice) * scaleY;
         }
 
-        /// <summary>
-        /// 拖动开始时收起输入框（渐隐）。
-        /// 拖动过程中窗口位置逐帧变化，输入框若跟随移动无法与窗口位置严格同步（两者不在同一时钟上），
-        /// 会表现为明显抖动；因此先收起，等松手、窗口静止后再按最终位置重新弹出。
-        /// </summary>
+        /// <summary>拖动开始时渐隐收起输入框：拖动中窗口位置逐帧变化，输入框跟不上（两者不在同一时钟）会抖动；
+        /// 松手、窗口静止后再按最终位置重新弹出。</summary>
         private void HideChatInputForDrag()
         {
             if (!_isChatInputVisible)
@@ -1283,11 +1268,9 @@ namespace KfuPet
             _ = SendChatAsync();
         }
 
-        /// <summary>
-        /// 对话后的情绪判断：单独发一次请求，让模型判断主人这句话里的态度并折算成情绪增减。
-        /// 与主对话里的 emotion_adjust 工具互补——工具负责本轮语气一致，这里保证每一轮都判过一次。
-        /// 由 <see cref="SettingsService.EmotionJudgeUseAi"/> 控制是否启用；失败只记日志，不影响对话。
-        /// </summary>
+        /// <summary>对话后的情绪判断：单独发一次请求，让模型判断主人这句话的态度并折算成情绪增减。
+        /// 与主对话的 emotion_adjust 工具互补（工具保证本轮语气一致，这里保证每轮都判过）；
+        /// 由 <see cref="SettingsService.EmotionJudgeUseAi"/> 控制，失败只记日志，不影响对话。</summary>
         /// <param name="model">本轮对话使用的模型。</param>
         /// <param name="userMessage">主人这一轮说的话。</param>
         /// <param name="assistantReply">桌宠这一轮的回复。</param>

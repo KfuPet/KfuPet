@@ -88,11 +88,8 @@ namespace KfuPet.Controls
             _skeletonRenderer?.Clear();
         }
 
-        /// <summary>
-        /// 判断画布上的点是否命中角色的不透明区域（用于悬停交互，透明部分不响应）。
-        /// 按 Z 序从顶层往下检查：附件图片按像素透明度判断，
-        /// 调试骨骼线框（连线/关节圆点）按几何距离判断。
-        /// </summary>
+        /// <summary>判断画布上的点是否命中角色的不透明区域（悬停交互用，透明部分不响应）。
+        /// 按 Z 序从顶层往下检查：附件图片按像素透明度判断，调试骨骼线框（连线/关节圆点）按几何距离判断。</summary>
         public bool HitTestOpaque(Point canvasPoint)
         {
             foreach (var element in RenderCanvas.Children.OfType<UIElement>()

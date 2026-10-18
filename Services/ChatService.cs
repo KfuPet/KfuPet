@@ -22,9 +22,7 @@ namespace KfuPet.Services
         /// <summary>工具调用循环的最大轮次，防止模型反复请求工具导致死循环。</summary>
         private const int MaxToolRounds = 3;
 
-        /// <summary>
-        /// 发送对话请求：使用调用方提供的系统提示词 + 历史 + 当前用户消息，返回 AI 回复文本。
-        /// </summary>
+        /// <summary>发送对话请求：使用调用方提供的系统提示词 + 历史 + 当前用户消息，返回 AI 回复文本。</summary>
         /// <param name="history">短期记忆（会话上下文），不含当前用户消息。</param>
         /// <param name="category">调用来源分类，用于 token 用量统计。</param>
         public async Task<string> SendAsync(
@@ -54,10 +52,8 @@ namespace KfuPet.Services
             return ExtractReply(body);
         }
 
-        /// <summary>
-        /// 带工具调用能力的对话：请求携带工具定义，模型返回工具调用时本地执行并回填结果，
-        /// 多轮循环直到模型给出最终文本；模型不支持工具时自动降级为普通对话。
-        /// </summary>
+        /// <summary>带工具调用能力的对话：请求携带工具定义，模型返回工具调用时本地执行并回填结果，
+        /// 多轮循环直到模型给出最终文本；模型不支持工具时自动降级为普通对话。</summary>
         /// <param name="history">短期记忆（会话上下文），不含当前用户消息。</param>
         /// <param name="tools">提供给模型的工具定义列表。</param>
         /// <param name="executeToolAsync">工具执行器：接收（工具名，参数 JSON），返回结果文本。</param>

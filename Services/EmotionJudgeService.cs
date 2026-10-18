@@ -10,12 +10,8 @@ namespace KfuPet.Services
         public bool IsNoChange => Math.Abs(Joy) < 0.5 && Math.Abs(Energy) < 0.5 && Math.Abs(Intimacy) < 0.5;
     }
 
-    /// <summary>
-    /// 对话后的情绪判断：主人说完一轮话之后，单独发一次请求，让模型判断这句话里流露出的态度
-    /// （夸奖 / 责备 / 关心 / 冷淡 / 与态度无关），并折算成情绪增减量。
-    /// 与主对话里的 emotion_adjust 工具互补——工具负责本轮语气一致，本服务负责保证每一轮都判过，
-    /// 因此模型的工具调用能力不可用（自动降级为普通对话）时，情绪仍有模型侧来源。
-    /// </summary>
+    /// <summary>对话后的情绪判断：主人说完一轮后单独发一次请求，让模型判断这句话的态度（夸奖/责备/关心/冷淡/无关）并折算成情绪增减。
+    /// 与主对话的 emotion_adjust 工具互补——工具保证本轮语气一致，本服务保证每轮都判过；因此工具调用不可用（降级为普通对话）时情绪仍有模型侧来源。</summary>
     internal static class EmotionJudgeService
     {
         /// <summary>判断结果里每个维度的最大幅度，与 emotion_adjust 工具的单次钳制保持一致。</summary>

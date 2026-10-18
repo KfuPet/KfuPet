@@ -10,9 +10,7 @@ namespace KfuPet.Views
     /// </summary>
     internal static class UpdatePrompt
     {
-        /// <summary>
-        /// 显示更新结果弹窗。用户确认且有新版本时拉起更新程序，拉起成功才退出桌宠。
-        /// </summary>
+        /// <summary>显示更新结果弹窗：用户确认且有新版本时拉起更新程序，拉起成功才退出桌宠。</summary>
         /// <param name="owner">弹窗属主窗口，可为 null。</param>
         /// <param name="result">检查更新结果。</param>
         public static void Show(Window? owner, UpdateCheckResult result)

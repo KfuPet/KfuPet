@@ -4,11 +4,8 @@ using KfuPet.Models;
 
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 日志落盘器：把日志异步追加写入本地文件，供用户自查与反馈问题。
-    /// 调用线程只入队，真正的写入由后台任务完成，不阻塞 UI；
-    /// 每次启动一个文件（KfuPet-yyyyMMdd-HHmmss.log），启动时清理旧文件只留最近几份。
-    /// </summary>
+    /// <summary>日志落盘器：把日志异步追加写入本地文件，供用户自查与反馈。
+    /// 调用线程只入队，真正写入由后台任务完成、不阻塞 UI；每次启动一个文件（KfuPet-yyyyMMdd-HHmmss.log），启动时清理旧文件只留最近几份。</summary>
     internal class LogFileWriter : IDisposable
     {
         /// <summary>日志目录：缓存目录下的 Logs（默认为 %AppData%\KfuPet\Logs，可在设置中自定义）。</summary>
@@ -42,12 +39,8 @@ namespace KfuPet.Services
             _pumpTask = Task.Run(() => PumpAsync(_cts.Token));
         }
 
-        /// <summary>
-        /// 创建日志目录，并把旧日志清理到只剩 <see cref="MaxFiles"/> - 1 份，
-        /// 给本次启动的文件留出位置（这样目录里始终不超过 MaxFiles 份）。
-        /// 返回 false 表示目录不可用（无权限、磁盘异常等），
-        /// 此时不要创建落盘器，日志保持只进内存。
-        /// </summary>
+        /// <summary>创建日志目录并把旧日志清理到只剩 <see cref="MaxFiles"/> - 1 份，给本次启动的文件留位（目录始终不超过 MaxFiles 份）。
+        /// 返回 false 表示目录不可用（无权限、磁盘异常等），此时不要创建落盘器，日志保持只进内存。</summary>
         public static bool Prepare()
         {
             try

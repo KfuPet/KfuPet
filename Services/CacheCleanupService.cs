@@ -1,10 +1,7 @@
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 缓存清理服务：负责删除可清理的本地文件（历史日志、软件配置文件）。
-    /// 记忆的清空由 <see cref="MemorySystem"/> 负责，设置 / 模型 / 停用词 / 记忆触发词 / 情绪的内存复位
-    /// 由各服务自身的 ResetToDefaults 负责，调用方（设置窗口）按需组合。
-    /// </summary>
+    /// <summary>缓存清理服务：负责删除可清理的本地文件（历史日志、软件配置文件）。
+    /// 记忆清空由 <see cref="MemorySystem"/> 负责，设置/模型/停用词/记忆触发词/情绪的内存复位由各服务的 ResetToDefaults 负责，调用方按需组合。</summary>
     internal static class CacheCleanupService
     {
         /// <summary>属于“软件配置”的文件清单。</summary>
@@ -18,11 +15,7 @@ namespace KfuPet.Services
             "emotion.json"
         };
 
-        /// <summary>
-        /// 删除日志目录下的历史日志，保留当前正在写入的那一份；
-        /// <paramref name="keepFilePath"/> 为 null（未启用落盘）时全部删除。
-        /// 返回实际删除的文件数量。
-        /// </summary>
+        /// <summary>删除日志目录下的历史日志，保留正在写入的那一份（<paramref name="keepFilePath"/> 为 null 时全删），返回删除数量。</summary>
         public static int DeleteLogFiles(string? keepFilePath)
         {
             var deleted = 0;

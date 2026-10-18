@@ -47,11 +47,8 @@ namespace KfuPet.Services
         public decimal EstimatedCostCny { get; init; }
     }
 
-    /// <summary>
-    /// 全局 token 用量统计：按分类与模型累计 prompt / completion token，并跨会话持久化到
-    /// 缓存目录下的 Config\tokenusage.json（默认 %AppData%\KfuPet）。
-    /// 金额按内置粗略单价表估算，仅作参考。
-    /// </summary>
+    /// <summary>全局 token 用量统计：按分类与模型累计 prompt/completion token，持久化到缓存目录下的 Config\tokenusage.json（默认 %AppData%\KfuPet）。
+    /// 金额按内置粗略单价表估算，仅作参考。</summary>
     internal class TokenUsageService
     {
         private static readonly string ConfigFilePath = Path.Combine(AppPaths.ConfigDirectory, "tokenusage.json");
@@ -81,9 +78,7 @@ namespace KfuPet.Services
             _saveTimer = new System.Threading.Timer(_ => Save(), null, Timeout.Infinite, Timeout.Infinite);
         }
 
-        /// <summary>
-        /// 记录一次调用的 token 用量。缺失 usage（服务商未返回）时传 0 即可，同样会计入请求次数。
-        /// </summary>
+        /// <summary>记录一次调用的 token 用量；缺失 usage（服务商未返回）时传 0，同样计入请求次数。</summary>
         /// <param name="model">本次调用使用的模型配置。</param>
         /// <param name="category">调用来源分类。</param>
         /// <param name="promptTokens">输入 token 数。</param>

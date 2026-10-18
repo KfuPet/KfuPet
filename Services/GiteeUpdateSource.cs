@@ -3,12 +3,8 @@ using KfuPet.Models;
 
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 从 Gitee Releases 获取发布信息（最新版本 / 指定版本）。
-    /// 作为 GitHub 源不可达时的国内镜像兜底，镜像仓库与 KfuPetUpdate 保持一致。
-    /// Gitee 的 v5 接口读取公开仓库无需鉴权，字段与 GitHub 的差异是
-    /// 发布时间叫 created_at；tag 约定与 GitHub 相同，都是 “v版本号”。
-    /// </summary>
+    /// <summary>从 Gitee Releases 获取发布信息（最新版本 / 指定版本），作为 GitHub 源不可达时的国内镜像兜底（镜像仓库与 KfuPetUpdate 一致）。
+    /// Gitee v5 接口读公开仓库无需鉴权，与 GitHub 的字段差异是发布时间叫 created_at；tag 约定相同，均为“v版本号”。</summary>
     internal class GiteeUpdateSource : IUpdateSource
     {
         private const string Owner = "lrht";

@@ -39,12 +39,9 @@ namespace KfuPet.Services
         public string ContextNote { get; }
     }
 
-    /// <summary>
-    /// 主动搭话服务：用低频心跳按"闸门链"判断什么时候可以让桌宠主动开口。
+    /// <summary>主动搭话服务：用低频心跳按"闸门链"判断何时可让桌宠主动开口。
     /// 心跳只做本地判断（设置、安静时段、冷却、系统空闲检测、界面忙闲），不产生模型请求；
-    /// 全部闸门通过时抛出 <see cref="Triggered"/> 事件，由主窗口负责生成台词并显示。
-    /// 台词与事件描述完全来自角色包，代码不内置文案。
-    /// </summary>
+    /// 全部闸门通过时抛出 <see cref="Triggered"/> 事件，由主窗口生成台词并显示；台词与事件描述均来自角色包、代码不内置文案。</summary>
     internal class ProactiveChatService
     {
         // ── 心跳与阈值 ─────────────────────────────
@@ -142,11 +139,8 @@ namespace KfuPet.Services
         /// <summary>触发事件：闸门全过时抛出，由主窗口负责生成台词并显示。</summary>
         public event EventHandler<ProactiveTriggerEventArgs>? Triggered;
 
-        /// <summary>
-        /// 启动心跳。describeBusyState 用于向主窗口查询界面此刻是否适合说话：
-        /// 可以说话返回 null，否则返回原因文案（仅用于日志）。
-        /// 启动时把"最后互动/最后主动"初始化为当前时刻，最初一个冷却周期内不会开口。
-        /// </summary>
+        /// <summary>启动心跳。describeBusyState 向主窗口查询界面此刻是否适合说话：可以说话返回 null，否则返回原因文案（仅记日志）。
+        /// 启动时把"最后互动/最后主动"初始化为当前时刻，最初一个冷却周期内不会开口。</summary>
         public void Start(Func<string?> describeBusyState)
         {
             Stop();
@@ -504,11 +498,8 @@ namespace KfuPet.Services
             Triggered?.Invoke(this, new ProactiveTriggerEventArgs(type, eventKey, contextNote));
         }
 
-        /// <summary>
-        /// 结算"开口后等待回应"的结果：窗口内主人有互动则连击清零；
-        /// 到期仍无互动则按连续次数加重扣一次情绪；主人不在电脑前时不计为无视。
-        /// 判定信号取自 <see cref="NotifyPetInteraction"/> 刷新的互动时刻，因此不需要额外定时器。
-        /// </summary>
+        /// <summary>结算"开口后等待回应"的结果：窗口内有互动则连击清零；到期仍无互动则按连续次数加重扣一次情绪；
+        /// 主人不在电脑前时不计为无视。判定信号取自 <see cref="NotifyPetInteraction"/> 刷新的互动时刻，无需额外定时器。</summary>
         private void CheckIgnored(DateTime now, string status)
         {
             if (!_awaitingReply)

@@ -10,12 +10,9 @@ using System.Windows.Navigation;
 
 namespace KfuPet.Helpers
 {
-    /// <summary>
-    /// 轻量 Markdown 渲染器：把更新日志一类的 Markdown 文本转换成 WPF 控件树。
-    /// 支持标题、无序/有序列表、引用、代码块、分隔线，以及加粗、斜体、删除线、
-    /// 行内代码、链接（图片按链接处理）等常用行内语法。
-    /// 字体与颜色全部引用应用主题资源，随主题切换自动更新。
-    /// </summary>
+    /// <summary>轻量 Markdown 渲染器：把更新日志一类的 Markdown 文本转成 WPF 控件树。
+    /// 支持标题、无序/有序列表、引用、代码块、分隔线，以及加粗、斜体、删除线、行内代码、链接（图片按链接处理）。
+    /// 字体与颜色全部引用应用主题资源，随主题切换自动更新。</summary>
     public static class MarkdownRenderer
     {
         // 正文字号、字体与颜色资源键
@@ -53,9 +50,7 @@ namespace KfuPet.Helpers
         private const int MaxListIndentLevel = 3;
         private const int TabWidth = 4;
 
-        /// <summary>
-        /// 把 Markdown 文本渲染到指定面板中，渲染前会先清空面板已有内容。
-        /// </summary>
+        /// <summary>把 Markdown 文本渲染到指定面板中，渲染前先清空面板已有内容。</summary>
         /// <param name="markdown">Markdown 文本，允许为 null 或空白（此时只做清空）。</param>
         /// <param name="container">承载渲染结果的面板。</param>
         public static void Render(string? markdown, Panel container)

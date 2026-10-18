@@ -2,16 +2,10 @@ using Microsoft.Win32;
 
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 应用名称 → 可启动目标 的解析。
-    /// 分两层：
-    /// 1) <see cref="MatchCandidates"/>：对给定的候选集做打分匹配，供白名单模式（只在名单内匹配）
-    ///    与完全访问模式（匹配全机应用池）共用；
-    /// 2) <see cref="Match"/>：枚举全机应用池（注册表 App Paths + 开始菜单快捷方式）后交给上面那层。
-    /// 匹配分档：精确 / 首字母缩写 / 子串 / 跳字，只有“精确”或“唯一且高置信”才直接给路径，
-    /// 其余给出候选名单交由模型兜底挑选。
-    /// 不新增第三方依赖：注册表用 Microsoft.Win32，开始菜单快捷方式直接以 .lnk 路径交给 ShellExecute 打开。
-    /// </summary>
+    /// <summary>应用名称 → 可启动目标 的解析，分两层：<see cref="MatchCandidates"/> 对候选集打分匹配（白名单与全机应用池共用）；
+    /// <see cref="Match"/> 枚举全机应用池（注册表 App Paths + 开始菜单快捷方式）后交给前者。
+    /// 匹配分档为精确/首字母缩写/子串/跳字，只有“精确”或“唯一且高置信”才直接给路径，其余给候选名单交模型兜底。
+    /// 不新增第三方依赖：注册表用 Microsoft.Win32，快捷方式以 .lnk 路径交给 ShellExecute 打开。</summary>
     internal static class AppResolveService
     {
         /// <summary>开始菜单最多扫描的快捷方式数量，避免异常环境下过慢。</summary>
@@ -23,11 +17,8 @@ namespace KfuPet.Services
         /// <summary>本地“敢自己开”的最低分值：只有精确（100）或首字母缩写（70）且唯一时才直接给出路径。</summary>
         private const int ConfidentScore = 70;
 
-        /// <summary>
-        /// 解析结果：
-        /// <see cref="Path"/> 非空表示本地已能确定要打开的目标（精确或高置信猜测）；
-        /// 否则 <see cref="Candidates"/> 为近似候选名称，交给模型兜底挑选。
-        /// </summary>
+        /// <summary>解析结果：<see cref="Path"/> 非空表示本地已确定目标（精确或高置信猜测），
+        /// 否则 <see cref="Candidates"/> 为近似候选名称，交给模型兜底挑选。</summary>
         public readonly record struct MatchResult(string? Path, string? MatchedName, IReadOnlyList<string> Candidates);
 
         /// <summary>候选：显示名 + 可启动路径（exe 或 .lnk）。</summary>
@@ -257,11 +248,8 @@ namespace KfuPet.Services
             return list;
         }
 
-        /// <summary>
-        /// 开始菜单（用户 + 公共）里的 .lnk，名称取快捷方式文件名，路径直接给 .lnk。
-        /// 采用逐目录递归 + 单目录容错：某个子目录无权限或枚举失败时跳过它，不影响其它目录，
-        /// 避免整轮扫描因一处异常而全部落空。
-        /// </summary>
+        /// <summary>收集开始菜单（用户 + 公共）里的 .lnk，名称取快捷方式文件名、路径直接给 .lnk。
+        /// 逐目录递归并单目录容错：某子目录无权限或枚举失败时跳过，避免整轮扫描因一处异常全部落空。</summary>
         private static List<Candidate> CollectStartMenuCandidates()
         {
             var list = new List<Candidate>();

@@ -14,9 +14,7 @@ namespace KfuPet.Services
             Timeout = TimeSpan.FromSeconds(10)
         };
 
-        /// <summary>
-        /// 发起一次最小化请求验证连通性，失败时抛出异常。
-        /// </summary>
+        /// <summary>发起一次最小化请求验证连通性，失败时抛出异常。</summary>
         /// <param name="baseUrl">API 基础地址，例如 https://api.openai.com/v1。</param>
         /// <param name="apiKey">API 密钥，可为空（部分本地服务无需鉴权）。</param>
         public async Task TestAsync(string baseUrl, string apiKey)
@@ -26,9 +24,7 @@ namespace KfuPet.Services
             EnsureSuccess(response);
         }
 
-        /// <summary>
-        /// 拉取服务商当前提供的模型 ID 列表（解析 /models 返回的 data[].id），失败时抛出异常。
-        /// </summary>
+        /// <summary>拉取服务商当前提供的模型 ID 列表（解析 /models 返回的 data[].id），失败时抛出异常。</summary>
         /// <param name="baseUrl">API 基础地址，例如 https://api.openai.com/v1。</param>
         /// <param name="apiKey">API 密钥，可为空（部分本地服务无需鉴权）。</param>
         public async Task<IReadOnlyList<string>> GetModelIdsAsync(string baseUrl, string apiKey)

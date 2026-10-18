@@ -5,11 +5,8 @@ using KfuPet.Models;
 
 namespace KfuPet.Services.Ipc
 {
-    /// <summary>
-    /// 日志命名管道服务端，向外部开发者工具单向推送日志。
-    /// 同一时刻只服务一个客户端；日志写入只入队、不直接写管道，
-    /// 真正的写入由后台发送任务完成，避免阻塞调用线程（可能是 UI 线程）。
-    /// </summary>
+    /// <summary>日志命名管道服务端，向外部开发者工具单向推送日志。
+    /// 同一时刻只服务一个客户端；日志写入只入队，真正写管道由后台任务完成，避免阻塞调用线程（可能是 UI 线程）。</summary>
     internal class LogPipeServer : IDisposable
     {
         private const string PipeName = "KfuPet.Log";

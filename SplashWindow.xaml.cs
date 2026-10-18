@@ -57,11 +57,8 @@ namespace KfuPet
             storyboard.Begin();
         }
 
-        /// <summary>
-        /// 根据实际文字宽度计算标题、遮罩与副标题位移动画的最终偏移，
-        /// 使标题与副标题之间空隙的中心与上方 Logo 的中心线对齐。
-        /// 必须在入场动画开始前调用。
-        /// </summary>
+        /// <summary>根据实际文字宽度计算标题、遮罩与副标题位移动画的最终偏移，使标题与副标题之间空隙的中心与上方 Logo 中心线对齐。
+        /// 必须在入场动画开始前调用。</summary>
         private void AlignTextGapToCenter()
         {
             double titleWidth = MeasureTextWidth(TitleText);

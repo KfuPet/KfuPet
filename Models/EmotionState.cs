@@ -1,12 +1,8 @@
 namespace KfuPet.Models
 {
-    /// <summary>
-    /// 情绪状态（emotion.json）的数据契约：愉悦 / 精力 / 亲密三个维度（0–100），
-    /// 外加两个时间游标——<see cref="UpdatedAtUtc"/> 用于惰性衰减结算，
-    /// <see cref="LastInteractionUtc"/> 用于“被冷落”惩罚结算。
-    /// 两者语义不同，不可合并：前者随每次结算推进，后者只在主人真的互动时才刷新。
-    /// 基线数值与增减规则由 <see cref="KfuPet.Services.EmotionService"/> 维护，本类只承载数据。
-    /// </summary>
+    /// <summary>情绪状态（emotion.json）的数据契约：愉悦/精力/亲密三维度（0–100），外加两个时间游标。
+    /// <see cref="UpdatedAtUtc"/> 用于惰性衰减结算，<see cref="LastInteractionUtc"/> 用于“被冷落”惩罚结算；
+    /// 两者语义不同不可合并（前者随每次结算推进，后者只在主人真的互动时刷新）。基线数值与增减规则由 <see cref="KfuPet.Services.EmotionService"/> 维护，本类只承载数据。</summary>
     public class EmotionState
     {
         /// <summary>愉悦度：被抚摸、被夸时上升；被冷落、被甩出屏幕时下降。</summary>

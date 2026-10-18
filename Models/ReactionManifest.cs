@@ -9,18 +9,13 @@ namespace KfuPet.Models
         /// <summary>配置版本号。</summary>
         public string Version { get; set; } = string.Empty;
 
-        /// <summary>
-        /// 事件提示（发给 AI 的"发生了什么"描述与应答要求），键：
-        /// headPet（抚摸头部）/ head / armLeft / armRight / legLeft / legRight / body / snapBack（拖动越界回正）/ instruction（应答要求）。
-        /// 必须提供全部键，代码不再内置默认文案。
-        /// </summary>
+        /// <summary>事件提示（发给 AI 的"发生了什么"描述与应答要求），键：headPet（抚摸头部）/ head / armLeft / armRight /
+        /// legLeft / legRight / body / snapBack（拖动越界回正）/ instruction（应答要求）；必须提供全部键，代码不内置默认文案。</summary>
         public Dictionary<string, string>? EventPrompt { get; set; }
 
-        /// <summary>
-        /// 反应台词，键为部位键（head / armLeft / armRight / legLeft / legRight / body）或事件键
-        /// （snapBack 拖动越界回正 / idleChat、welcomeBack、morningGreeting、eveningGreeting 主动搭话 / thinking 等待回复占位），
-        /// 值为候选台词列表（随机抽取）。左右与骨骼命名一致，指画面上的左右。每个键至少一条非空台词。
-        /// </summary>
+        /// <summary>反应台词，键为部位键（head / armLeft / armRight / legLeft / legRight / body）或事件键（snapBack / idleChat /
+        /// welcomeBack / morningGreeting / eveningGreeting / thinking 等待回复占位），值为候选台词列表（随机抽取）。
+        /// 左右与骨骼命名一致（指画面左右）；每个键至少一条非空台词。</summary>
         public Dictionary<string, List<string>> Reactions { get; set; } = new Dictionary<string, List<string>>();
     }
 }

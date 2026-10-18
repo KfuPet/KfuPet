@@ -3,15 +3,10 @@ using KfuPet.Models;
 
 namespace KfuPet.Services
 {
-    /// <summary>
-    /// 角色反应文案服务：为触摸反应、拖动越界回正（snapBack）与主动搭话提供两类文案。
-    /// 一、事件提示：把"发生了什么"整理成发给 AI 的用户消息（<see cref="BuildEventPrompt"/>、<see cref="BuildSnapBackEventPrompt"/>、<see cref="BuildProactiveEventPrompt"/>），
-    ///     文案取自角色包 reactions.json 的 eventPrompt 段；
-    /// 二、备用台词：从角色包 reactions.json 的 reactions 段读取，未接入 AI 或 AI 请求失败时使用；
-    ///     其中 thinking 键额外作为"发送消息后、AI 回复到达前"的气泡占位台词。
-    /// 两类文案均完全由角色包提供，代码不再内置默认；启动时 <see cref="Load"/> 会检测配置完整性并记录日志。
-    /// 左右与骨骼命名一致，指画面上的左右（Left 为画面左侧）。
-    /// </summary>
+    /// <summary>角色反应文案服务：为触摸反应、拖动越界回正（snapBack）与主动搭话提供两类文案。
+    /// 事件提示（发给 AI 的用户消息）取自角色包 reactions.json 的 eventPrompt 段；
+    /// 备用台词取自 reactions 段，用于未接入 AI 或请求失败时，其中 thinking 键兼作"AI 回复到达前"的气泡占位。
+    /// 两类文案均由角色包提供、代码不内置默认；启动时 <see cref="Load"/> 校验配置完整性并记日志。左右与骨骼命名一致（Left 为画面左侧）。</summary>
     internal class TouchReactionService
     {
         /// <summary>反应台词配置文件名，位于角色包目录下。</summary>
@@ -256,13 +251,10 @@ namespace KfuPet.Services
             return null;
         }
 
-        /// <summary>
-        /// 构造触摸事件给 AI 的用户消息：说明被触碰的部位与动作，并要求一句符合人设的短回应。
-        /// 文案取自角色包 eventPrompt；未提供该事件描述时返回空串（调用方应跳过 AI 请求）。
-        /// 部位按角色自身视角描述（画面左侧的手脚是角色的右手/右腿），与备用台词写法一致。
-        /// </summary>
+        /// <summary>构造触摸事件给 AI 的用户消息：说明被触碰的部位与动作并要求一句符合人设的短回应。
+        /// 文案取自角色包 eventPrompt，未提供时返回空串（调用方应跳过 AI）；部位按角色自身视角描述（画面左侧即角色右手/右腿）。</summary>
         /// <param name="partKey">反应部位键（head / armLeft / armRight / legLeft / legRight / body）。</param>
-        /// <param name="isPetting">true 表示抚摸手势（按住头部来回滑动），false 表示双击。</param>
+        /// <param name="isPetting">true 为抚摸（按住头部来回滑动），false 为双击。</param>
         public string BuildEventPrompt(string partKey, bool isPetting)
         {
             var eventKey = partKey == PartHead && isPetting ? EventHeadPet : partKey;
@@ -278,12 +270,10 @@ namespace KfuPet.Services
             return BuildEventMessage("拖动事件", EventSnapBack);
         }
 
-        /// <summary>
-        /// 构造主动搭话事件给 AI 的用户消息：把动态语境（当前时间、间隔时长）与角色包的场景描述拼成一段，
-        /// 并要求一句符合人设的短回应。文案取自角色包 eventPrompt；未提供该事件描述时返回空串（调用方应跳过 AI 请求）。
-        /// </summary>
+        /// <summary>构造主动搭话事件给 AI 的用户消息：把动态语境（当前时间、间隔时长）与角色包场景描述拼成一段并要求一句短回应。
+        /// 文案取自角色包 eventPrompt，未提供时返回空串（调用方应跳过 AI）。</summary>
         /// <param name="eventKey">主动搭话事件键（idleChat / welcomeBack / morningGreeting / eveningGreeting）。</param>
-        /// <param name="contextNote">动态语境（当前时间、间隔时长等）；为空时不带语境。</param>
+        /// <param name="contextNote">动态语境（当前时间、间隔时长等），为空时不带语境。</param>
         public string BuildProactiveEventPrompt(string eventKey, string contextNote)
         {
             var action = ResolveEventText(eventKey);

@@ -4,11 +4,8 @@ using KfuPet.Models;
 
 namespace KfuPet.Services.Tools
 {
-    /// <summary>
-    /// 打开应用工具：主人明确要求打开某个应用时由模型调用。
-    /// 白名单模式下只能打开用户在设置里允许的应用；完全访问模式下忽略白名单，可打开任意应用。
-    /// 路径永远由本地解析，模型只提供名称。
-    /// </summary>
+    /// <summary>打开应用工具：主人明确要求打开某个应用时由模型调用。
+    /// 白名单模式只能打开设置里允许的应用，完全访问模式忽略白名单可打开任意应用；路径永远由本地解析，模型只提供名称。</summary>
     internal class OpenAppTool : ITool
     {
         /// <summary>工具名称（供注册与筛选逻辑引用）。</summary>
@@ -16,11 +13,8 @@ namespace KfuPet.Services.Tools
 
         public string Name => ToolName;
 
-        /// <summary>
-        /// 工具描述随设置动态生成：白名单模式下把“已允许的应用名”直接列给模型，
-        /// 避免模型不知道合法名称而猜错；完全访问模式下说明可按主人说的名称来。
-        /// （每次请求都会重新求值，改动设置后立即生效。）
-        /// </summary>
+        /// <summary>工具描述随设置动态生成：白名单模式把“已允许的应用名”直接列给模型，避免其猜错名称；
+        /// 完全访问模式说明可按主人说的名称来。每次请求重新求值，改动设置后立即生效。</summary>
         public string Description
         {
             get
