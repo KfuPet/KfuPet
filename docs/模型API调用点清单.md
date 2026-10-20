@@ -18,4 +18,14 @@
 | `ScoreContentAsync` | 对单条信息重新评分（总结条目丢弃前的评估） |
 | `SummarizeAsync` | 把多条零散信息总结成一句话 |
 
----
+### 工具调用循环
+
+每次工具调用会多一轮模型请求，上限 3 轮（`ChatService.MaxToolRounds`）。
+
+| 工具 | 执行内容 |
+| --- | --- |
+| `open_app` | 打开应用（程序路径本地解析，猜不准才交回模型） |
+| `emotion_adjust` | 调整情绪 |
+| `feed` | 投喂 |
+| `memory_search` | 记忆检索（本地） |
+| `query_balance` | 查余额（服务商余额端点，非模型 API） |
