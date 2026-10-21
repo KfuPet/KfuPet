@@ -222,6 +222,12 @@ namespace KfuPet
         /// <summary>气泡是否正在播放（含停留与淡出），用于避免主动搭话在显示中途插话。</summary>
         private bool _bubblePlaying;
 
+        /// <summary>当前播放的气泡是否属于主对话输出，用于触摸反应避让。</summary>
+        private bool _chatBubblePlaying;
+
+        /// <summary>当前播放的气泡是否属于主动搭话输出，用于触摸反应避让。</summary>
+        private bool _proactiveBubblePlaying;
+
         /// <summary>
         /// 开发者工具（KfuPet-Tool）进程是否正在运行。
         /// </summary>
@@ -999,6 +1005,13 @@ namespace KfuPet
             var partKey = TouchReactionService.ResolvePartKey(boneId);
             if (partKey == null) return;
 
+            // 主对话/主动搭话仍在其输出过程中：忽略触摸反应，避免抢占或打断表现
+            if (_isSending || _chatBubblePlaying || _proactiveBubblePlaying)
+            {
+                Log.Debug($"[触摸] 主对话或主动搭话进行中，本次触摸忽略：{boneId}");
+                return;
+            }
+
             var elapsedMs = (DateTime.UtcNow - _lastTouchReactionTime).TotalMilliseconds;
             if (elapsedMs < TOUCH_REACTION_COOLDOWN_MS)
             {
@@ -1064,6 +1077,13 @@ namespace KfuPet
             {
                 Log.Debug($"[触摸] {partKey} 既没有 AI 回应也没有备用台词，触摸不作声" +
                           $"（可在角色包 {TouchReactionService.ManifestFileName} 中补充）");
+                return;
+            }
+
+            // 触摸请求期间主对话或主动搭话已经开始：丢弃本次台词，避免打断其气泡
+            if (_isSending || _chatBubblePlaying || _proactiveBubblePlaying)
+            {
+                Log.Debug($"[触摸] 回复到达时主对话或主动搭话已开始，本次触摸台词丢弃：{boneId} → {partKey}");
                 return;
             }
 
@@ -1348,7 +1368,7 @@ namespace KfuPet
             if (model == null)
             {
                 Log.Warning("[对话] 尚未配置可用模型，已提示用户先添加模型");
-                ShowBubbleBatches(new List<string> { "主人还没有配置模型哦，去设置里添加一个再来找我吧～" });
+                ShowBubbleBatches(new List<string> { "主人还没有配置模型哦，去设置里添加一个再来找我吧～" }, isChatOutput: true);
                 return;
             }
 
@@ -1359,7 +1379,7 @@ namespace KfuPet
             var thinking = _touchReactions.PickLine(TouchReactionService.EventThinking);
             if (!string.IsNullOrEmpty(thinking))
             {
-                ShowBubbleBatches(new List<string> { thinking });
+                ShowBubbleBatches(new List<string> { thinking }, isChatOutput: true);
             }
 
             Log.Info($"[对话] 用户发送消息 {text.Length} 字，使用模型 {model.ModelId}（{model.ModelName}）");
@@ -1377,7 +1397,7 @@ namespace KfuPet
                     model, systemPrompt, history, text,
                     _toolRegistry.GetDefinitions(ShouldAdvertiseTool), _toolRegistry.ExecuteAsync,
                     TokenUsageCategory.Conversation);
-                ShowBubbleBatches(SplitIntoBatches(reply));
+                ShowBubbleBatches(SplitIntoBatches(reply), isChatOutput: true);
                 Log.Debug($"[对话] 回复已显示：{reply.Length} 字");
 
                 // 记录一轮对话到记忆系统（短期 + 溢出归档 + 后台分析）
@@ -1396,7 +1416,7 @@ namespace KfuPet
             catch (Exception ex)
             {
                 Log.Error($"[对话] 请求失败：{ex.Message}");
-                ShowBubbleBatches(new List<string> { $"连接失败了……{ex.Message}" });
+                ShowBubbleBatches(new List<string> { $"连接失败了……{ex.Message}" }, isChatOutput: true);
             }
             finally
             {
@@ -1441,17 +1461,22 @@ namespace KfuPet
         /// 气泡分批显示：每批淡入展示一段时间，播完后自动淡出。
         /// 新的显示请求会打断上一轮的播放。
         /// </summary>
-        private void ShowBubbleBatches(List<string> batches)
+        /// <param name="isChatOutput">true 表示这是主对话的输出，播放期间触摸反应需要避让。</param>
+        /// <param name="isProactiveOutput">true 表示这是主动搭话的输出，播放期间触摸反应需要避让。</param>
+        private void ShowBubbleBatches(List<string> batches, bool isChatOutput = false, bool isProactiveOutput = false)
         {
             _bubbleCts?.Cancel();
             var cts = new CancellationTokenSource();
             _bubbleCts = cts;
             _bubblePlaying = true;
+            _chatBubblePlaying = isChatOutput;
+            _proactiveBubblePlaying = isProactiveOutput;
 
-            _ = RunBubbleBatchesAsync(batches, cts);
+            _ = RunBubbleBatchesAsync(batches, cts, isChatOutput, isProactiveOutput);
         }
 
-        private async Task RunBubbleBatchesAsync(List<string> batches, CancellationTokenSource cts)
+        private async Task RunBubbleBatchesAsync(List<string> batches, CancellationTokenSource cts,
+            bool isChatOutput, bool isProactiveOutput)
         {
             var token = cts.Token;
             try
@@ -1503,6 +1528,14 @@ namespace KfuPet
                 if (ReferenceEquals(_bubbleCts, cts))
                 {
                     _bubblePlaying = false;
+                    if (isChatOutput)
+                    {
+                        _chatBubblePlaying = false;
+                    }
+                    if (isProactiveOutput)
+                    {
+                        _proactiveBubblePlaying = false;
+                    }
                 }
             }
         }
@@ -1614,7 +1647,14 @@ namespace KfuPet
                 return;
             }
 
-            ShowBubbleBatches(new List<string> { line });
+            // 生成期间界面可能已经变化：对话/其它气泡/触摸回应进行中时让出，避免互相打断
+            if (_isSending || _bubblePlaying || _touchReactionPending)
+            {
+                Log.Debug($"[主动搭话] {e.Type} 生成完成时界面正忙，本次台词丢弃");
+                return;
+            }
+
+            ShowBubbleBatches(new List<string> { line }, isProactiveOutput: true);
             Log.Info($"[主动搭话] {e.Type}（{source}）：{line}");
 
             // 真正开口之后才开始计算"有没有得到回应"，未回应则再由心跳判定被无视
