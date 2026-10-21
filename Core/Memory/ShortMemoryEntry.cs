@@ -13,5 +13,8 @@ namespace KfuPet.Core.Memory
 
         /// <summary>助手回复。</summary>
         public string Assistant { get; set; } = string.Empty;
+
+        /// <summary>是否已由实时通道提炼并写入长期记忆；已入库的对话不再参与归档批处理，避免重复提取。</summary>
+        public bool RealtimeExtracted { get; set; }
     }
 }

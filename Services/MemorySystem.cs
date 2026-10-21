@@ -307,7 +307,7 @@ namespace KfuPet.Services
         /// </summary>
         public void AddTurn(ModelConfig model, string user, string assistant)
         {
-            var (shortCount, archiveCount, overflowCount) = AppendEntry(user, assistant);
+            var (shortCount, archiveCount, overflowCount, turnEntry) = AppendEntry(user, assistant);
 
             _logService.Debug($"[记忆] 记录一轮对话：短期 {shortCount}/{ShortMemoryLimit}" +
                               (overflowCount > 0 ? $"，溢出 {overflowCount} 条到归档（归档 {archiveCount}/{ArchiveMemoryLimit}）" : string.Empty));
@@ -316,7 +316,7 @@ namespace KfuPet.Services
             // 节省模式下走触发词门控，仅命中触发词才发起，避免每轮对话都额外消耗一次模型
             if (!SettingsService.Instance.MemoryExtractionGated || _triggerService.Matches(user))
             {
-                _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant));
+                _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant, turnEntry));
             }
             else
             {
@@ -336,19 +336,20 @@ namespace KfuPet.Services
         /// </summary>
         public void AddProactiveLine(string line)
         {
-            var (shortCount, _, overflowCount) = AppendEntry("（主动搭话）", line);
+            var (shortCount, _, overflowCount, _) = AppendEntry("（主动搭话）", line);
 
             _logService.Debug($"[记忆] 记录主动搭话：短期 {shortCount}/{ShortMemoryLimit}" +
                               (overflowCount > 0 ? $"，溢出 {overflowCount} 条到归档" : string.Empty));
         }
 
-        /// <summary>向短期记忆追加一条记录，满额时溢出到归档并落盘；返回记录后的数量统计。</summary>
-        private (int ShortCount, int ArchiveCount, int OverflowCount) AppendEntry(string user, string assistant)
+        /// <summary>向短期记忆追加一条记录，满额时溢出到归档并落盘；返回记录后的数量统计与本轮条目。</summary>
+        private (int ShortCount, int ArchiveCount, int OverflowCount, ShortMemoryEntry Entry) AppendEntry(string user, string assistant)
         {
             var overflowCount = 0;
             lock (_archiveLock)
             {
-                _shortEntries.Add(new ShortMemoryEntry { User = user, Assistant = assistant });
+                var turnEntry = new ShortMemoryEntry { User = user, Assistant = assistant };
+                _shortEntries.Add(turnEntry);
 
                 // 短期溢出到归档（保留最近 20 条）
                 while (_shortEntries.Count > ShortMemoryLimit)
@@ -360,14 +361,16 @@ namespace KfuPet.Services
                         Type = "conversation",
                         Time = oldest.Time,
                         User = oldest.User,
-                        Assistant = oldest.Assistant
+                        Assistant = oldest.Assistant,
+                        // 把实时通道的提炼标记带到归档，归档分析据此跳过，避免重复提取
+                        RealtimeExtracted = oldest.RealtimeExtracted
                     });
                     overflowCount++;
                 }
 
                 _shortStore.Save(_shortEntries);
                 _archiveStore.Save(_archiveEntries);
-                return (_shortEntries.Count, _archiveEntries.Count, overflowCount);
+                return (_shortEntries.Count, _archiveEntries.Count, overflowCount, turnEntry);
             }
         }
 
@@ -389,20 +392,28 @@ namespace KfuPet.Services
         }
 
         /// <summary>实时提取的外层包装：吞掉异常，不影响主流程。</summary>
-        private async Task RunRealtimeExtractAsync(ModelConfig model, string user, string assistant)
+        private async Task RunRealtimeExtractAsync(
+            ModelConfig model, string user, string assistant, ShortMemoryEntry turnEntry)
         {
             try
             {
                 _logService.Debug("[记忆] 实时通道：开始提取核心信息...");
                 var items = await ExtractCoreInfoAsync(model, user, assistant);
-                var coreItems = items.Where(i => i.Importance >= 4).ToList();
+                var coreItems = items.Where(i => i.Importance >= 3).ToList();
                 _logService.Debug(coreItems.Count > 0
-                    ? $"[记忆] 实时通道：提取到 {coreItems.Count} 条核心信息"
-                    : "[记忆] 实时通道：未发现需要立即记住的核心信息");
+                    ? $"[记忆] 实时通道：提取到 {coreItems.Count} 条信息"
+                    : "[记忆] 实时通道：未发现需要立即记住的信息");
                 foreach (var item in coreItems)
                 {
                     await _memoryManager.StoreAsync(item.Content, item.Importance);
                     _logService.Info($"[记忆] 实时入库核心信息：{item.Content}（重要性 {item.Importance}）");
+                }
+
+                // 只有真正写入长期记忆的对话才算处理完，归档分析据此跳过、不重复提炼；
+                // 没有写入任何信息的对话保持未标记，继续等待归档统一处理（3 分以下的内容也在归档里总结）
+                if (coreItems.Count > 0)
+                {
+                    MarkRealtimeExtracted(turnEntry);
                 }
 
                 // 实时入库后同样检查长期记忆上限，避免只在归档分析末尾才压缩
@@ -414,17 +425,27 @@ namespace KfuPet.Services
             }
         }
 
+        /// <summary>标记该轮对话已由实时通道提炼并写入长期记忆，并立即落盘，避免重启后标记丢失。</summary>
+        private void MarkRealtimeExtracted(ShortMemoryEntry turnEntry)
+        {
+            lock (_archiveLock)
+            {
+                turnEntry.RealtimeExtracted = true;
+                _shortStore.Save(_shortEntries);
+            }
+        }
+
         /// <summary>
-        /// 实时通道：判断本轮对话是否包含需要立即记住的核心信息（生日、姓名、重要偏好等），
-        /// 仅提取重要性 ≥ 4 的信息，绕过归档批处理的等待。
+        /// 实时通道：判断本轮对话是否包含值得长期记住的信息（生日、姓名、重要偏好、习惯等），
+        /// 提取重要性 ≥ 3 的信息，绕过归档批处理的等待；已处理的对话不会再由归档重复提炼。
         /// </summary>
         private async Task<List<MemoryItem>> ExtractCoreInfoAsync(ModelConfig model, string user, string assistant)
         {
             const string prompt = """
-                你是记忆提取器。判断下面这轮对话中是否包含关于用户的、需要立即记住的核心信息，
+                你是记忆提取器。判断下面这轮对话中是否包含关于用户的、值得长期记住的信息，
                 例如：生日、姓名、性别、年龄、住址、联系方式、重要偏好、长期目标、重要关系、重要事件等。
 
-                只提取重要性 ≥ 4 的核心信息（4 用户偏好/长期目标，5 核心用户信息），
+                只提取重要性 ≥ 3 的信息（3 用户习惯，4 用户偏好/长期目标，5 核心用户信息），
                 忽略普通聊天、临时信息、寒暄和琐碎内容。
 
                 请只输出一个 JSON 数组，不要包含其他任何文字或代码块标记，格式如下：
@@ -461,7 +482,14 @@ namespace KfuPet.Services
             _logService.Debug($"[记忆] 归档已满（{snapshot.Count} 条），开始分析筛选...");
 
             var summaryEntries = snapshot.Where(e => e.IsSummary).ToList();
-            var conversationEntries = snapshot.Where(e => !e.IsSummary).ToList();
+
+            // 已由实时通道写入长期记忆的对话直接丢弃，不再重复提炼；没有入库的对话照常参与批量分析
+            var conversationEntries = snapshot.Where(e => !e.IsSummary && !e.RealtimeExtracted).ToList();
+            var skippedEntries = snapshot.Count(e => !e.IsSummary && e.RealtimeExtracted);
+            if (skippedEntries > 0)
+            {
+                _logService.Debug($"[记忆] 归档分析直接丢弃 {skippedEntries} 条已由实时通道入库的对话");
+            }
 
             var longTermItems = new List<MemoryItem>();
             var lowItems = new List<string>();

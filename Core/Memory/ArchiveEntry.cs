@@ -26,5 +26,9 @@ namespace KfuPet.Core.Memory
 
         /// <summary>是否为总结条目。</summary>
         public bool IsSummary { get; set; }
+
+        /// <summary>该轮对话是否已由实时通道提炼并写入长期记忆；为 true 时归档分析直接丢弃，不再重复提炼。
+        /// 实时通道没有写入任何信息的对话保持 false，继续等待归档统一处理。</summary>
+        public bool RealtimeExtracted { get; set; }
     }
 }
