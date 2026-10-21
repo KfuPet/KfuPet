@@ -892,6 +892,13 @@ namespace KfuPet
         /// </summary>
         private async Task RunSnapBackReactionAsync()
         {
+            // 主对话/主动搭话仍在其输出过程中：忽略回正台词，避免抢占或打断其气泡（窗口回正不受影响）
+            if (_isSending || _chatBubblePlaying || _proactiveBubblePlaying)
+            {
+                Log.Debug("[窗口] 主对话或主动搭话进行中，本次回正不再生成台词");
+                return;
+            }
+
             EmotionService.OnUserInteraction(EmotionEventKind.SnapBack, "越界回正");
 
             // 节省模式：不请求 AI，直接走下方的文案兜底
@@ -929,6 +936,13 @@ namespace KfuPet
 
             if (string.IsNullOrEmpty(line))
             {
+                return;
+            }
+
+            // 回正请求期间主对话或主动搭话已经开始：丢弃本次台词，避免打断其气泡
+            if (_isSending || _chatBubblePlaying || _proactiveBubblePlaying)
+            {
+                Log.Debug($"[窗口] 回正台词到达时主对话或主动搭话已开始，本次台词丢弃：{line}");
                 return;
             }
 
