@@ -7,6 +7,12 @@ namespace KfuPet.Services
     /// </summary>
     internal class MemoryManager
     {
+        /// <summary>近重复判定的字符二元组相似度阈值（Dice 系数），越高越严格。</summary>
+        private const double SimilarityThreshold = 0.8;
+
+        /// <summary>参与近重复比较的最短归一化长度，过短的记忆不做模糊合并，避免误判。</summary>
+        private const int MinSimilarityLength = 8;
+
         private readonly MemoryStore _store = new();
         private readonly StopWordsService _stopWordsService;
         private readonly List<MemoryEntry> _entries;
@@ -123,7 +129,8 @@ namespace KfuPet.Services
         private static bool IsCjk(char c) => c >= '\u4E00' && c <= '\u9FFF';
 
         /// <summary>
-        /// 写入一条新记忆：去重后落盘。
+        /// 写入一条新记忆：归一化精确去重 + 近重复合并后落盘。
+        /// 同一事实换一种措辞（如「用户的生日是3月6日」与「用户生日是3月6日。」）不会重复入库。
         /// </summary>
         public Task StoreAsync(string content, int importance)
         {
@@ -133,28 +140,100 @@ namespace KfuPet.Services
                 return Task.CompletedTask;
             }
 
-            // 去重：内容完全相同的已有记忆直接跳过，避免重复入库
+            var normalized = NormalizeForCompare(content);
+
             lock (_lock)
             {
-                if (_entries.Any(e => string.Equals(e.Content.Trim(), content, StringComparison.OrdinalIgnoreCase)))
+                foreach (var existing in _entries)
                 {
+                    var existingNormalized = NormalizeForCompare(existing.Content);
+                    if (!IsSameFact(normalized, existingNormalized))
+                    {
+                        continue;
+                    }
+
+                    // 同一事实只保留一条：新内容更完整时替换旧内容，重要性取较高者
+                    if (normalized.Length > existingNormalized.Length)
+                    {
+                        existing.Content = content;
+                        existing.Importance = Math.Max(existing.Importance, Math.Clamp(importance, 0, 5));
+                        _store.Save(_entries);
+                        Log.Debug($"[记忆] 近重复记忆已合并（保留更完整的版本）：{content}");
+                    }
+                    else
+                    {
+                        Log.Debug($"[记忆] 跳过重复记忆：{content}");
+                    }
+
                     return Task.CompletedTask;
                 }
-            }
 
-            var entry = new MemoryEntry
-            {
-                Content = content,
-                Importance = Math.Clamp(importance, 0, 5)
-            };
-
-            lock (_lock)
-            {
+                var entry = new MemoryEntry
+                {
+                    Content = content,
+                    Importance = Math.Clamp(importance, 0, 5)
+                };
                 _entries.Add(entry);
                 _store.Save(_entries);
             }
 
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 判断两条归一化后的记忆是否为同一事实：完全相同、一方包含另一方，
+        /// 或字符二元组相似度达到阈值（允许「的」这类虚词差异）。
+        /// </summary>
+        private static bool IsSameFact(string normalized, string existingNormalized)
+        {
+            if (string.Equals(normalized, existingNormalized, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (Math.Min(normalized.Length, existingNormalized.Length) < MinSimilarityLength)
+            {
+                return false;
+            }
+
+            if (normalized.Contains(existingNormalized, StringComparison.Ordinal) ||
+                existingNormalized.Contains(normalized, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return BigramSimilarity(normalized, existingNormalized) >= SimilarityThreshold;
+        }
+
+        /// <summary>字符二元组 Dice 相似度：2×交集 / (A 组数 + B 组数)，取值 0~1。</summary>
+        private static double BigramSimilarity(string a, string b)
+        {
+            var setA = ExtractBigrams(a);
+            var setB = ExtractBigrams(b);
+            if (setA.Count == 0 || setB.Count == 0)
+            {
+                return 0;
+            }
+
+            var intersection = setA.Count(x => setB.Contains(x));
+            return 2.0 * intersection / (setA.Count + setB.Count);
+        }
+
+        /// <summary>比较前归一化：去掉空白、标点与符号并统一小写，消除措辞中的格式差异。</summary>
+        private static string NormalizeForCompare(string content)
+        {
+            var sb = new System.Text.StringBuilder(content.Length);
+            foreach (var c in content)
+            {
+                if (char.IsWhiteSpace(c) || char.IsPunctuation(c) || char.IsSymbol(c))
+                {
+                    continue;
+                }
+
+                sb.Append(char.ToLowerInvariant(c));
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>从磁盘重新加载长期记忆，覆盖当前内存中的缓存。</summary>
