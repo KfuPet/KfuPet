@@ -537,20 +537,31 @@ namespace KfuPet.Services
             EmotionService.Instance.OnIgnored(_ignoredStreak);
         }
 
-        /// <summary>拼动态语境：把当前时间与间隔时长告诉模型，避免它凭空想象。</summary>
+        /// <summary>拼动态语境：把当前时间、间隔时长与（用户授权后的）前台应用告诉模型，避免它凭空想象。</summary>
         private string BuildContextNote(ProactiveTriggerType type, DateTime now)
         {
-            switch (type)
+            var note = type switch
             {
-                case ProactiveTriggerType.WelcomeBack:
-                    var awayMinutes = Math.Max(1, (int)(now - _awaySince).TotalMinutes);
-                    return $"现在是 {now:HH:mm}，主人离开了大约 {awayMinutes} 分钟，刚刚回到电脑前。";
-                case ProactiveTriggerType.IdleChat:
-                    var idleMinutes = Math.Max(1, (int)(now - _lastPetInteractionTime).TotalMinutes);
-                    return $"现在是 {now:HH:mm}，主人已经 {idleMinutes} 分钟没有和你互动了。";
-                default:
-                    return $"现在是 {now:HH:mm}。";
+                ProactiveTriggerType.WelcomeBack =>
+                    $"现在是 {now:HH:mm}，主人离开了大约 {Math.Max(1, (int)(now - _awaySince).TotalMinutes)} 分钟，刚刚回到电脑前。",
+                ProactiveTriggerType.IdleChat =>
+                    $"现在是 {now:HH:mm}，主人已经 {Math.Max(1, (int)(now - _lastPetInteractionTime).TotalMinutes)} 分钟没有和你互动了。",
+                _ => $"现在是 {now:HH:mm}。"
+            };
+
+            return note + BuildForegroundAppNote();
+        }
+
+        /// <summary>前台应用语境：仅在用户开启授权时读取；读取失败或前台是桌宠自身时留空。</summary>
+        private static string BuildForegroundAppNote()
+        {
+            if (!SettingsService.Instance.ForegroundAppContextEnabled)
+            {
+                return string.Empty;
             }
+
+            var appName = ForegroundAppService.TryGetForegroundAppName();
+            return string.IsNullOrEmpty(appName) ? string.Empty : $"主人当前正在使用「{appName}」。";
         }
 
         /// <summary>触发类型 → 角色包 reactions.json 的事件键。</summary>

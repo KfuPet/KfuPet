@@ -153,6 +153,9 @@ namespace KfuPet.Services
             _ => true
         };
 
+        /// <summary>主动搭话时是否读取前台应用名称并注入语境（默认关闭，需用户在“应用操作”中主动开启授权）。</summary>
+        public bool ForegroundAppContextEnabled { get; private set; }
+
         /// <summary>是否允许模型帮忙打开应用（总开关，默认关闭）。</summary>
         public bool OpenAppEnabled { get; private set; }
 
@@ -219,6 +222,7 @@ namespace KfuPet.Services
             ProactiveWelcomeBackEnabled = true;
             ProactiveGreetingEnabled = true;
             CustomProactiveChatUseAi = true;
+            ForegroundAppContextEnabled = false;
             OpenAppEnabled = false;
             AllowedApps = Array.Empty<AllowedAppEntry>();
             OpenAppFullAccess = false;
@@ -356,6 +360,13 @@ namespace KfuPet.Services
         public void SetCustomProactiveChatUseAi(bool useAi)
         {
             CustomProactiveChatUseAi = useAi;
+            Save();
+        }
+
+        /// <summary>保存“主动搭话读取前台应用”开关状态。</summary>
+        public void SetForegroundAppContextEnabled(bool enabled)
+        {
+            ForegroundAppContextEnabled = enabled;
             Save();
         }
 
@@ -529,6 +540,12 @@ namespace KfuPet.Services
                     CustomMemoryExtractionGated = memoryExtractionGatedElement.GetBoolean();
                 }
 
+                if (root.TryGetProperty("ForegroundAppContextEnabled", out var foregroundAppElement) &&
+                    foregroundAppElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    ForegroundAppContextEnabled = foregroundAppElement.GetBoolean();
+                }
+
                 if (root.TryGetProperty("OpenAppEnabled", out var openAppElement) &&
                     openAppElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
                 {
@@ -602,6 +619,7 @@ namespace KfuPet.Services
                     CustomProactiveChatUseAi,
                     CustomEmotionJudgeUseAi,
                     CustomMemoryExtractionGated,
+                    ForegroundAppContextEnabled,
                     OpenAppEnabled,
                     OpenAppFullAccess,
                     AllowedApps

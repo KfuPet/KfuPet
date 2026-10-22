@@ -2301,8 +2301,8 @@
                                 </Border>
                             </StackPanel>
 
-                            <!-- 打开应用：总开关默认关闭，白名单随总开关显隐；作为“模型功能”页内的子标题 -->
-                            <TextBlock Text="打开应用"
+                            <!-- 应用操作：打开应用（总开关默认关闭，白名单随总开关显隐）与前台应用读取；作为“桌宠功能”页内的子标题 -->
+                            <TextBlock Text="应用操作"
                                        Style="{StaticResource SubSectionTitleStyle}"
                                        Margin="0,24,0,0"/>
 
@@ -2571,6 +2571,57 @@
                                            Foreground="#E81123"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
+
+                            <!-- 前台应用语境：主动搭话时读取当前前台应用名称（默认关闭，开启即视为用户授权） -->
+                            <Border Margin="0,8,0,0"
+                                    Padding="14,10"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,16,0">
+                                        <TextBlock Text="主动搭话时读取前台应用"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <TextBlock Text="&#xE9CE;"
+                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                   Cursor="Help"
+                                                   Margin="6,1,0,0"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                            <TextBlock.ToolTip>
+                                                <ToolTip MaxWidth="320">
+                                                    <TextBlock TextWrapping="Wrap"
+                                                               Text="开启即授权桌宠在主动搭话时读取当前前台应用的名称，并作为语境发送给 AI 模型，让它更贴合你正在做的事。只读取应用名称，不读取窗口内容；默认关闭，关闭后立即停止读取。"/>
+                                                </ToolTip>
+                                            </TextBlock.ToolTip>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <ToggleButton x:Name="ForegroundAppContextToggle"
+                                                  Style="{StaticResource ToggleSwitchStyle}"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center"
+                                                  Checked="ForegroundAppContextToggle_Changed"
+                                                  Unchecked="ForegroundAppContextToggle_Changed"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
 

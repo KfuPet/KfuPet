@@ -54,6 +54,7 @@ namespace KfuPet.Views
         private bool _suppressProactiveEvents;
         private bool _suppressOpenAppEvents;
         private bool _suppressFullAccessEvents;
+        private bool _suppressForegroundAppEvents;
         private bool _isLoadingStorageUsage;
         private bool _hasLoadedStorageUsage;
         private AddModelProviderDialog? _addModelProviderDialog;
@@ -158,11 +159,16 @@ namespace KfuPet.Views
             UpdateProactiveOptionsVisibility();
             UpdateQuietHoursOptionsVisibility();
 
-            // 打开应用：读取总开关（控件事件在此期间忽略）
+            // 应用操作：读取打开应用总开关（控件事件在此期间忽略）
             _suppressOpenAppEvents = true;
             OpenAppToggle.IsChecked = SettingsService.Instance.OpenAppEnabled;
             _suppressOpenAppEvents = false;
             UpdateOpenAppOptionsVisibility();
+
+            // 前台应用语境：读取授权开关（控件事件在此期间忽略）
+            _suppressForegroundAppEvents = true;
+            ForegroundAppContextToggle.IsChecked = SettingsService.Instance.ForegroundAppContextEnabled;
+            _suppressForegroundAppEvents = false;
 
             // 完全访问：读取开关（控件事件在此期间忽略）
             _suppressFullAccessEvents = true;
@@ -333,6 +339,19 @@ namespace KfuPet.Views
         }
 
         /// <summary>
+        /// 前台应用语境开关：保存用户授权状态；开启后主动搭话会把当前前台应用名称注入语境。
+        /// </summary>
+        private void ForegroundAppContextToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressForegroundAppEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetForegroundAppContextEnabled(ForegroundAppContextToggle.IsChecked == true);
+        }
+
+        /// <summary>
         /// 按总开关刷新白名单区显隐：开启展开（淡入 + 上滑），关闭收起。
         /// </summary>
         private void UpdateOpenAppOptionsVisibility()
@@ -404,7 +423,7 @@ namespace KfuPet.Views
             dialog.Show();
         }
 
-        /// <summary>按完全访问开关刷新“打开应用”各区块显隐：开启时隐藏白名单卡片（已不生效、工具也不读它），
+        /// <summary>按完全访问开关刷新“应用操作”内打开应用各区块显隐：开启时隐藏白名单卡片（已不生效、工具也不读它），
         /// 但保留红色警示与开关本身，用户随时能关回去。</summary>
         private void UpdateOpenAppSectionVisibility()
         {
