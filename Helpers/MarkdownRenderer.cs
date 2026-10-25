@@ -399,10 +399,11 @@ namespace KfuPet.Helpers
             return decorations;
         }
 
-        /// <summary>链接：强调色，点击调用系统默认浏览器；图片（![]()）按链接文本处理。</summary>
+        /// <summary>链接：强调色，点击调用系统默认浏览器；图片（![]()）按链接文本处理。
+        /// 只允许 http / https，避免 Markdown 中的 file、自定义协议被系统直接打开。</summary>
         private static Inline CreateHyperlink(string label, string url)
         {
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !IsWebScheme(uri))
             {
                 var plain = new Run(label);
                 plain.SetResourceReference(TextElement.ForegroundProperty, SecondaryTextBrushKey);
@@ -419,9 +420,21 @@ namespace KfuPet.Helpers
             return link;
         }
 
+        /// <summary>判断链接协议是否安全：仅放行 http 与 https。</summary>
+        private static bool IsWebScheme(Uri uri)
+        {
+            return string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        }
+
         private static void OnRequestNavigate(object sender, RequestNavigateEventArgs e)
         {
             e.Handled = true;
+            if (!IsWebScheme(e.Uri))
+            {
+                return;
+            }
+
             try
             {
                 Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });

@@ -43,7 +43,7 @@ namespace KfuPet.Views
                 MarkdownRenderer.Render(announcement.Body, BodyPanel);
             }
 
-            if (Uri.TryCreate(announcement.Link, UriKind.Absolute, out _))
+            if (IsWebLink(announcement.Link))
             {
                 LinkButton.Visibility = Visibility.Visible;
             }
@@ -110,7 +110,7 @@ namespace KfuPet.Views
 
         private void LinkButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!Uri.TryCreate(_link, UriKind.Absolute, out var uri))
+            if (!Uri.TryCreate(_link, UriKind.Absolute, out var uri) || !IsWebScheme(uri))
             {
                 return;
             }
@@ -123,6 +123,18 @@ namespace KfuPet.Views
             {
                 // 打不开浏览器时忽略，不影响弹窗关闭
             }
+        }
+
+        /// <summary>判断链接是否为可打开的网页链接：仅放行 http 与 https。</summary>
+        private static bool IsWebLink(string link)
+        {
+            return Uri.TryCreate(link, UriKind.Absolute, out var uri) && IsWebScheme(uri);
+        }
+
+        private static bool IsWebScheme(Uri uri)
+        {
+            return string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
         }
 
         private void PlayEntranceAnimation()
