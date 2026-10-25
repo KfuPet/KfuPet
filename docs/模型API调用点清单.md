@@ -15,7 +15,7 @@
 
 | 位置 | 用途 |
 | --- | --- |
-| `ExtractCoreInfoAsync` | 命中记忆触发词时的实时核心信息提取（仅 importance ≥ 4 立即入库） |
+| `ExtractCoreInfoAsync` | 命中记忆触发词时的实时核心信息提取（仅 importance ≥ 3 立即入库） |
 | `ExtractFromConversationsAsync` | 归档满时批量提炼值得长期记住的信息并评分 |
 | `ScoreContentAsync` | 对单条信息重新评分（总结条目丢弃前的评估） |
 | `SummarizeAsync` | 把多条零散信息总结成一句话 |
