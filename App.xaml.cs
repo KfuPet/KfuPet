@@ -17,6 +17,9 @@ namespace KfuPet
         /// <summary>启动后静默检查更新的延迟：等启动动画与主窗口淡入结束，避免通知和开场特效抢注意力。</summary>
         private static readonly TimeSpan StartupUpdateCheckDelay = TimeSpan.FromSeconds(3);
 
+        /// <summary>公告弹窗相对主窗口显示的延迟：等淡入动画结束，避免两层动画叠在一起。</summary>
+        private static readonly TimeSpan StartupAnnouncementDelay = TimeSpan.FromMilliseconds(600);
+
         /// <summary>系统通知的停留时长（毫秒）。</summary>
         private const int NotificationDisplayMilliseconds = 10000;
 
@@ -32,6 +35,7 @@ namespace KfuPet
         private readonly UpdateService _updateService = new();
         private readonly StartupService _startupService = new();
         private readonly ChatService _chatService = new();
+        private readonly AnnouncementService _announcementService = new();
 
         /// <summary>启动检查发现的新版本结果，供点击系统通知时展示更新弹窗。</summary>
         private UpdateCheckResult? _startupUpdateResult;
@@ -120,11 +124,16 @@ namespace KfuPet
                 // 主窗口已初始化，若角色包反应配置不完整则发出警告通知
                 ShowCharacterPackageWarningIfNeeded();
 
+                // 开机自启动为静默启动，不弹出公告窗口打扰用户
+                Log.Debug("[公告] 开机自启动为静默启动，跳过公告弹窗");
+
                 // 静默检查更新：不阻塞启动流程，检查失败或已是最新都不打扰用户
                 _ = CheckUpdateOnStartupAsync();
                 return;
             }
 
+            // 公告获取与启动动画并行：不阻塞启动流程，拿到后由启动完成回调决定是否展示
+            var announcementTask = _announcementService.GetLatestAsync();
             var splashWindow = new SplashWindow();
             var splashCompleted = false;
             EventHandler? splashHandler = null;
@@ -144,6 +153,9 @@ namespace KfuPet
 
                 // 主窗口初始化已在启动画面期间完成，若角色包反应配置不完整则发出警告通知
                 ShowCharacterPackageWarningIfNeeded();
+
+                // 启动公告：只展示尚未看过的公告，获取失败时静默跳过
+                _ = ShowStartupAnnouncementAsync(announcementTask);
 
                 // 静默检查更新：不阻塞启动流程，检查失败或已是最新都不打扰用户
                 _ = CheckUpdateOnStartupAsync();
@@ -201,6 +213,53 @@ namespace KfuPet
             _notifyIcon.BalloonTipClicked += (s, args) => ShowStartupUpdateDialog();
 
             Log.Debug("[托盘] 托盘图标已就绪");
+        }
+
+        /// <summary>
+        /// 展示启动公告：只展示尚未看过的公告，获取失败或没有新公告时静默跳过。
+        /// </summary>
+        private async Task ShowStartupAnnouncementAsync(Task<Announcement?> announcementTask)
+        {
+            try
+            {
+                var announcement = await announcementTask;
+                if (announcement == null)
+                {
+                    return;
+                }
+
+                if (string.Equals(
+                        announcement.Id,
+                        SettingsService.Instance.LastSeenAnnouncementId,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Debug($"[公告] 公告已读，跳过弹窗：{announcement.Id}");
+                    return;
+                }
+
+                // 等主窗口淡入结束再弹，避免两层动画抢注意力
+                await Task.Delay(StartupAnnouncementDelay);
+
+                if (_mainWindow == null || !_mainWindow.IsLoaded)
+                {
+                    return;
+                }
+
+                var dialog = new AnnouncementDialog(announcement)
+                {
+                    Owner = _mainWindow
+                };
+                dialog.Show();
+                dialog.Activate();
+
+                SettingsService.Instance.SetLastSeenAnnouncementId(announcement.Id);
+                Log.Info($"[公告] 已展示启动公告：{announcement.Id}");
+            }
+            catch (Exception ex)
+            {
+                // 公告展示失败不得影响启动流程
+                Log.Warning($"[公告] 启动公告展示失败：{ex.Message}");
+            }
         }
 
         /// <summary>

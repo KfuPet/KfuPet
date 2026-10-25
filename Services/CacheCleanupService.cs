@@ -12,7 +12,8 @@ namespace KfuPet.Services
             "stopwords.json",
             "memory-triggers.json",
             "tokenusage.json",
-            "emotion.json"
+            "emotion.json",
+            "announcement-cache.json"
         };
 
         /// <summary>删除日志目录下的历史日志，保留正在写入的那一份（<paramref name="keepFilePath"/> 为 null 时全删），返回删除数量。</summary>

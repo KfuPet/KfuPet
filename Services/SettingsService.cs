@@ -60,6 +60,9 @@ namespace KfuPet.Services
         /// <summary>当前使用的角色包标识（character.json 的 id，缺省时为文件夹名）；空串表示未选择过，按默认角色启动。</summary>
         public string ActiveCharacterId { get; private set; } = string.Empty;
 
+        /// <summary>最近一次已展示过的公告标识；同一公告不再重复弹出。</summary>
+        public string LastSeenAnnouncementId { get; private set; } = string.Empty;
+
         /// <summary>模型功能节省模式。</summary>
         public SavingMode ModelSavingMode { get; private set; }
 
@@ -207,6 +210,7 @@ namespace KfuPet.Services
             WindowLeft = null;
             WindowTop = null;
             ActiveCharacterId = string.Empty;
+            LastSeenAnnouncementId = string.Empty;
             ModelSavingMode = SavingMode.Off;
             CustomTouchReactionUseAi = true;
             CustomUpdateNotificationUseAi = true;
@@ -261,6 +265,13 @@ namespace KfuPet.Services
         public void SetActiveCharacterId(string characterId)
         {
             ActiveCharacterId = characterId?.Trim() ?? string.Empty;
+            Save();
+        }
+
+        /// <summary>记录已展示过的公告标识，避免同一公告每次启动都弹出。</summary>
+        public void SetLastSeenAnnouncementId(string announcementId)
+        {
+            LastSeenAnnouncementId = announcementId?.Trim() ?? string.Empty;
             Save();
         }
 
@@ -446,6 +457,12 @@ namespace KfuPet.Services
                     ActiveCharacterId = activeCharacterElement.GetString()?.Trim() ?? string.Empty;
                 }
 
+                if (root.TryGetProperty("LastSeenAnnouncementId", out var lastSeenAnnouncementElement) &&
+                    lastSeenAnnouncementElement.ValueKind == JsonValueKind.String)
+                {
+                    LastSeenAnnouncementId = lastSeenAnnouncementElement.GetString()?.Trim() ?? string.Empty;
+                }
+
                 if (root.TryGetProperty("ModelSavingMode", out var savingModeElement) &&
                     savingModeElement.ValueKind == JsonValueKind.String &&
                     Enum.TryParse<SavingMode>(savingModeElement.GetString(), ignoreCase: true, out var savingMode) &&
@@ -604,6 +621,7 @@ namespace KfuPet.Services
                     WindowLeft,
                     WindowTop,
                     ActiveCharacterId,
+                    LastSeenAnnouncementId,
                     ModelSavingMode = ModelSavingMode.ToString(),
                     CustomTouchReactionUseAi,
                     CustomUpdateNotificationUseAi,
