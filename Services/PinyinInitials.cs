@@ -3,8 +3,8 @@ using System.Text;
 namespace KfuPet.Services
 {
     /// <summary>内置 GB2312 一级汉字（3755 字）的拼音首字母表，零第三方依赖。
-    /// 用于把中文软件名转成拼音缩写（微信 → wx）；多音字按 GB2312 排序取常用读音，
-    /// 二级汉字与生僻字不在表内，未识别时直接跳过。</summary>
+    /// 用于把中文软件名转成拼音缩写（微信 → wx）；多音字按 GB2312 排序取常用读音。
+    /// 一级表外的字（二级汉字、GBK 扩展字）默认跳过，另有少量高频补充字见 ExtraGroups。</summary>
     internal static class PinyinInitials
     {
         // a : 36 chars
@@ -156,6 +156,25 @@ namespace KfuPet.Services
             ('z', GroupZ)
         };
 
+        /// <summary>高频补充字：GB2312 一级汉字之外、但常见于软件名与网络品牌的用字（二级汉字或 GBK 扩展字）。
+        /// 二级汉字在 GB2312 中按部首排序，无法用边界推断首字母，因此逐字标注。</summary>
+        private static readonly (char Initial, string Chars)[] ExtraGroups =
+        {
+            ('b', "哔呗"),
+            ('c', "呲"),
+            ('d', "哒咚嘟嘀"),
+            ('j', "叽唧囧"),
+            ('k', "咔氪哐"),
+            ('l', "咧嘞噜"),
+            ('m', "喵槑"),
+            ('n', "嗯"),
+            ('o', "噢"),
+            ('s', "嗦"),
+            ('x', "咻"),
+            ('y', "吖咿嘤"),
+            ('z', "咂")
+        };
+
         /// <summary>汉字 → 首字母的快速反查表（类加载时构建一次）。</summary>
         private static readonly Dictionary<char, char> InitialMap = BuildMap();
 
@@ -193,6 +212,14 @@ namespace KfuPet.Services
         {
             var map = new Dictionary<char, char>(4000);
             foreach (var group in Groups)
+            {
+                foreach (var c in group.Chars)
+                {
+                    map[c] = group.Initial;
+                }
+            }
+
+            foreach (var group in ExtraGroups)
             {
                 foreach (var c in group.Chars)
                 {

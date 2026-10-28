@@ -172,8 +172,9 @@ namespace KfuPet.Services
                 return 65;
             }
 
-            // 子串：vscode 含 code / 双向都试，过短的候选不参与以免误判
-            if (Math.Min(query.Length, candidateText.Length) >= 3 &&
+            // 子串：vscode 含 code / 双向都试；中文两字即可命中（软件名很少只有两字），其它仍要 3 字以免误判
+            var minSubstringLength = ContainsChinese(query) ? 2 : 3;
+            if (Math.Min(query.Length, candidateText.Length) >= minSubstringLength &&
                 (candidateText.Contains(query, StringComparison.Ordinal) ||
                  query.Contains(candidateText, StringComparison.Ordinal)))
             {
@@ -233,6 +234,20 @@ namespace KfuPet.Services
             }
 
             return index == needle.Length;
+        }
+
+        /// <summary>文本是否包含中日韩统一汉字。</summary>
+        private static bool ContainsChinese(string text)
+        {
+            foreach (var c in text)
+            {
+                if (c >= '\u4E00' && c <= '\u9FFF')
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>归一化：只保留字母数字与中日韩文字并转小写，用于忽略空格、符号、大小写的比较。</summary>
