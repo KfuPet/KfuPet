@@ -58,25 +58,25 @@ namespace KfuPet.Services.Tools
             }
             """;
 
-        public Task<string> ExecuteAsync(string argumentsJson)
+        public async Task<string> ExecuteAsync(string argumentsJson)
         {
             var name = ReadName(argumentsJson);
             if (string.IsNullOrWhiteSpace(name))
             {
-                return Task.FromResult("没有提供要打开的应用名称。");
+                return "没有提供要打开的应用名称。";
             }
 
             var settings = SettingsService.Instance;
             if (!settings.OpenAppEnabled)
             {
-                return Task.FromResult("主人还没有开启“帮你打开应用”的功能，我不能打开程序。");
+                return "主人还没有开启“帮你打开应用”的功能，我不能打开程序。";
             }
 
             var fullAccess = settings.OpenAppFullAccess;
             var allowed = settings.AllowedApps;
             if (!fullAccess && allowed.Count == 0)
             {
-                return Task.FromResult("主人还没有允许任何应用，请先在设置里添加想让我打开的应用。");
+                return "主人还没有允许任何应用，请先在设置里添加想让我打开的应用。";
             }
 
             // 1) 白名单优先（两种模式都先看白名单）：名单内支持简称/缩写匹配，且绝不越出名单
@@ -90,7 +90,7 @@ namespace KfuPet.Services.Tools
                         Log.Info($"[打开应用] 名称「{name}」未精确匹配，按白名单近似猜中「{whitelistMatch.MatchedName}」并打开");
                     }
 
-                    return Launch(whitelistMatch.Path, whitelistMatch.MatchedName ?? name);
+                    return await Launch(whitelistMatch.Path, whitelistMatch.MatchedName ?? name);
                 }
 
                 // 白名单模式：只在名单内找，找不到就到此为止（绝不外扩）
@@ -100,17 +100,17 @@ namespace KfuPet.Services.Tools
                     {
                         var whitelistList = string.Join("、", whitelistMatch.Candidates);
                         Log.Info($"[打开应用] 名称「{name}」在白名单内无法确定，提示候选：{whitelistList}");
-                        return Task.FromResult(
-                            $"主人允许的应用里没有叫「{name}」的。你是不是想开这些之一：{whitelistList}？" +
-                            "如果其中有一个就是，请用它确切的名字再调用一次本工具；都不是就如实告诉主人需要先去设置里允许。");
+                        return $"主人允许的应用里没有叫「{name}」的。你是不是想开这些之一：{whitelistList}？" +
+                               "如果其中有一个就是，请用它确切的名字再调用一次本工具；都不是就如实告诉主人需要先去设置里允许。";
                     }
 
-                    return Task.FromResult($"主人没有允许打开「{name}」，我不能打开它。");
+                    return $"主人没有允许打开「{name}」，我不能打开它。";
                 }
             }
 
-            // 2) 完全访问模式：本地先自己判断全机应用池——精确匹配，或“唯一且高置信”的近似猜测
-            var match = AppResolveService.Match(name);
+            // 2) 完全访问模式：本地先自己判断全机应用池——精确匹配，或“唯一且高置信”的近似猜测。
+            // 首次调用要扫描注册表与快捷方式，放到后台线程建索引，避免卡住界面
+            var match = await Task.Run(() => AppResolveService.Match(name));
             if (match.Path != null)
             {
                 if (!string.Equals(match.MatchedName, name, StringComparison.OrdinalIgnoreCase))
@@ -118,24 +118,23 @@ namespace KfuPet.Services.Tools
                     Log.Info($"[打开应用] 名称「{name}」未精确匹配，本地按近似猜中「{match.MatchedName}」并直接打开");
                 }
 
-                return Launch(match.Path, match.MatchedName ?? name);
+                return await Launch(match.Path, match.MatchedName ?? name);
             }
 
-            // 4) 本地猜不出来（只有弱匹配或出现并列）：把候选交给模型兜底挑选
+            // 3) 本地猜不出来（只有弱匹配或出现并列）：把候选交给模型兜底挑选
             if (match.Candidates.Count > 0)
             {
                 var list = string.Join("、", match.Candidates);
                 Log.Info($"[打开应用] 名称「{name}」本地无法确定，交给模型判断候选：{list}");
-                return Task.FromResult(
-                    $"本地没能直接确定叫「{name}」的程序。相关程序有这些：{list}。" +
-                    "请结合你自己的知识判断：如果主人说的就是这个软件、而它常被叫作清单里的某个名字，" +
-                    "就直接用那个名字再调用一次本工具；" +
-                    "如果清单里都不像，但你确定这个软件在本机常用的名称或可执行名（例如 VS Code 的可执行名是 code），" +
-                    "也可以直接用那个名字再调一次本工具；实在判断不了，才如实告诉主人你没找到。");
+                return $"本地没能直接确定叫「{name}」的程序。相关程序有这些：{list}。" +
+                       "请结合你自己的知识判断：如果主人说的就是这个软件、而它常被叫作清单里的某个名字，" +
+                       "就直接用那个名字再调用一次本工具；" +
+                       "如果清单里都不像，但你确定这个软件在本机常用的名称或可执行名（例如 VS Code 的可执行名是 code），" +
+                       "也可以直接用那个名字再调一次本工具；实在判断不了，才如实告诉主人你没找到。";
             }
 
-            // 5) 兜底：交给 ShellExecute，让 Windows 自行按 PATH / 已注册项解析
-            return TryShellExecute(name);
+            // 4) 兜底：交给 ShellExecute，让 Windows 自行按 PATH / 已注册项解析
+            return await TryShellExecute(name);
         }
 
         /// <summary>

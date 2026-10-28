@@ -3,13 +3,19 @@ using Microsoft.Win32;
 namespace KfuPet.Services
 {
     /// <summary>应用名称 → 可启动目标 的解析，分两层：<see cref="MatchCandidates"/> 对候选集打分匹配（白名单与全机应用池共用）；
-    /// <see cref="Match"/> 枚举全机应用池（注册表 App Paths + 开始菜单快捷方式）后交给前者。
-    /// 匹配分档为精确/首字母缩写/子串/跳字，只有“精确”或“唯一且高置信”才直接给路径，其余给候选名单交模型兜底。
-    /// 不新增第三方依赖：注册表用 Microsoft.Win32，快捷方式以 .lnk 路径交给 ShellExecute 打开。</summary>
+    /// <see cref="Match"/> 枚举全机应用池（注册表 App Paths、卸载登记项、开始菜单与桌面快捷方式、用户级安装目录）后交给前者。
+    /// 匹配分档为精确/英文缩写/拼音首字母/拼音前缀/子串/跳字，只有“精确”或“唯一且高置信”才直接给路径，其余给候选名单交模型兜底。
+    /// 全机候选池进程内缓存一次，避免每次请求都重扫；不新增第三方依赖。</summary>
     internal static class AppResolveService
     {
         /// <summary>开始菜单最多扫描的快捷方式数量，避免异常环境下过慢。</summary>
-        private const int MaxStartMenuShortcuts = 800;
+        private const int MaxStartMenuShortcuts = 1500;
+
+        /// <summary>用户级安装目录最多扫描的可执行文件数量。</summary>
+        private const int MaxLocalProgramExecutables = 400;
+
+        /// <summary>用户级安装目录的最大递归深度。</summary>
+        private const int MaxLocalProgramDepth = 3;
 
         /// <summary>进入候选名单的最低分值，低于此分视为毫不相干。</summary>
         private const int MinGuessScore = 30;
@@ -21,8 +27,17 @@ namespace KfuPet.Services
         /// 否则 <see cref="Candidates"/> 为近似候选名称，交给模型兜底挑选。</summary>
         public readonly record struct MatchResult(string? Path, string? MatchedName, IReadOnlyList<string> Candidates);
 
-        /// <summary>候选：显示名 + 可启动路径（exe 或 .lnk）。</summary>
-        public readonly record struct Candidate(string Name, string Path);
+        /// <summary>候选：显示名 + 可启动路径（exe 或 .lnk）+ 拼音首字母（可预填）。</summary>
+        public readonly record struct Candidate(string Name, string Path, string Pinyin = "")
+        {
+            /// <summary>拼音首字母串：构建候选池时预填，白名单等少量条目按需计算。</summary>
+            public string PinyinValue => string.IsNullOrEmpty(Pinyin) ? PinyinInitials.From(Name) : Pinyin;
+        }
+
+        /// <summary>全机候选池缓存：首次匹配时构建，之后复用。</summary>
+        private static readonly object IndexGate = new();
+
+        private static IReadOnlyList<Candidate>? _index;
 
         /// <summary>
         /// 完全访问模式入口：把名称解析到全机应用池。
@@ -41,7 +56,23 @@ namespace KfuPet.Services
                 return new MatchResult(name, name, Array.Empty<string>());
             }
 
-            return MatchCandidates(name, CollectCandidates(), maxCandidates);
+            return MatchCandidates(name, GetIndex(), maxCandidates);
+        }
+
+        /// <summary>取全机候选池：首次调用时构建，之后直接复用缓存。</summary>
+        private static IReadOnlyList<Candidate> GetIndex()
+        {
+            var index = _index;
+            if (index != null)
+            {
+                return index;
+            }
+
+            lock (IndexGate)
+            {
+                _index ??= CollectCandidates();
+                return _index;
+            }
         }
 
         /// <summary>
@@ -59,7 +90,7 @@ namespace KfuPet.Services
             var scored = new List<(string Name, string Path, int Score)>();
             foreach (var candidate in candidates)
             {
-                var score = Score(name, candidate.Name);
+                var score = Score(name, candidate);
                 if (score > 0)
                 {
                     scored.Add((candidate.Name, candidate.Path, score));
@@ -100,37 +131,57 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 给“查询名”与“候选名”打分：100 完全匹配 / 70 首字母缩写 / 55 子串 / 35 跳字 / 0 不匹配。
+        /// 给“查询名”与候选打分：100 完全匹配 / 70 英文首字母或拼音首字母 / 65 拼音前缀 / 55 子串 / 35 跳字 / 0 不匹配。
         /// </summary>
-        private static int Score(string queryName, string candidateName)
+        private static int Score(string queryName, Candidate candidate)
         {
             var query = Normalize(queryName);
-            var candidate = Normalize(candidateName);
-            if (query.Length == 0 || candidate.Length == 0)
+            if (query.Length == 0)
             {
                 return 0;
             }
 
-            if (query == candidate)
+            var candidateName = candidate.Name;
+            var candidateText = Normalize(candidateName);
+            if (candidateText.Length == 0)
+            {
+                return 0;
+            }
+
+            if (query == candidateText)
             {
                 return 100;
             }
 
-            // 首字母缩写：Visual Studio Code → vsc
+            // 英文首字母缩写：Visual Studio Code → vsc
             if (Initials(candidateName) == query)
             {
                 return 70;
             }
 
+            // 拼音首字母：微信 → wx
+            var pinyin = candidate.PinyinValue;
+            if (pinyin.Length > 0 && pinyin == query)
+            {
+                return 70;
+            }
+
+            // 拼音前缀：中文名带英文后缀时（微信 WeChat → wx）也能命中，但不足以直接打开
+            if (query.Length >= 2 && pinyin.Length > 0 && pinyin.StartsWith(query, StringComparison.Ordinal))
+            {
+                return 65;
+            }
+
             // 子串：vscode 含 code / 双向都试，过短的候选不参与以免误判
-            if (Math.Min(query.Length, candidate.Length) >= 3 &&
-                (candidate.Contains(query, StringComparison.Ordinal) || query.Contains(candidate, StringComparison.Ordinal)))
+            if (Math.Min(query.Length, candidateText.Length) >= 3 &&
+                (candidateText.Contains(query, StringComparison.Ordinal) ||
+                 query.Contains(candidateText, StringComparison.Ordinal)))
             {
                 return 55;
             }
 
             // 跳字：vscode 是 visualstudiocode 的子序列
-            if (query.Length >= 3 && IsSubsequence(query, candidate))
+            if (query.Length >= 3 && IsSubsequence(query, candidateText))
             {
                 return 35;
             }
@@ -199,15 +250,60 @@ namespace KfuPet.Services
             return builder.ToString();
         }
 
-        /// <summary>收集全机候选：注册表 App Paths 条目 + 开始菜单快捷方式。</summary>
+        /// <summary>收集全机候选池：App Paths、卸载登记项、开始菜单、桌面快捷方式与用户级安装目录。</summary>
         private static List<Candidate> CollectCandidates()
         {
-            var candidates = CollectAppPathCandidates();
-            var appPathCount = candidates.Count;
-            candidates.AddRange(CollectStartMenuCandidates());
+            var candidates = new List<Candidate>();
+            var counts = new List<string>();
 
-            Log.Debug($"[打开应用] 候选池：App Paths {appPathCount} 条，开始菜单 {candidates.Count - appPathCount} 条");
-            return candidates;
+            Append(candidates, counts, "App Paths", CollectAppPathCandidates);
+            Append(candidates, counts, "卸载登记", CollectUninstallCandidates);
+            Append(candidates, counts, "开始菜单", CollectStartMenuCandidates);
+            Append(candidates, counts, "桌面", CollectDesktopCandidates);
+            Append(candidates, counts, "用户级安装目录", CollectLocalProgramCandidates);
+
+            var distinct = DeduplicateByPath(candidates);
+            Log.Debug($"[打开应用] 候选池：{string.Join("、", counts)}；去重后 {distinct.Count} 条");
+            return distinct;
+        }
+
+        /// <summary>执行一个来源的收集：单个来源异常只记录日志，不影响其它来源。</summary>
+        private static void Append(List<Candidate> target, List<string> counts, string label,
+            Func<List<Candidate>> collector)
+        {
+            try
+            {
+                var items = collector();
+                counts.Add($"{label} {items.Count}");
+                target.AddRange(items);
+            }
+            catch (Exception ex)
+            {
+                counts.Add($"{label} 失败");
+                Log.Warning($"[打开应用] 收集{label}失败：{ex.Message}");
+            }
+        }
+
+        /// <summary>按可执行路径去重，保留先出现的显示名。</summary>
+        private static List<Candidate> DeduplicateByPath(List<Candidate> candidates)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var result = new List<Candidate>(candidates.Count);
+            foreach (var candidate in candidates)
+            {
+                if (seen.Add(candidate.Path))
+                {
+                    result.Add(candidate);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>创建候选并预算拼音首字母。</summary>
+        private static Candidate Create(string name, string path)
+        {
+            return new Candidate(name, path, PinyinInitials.From(name));
         }
 
         /// <summary>注册表 App Paths：HKLM / HKCU（含 32 位 WOW6432Node 视图）下的全部条目。</summary>
@@ -234,7 +330,7 @@ namespace KfuPet.Services
                             using var appKey = root.OpenSubKey(subKey);
                             if (appKey?.GetValue(null) is string path && path.Length > 0 && File.Exists(path))
                             {
-                                list.Add(new Candidate(Path.GetFileNameWithoutExtension(subKey), path));
+                                list.Add(Create(Path.GetFileNameWithoutExtension(subKey), path));
                             }
                         }
                     }
@@ -246,6 +342,190 @@ namespace KfuPet.Services
             }
 
             return list;
+        }
+
+        /// <summary>卸载登记项：读取 DisplayName 与 DisplayIcon，只收指向 .exe 的条目，
+        /// 覆盖没有开始菜单快捷方式的软件（商店应用除外）。</summary>
+        private static List<Candidate> CollectUninstallCandidates()
+        {
+            var list = new List<Candidate>();
+            var subPaths = new[]
+            {
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+            };
+
+            foreach (var hive in new[] { Registry.LocalMachine, Registry.CurrentUser })
+            {
+                foreach (var subPath in subPaths)
+                {
+                    try
+                    {
+                        using var root = hive.OpenSubKey(subPath);
+                        if (root == null)
+                        {
+                            continue;
+                        }
+
+                        foreach (var subKeyName in root.GetSubKeyNames())
+                        {
+                            using var appKey = root.OpenSubKey(subKeyName);
+                            if (appKey?.GetValue("DisplayName") is not string rawName ||
+                                appKey.GetValue("DisplayIcon") is not string rawIcon)
+                            {
+                                continue;
+                            }
+
+                            var name = rawName.Trim();
+                            var executable = ParseDisplayIcon(rawIcon);
+                            if (name.Length == 0 || executable == null ||
+                                !IsLikelyApplication(name) || !File.Exists(executable))
+                            {
+                                continue;
+                            }
+
+                            list.Add(Create(name, executable));
+                        }
+                    }
+                    catch
+                    {
+                        // 单个注册表分支读取失败不影响其它来源
+                    }
+                }
+            }
+
+            return list;
+        }
+
+        /// <summary>从 DisplayIcon 取出可执行文件路径：去掉 “,0” 索引与引号，只接受 .exe。</summary>
+        private static string? ParseDisplayIcon(string displayIcon)
+        {
+            var path = displayIcon.Trim();
+            var comma = path.LastIndexOf(',');
+            if (comma > 0)
+            {
+                path = path[..comma].Trim();
+            }
+
+            path = path.Trim('"').Trim();
+            return path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? path : null;
+        }
+
+        /// <summary>过滤卸载登记里的运行库、补丁与语言包，避免它们进入候选名单。</summary>
+        private static bool IsLikelyApplication(string displayName)
+        {
+            var lower = displayName.ToLowerInvariant();
+            return !lower.Contains("redistributable") &&
+                   !lower.Contains("update for") &&
+                   !lower.Contains("security update") &&
+                   !lower.Contains("hotfix") &&
+                   !lower.Contains("language pack") &&
+                   !lower.Contains("运行库") &&
+                   !lower.Contains("补丁");
+        }
+
+        /// <summary>桌面（用户 + 公共）里的快捷方式。</summary>
+        private static List<Candidate> CollectDesktopCandidates()
+        {
+            var list = new List<Candidate>();
+            foreach (var folder in new[]
+                     {
+                         Environment.SpecialFolder.DesktopDirectory,
+                         Environment.SpecialFolder.CommonDesktopDirectory
+                     })
+            {
+                var directory = Environment.GetFolderPath(folder);
+                if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    foreach (var file in Directory.GetFiles(directory, "*.lnk"))
+                    {
+                        list.Add(Create(Path.GetFileNameWithoutExtension(file), file));
+                    }
+                }
+                catch
+                {
+                    // 单个桌面目录枚举失败不影响其它来源
+                }
+            }
+
+            return list;
+        }
+
+        /// <summary>用户级安装目录（%LocalAppData%\Programs）里的主程序：VS Code、Discord 等常装在这里，
+        /// 且不一定生成开始菜单快捷方式。</summary>
+        private static List<Candidate> CollectLocalProgramCandidates()
+        {
+            var root = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs");
+            if (!Directory.Exists(root))
+            {
+                return new List<Candidate>();
+            }
+
+            var list = new List<Candidate>();
+            CollectExecutablesRecursive(root, list, depth: 0);
+            return list;
+        }
+
+        /// <summary>递归收集可执行文件：限制深度与数量，并过滤卸载、更新、崩溃上报等噪音程序。</summary>
+        private static void CollectExecutablesRecursive(string directory, List<Candidate> list, int depth)
+        {
+            if (depth > MaxLocalProgramDepth || list.Count >= MaxLocalProgramExecutables)
+            {
+                return;
+            }
+
+            try
+            {
+                foreach (var file in Directory.GetFiles(directory, "*.exe"))
+                {
+                    if (list.Count >= MaxLocalProgramExecutables)
+                    {
+                        return;
+                    }
+
+                    var fileName = Path.GetFileNameWithoutExtension(file);
+                    if (IsLikelyMainExecutable(fileName))
+                    {
+                        list.Add(Create(fileName, file));
+                    }
+                }
+            }
+            catch
+            {
+                // 单个目录枚举失败不影响其它目录
+            }
+
+            try
+            {
+                foreach (var subDirectory in Directory.GetDirectories(directory))
+                {
+                    if (list.Count >= MaxLocalProgramExecutables)
+                    {
+                        return;
+                    }
+
+                    CollectExecutablesRecursive(subDirectory, list, depth + 1);
+                }
+            }
+            catch
+            {
+                // 单个子目录枚举失败不影响其它目录
+            }
+        }
+
+        /// <summary>排除更新器、卸载器、崩溃上报等辅助程序。</summary>
+        private static bool IsLikelyMainExecutable(string fileName)
+        {
+            var lower = fileName.ToLowerInvariant();
+            return !(lower.Contains("unins") || lower.Contains("setup") || lower.Contains("update") ||
+                     lower.Contains("install") || lower.Contains("helper") || lower.Contains("crash") ||
+                     lower.Contains("report") || lower.Contains("elevate") || lower.Contains("repair"));
         }
 
         /// <summary>收集开始菜单（用户 + 公共）里的 .lnk，名称取快捷方式文件名、路径直接给 .lnk。
@@ -284,7 +564,7 @@ namespace KfuPet.Services
                         return;
                     }
 
-                    list.Add(new Candidate(Path.GetFileNameWithoutExtension(file), file));
+                    list.Add(Create(Path.GetFileNameWithoutExtension(file), file));
                 }
             }
             catch
