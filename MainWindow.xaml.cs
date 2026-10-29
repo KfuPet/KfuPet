@@ -1605,7 +1605,8 @@ namespace KfuPet
             string? line = null;
             var source = string.Empty;
 
-            Log.Debug($"[主动搭话] 开始生成台词：{e.Type}｜上下文：{e.ContextNote}");
+            // 语境里可能含前台窗口标题，日志只记长度，不落盘具体内容
+            Log.Debug($"[主动搭话] 开始生成台词：{e.Type}｜语境 {e.ContextNote.Length} 字");
 
             if (!useAi)
             {

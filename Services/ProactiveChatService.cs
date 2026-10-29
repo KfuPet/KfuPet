@@ -497,7 +497,9 @@ namespace KfuPet.Services
 
             var eventKey = GetEventKey(type);
             var contextNote = BuildContextNote(type, now);
-            Log.Info($"[主动搭话] 触发 {type}｜{contextNote}");
+
+            // 语境里可能含前台窗口标题（浏览器页面、文件名等），日志只记长度，不落盘具体内容
+            Log.Info($"[主动搭话] 触发 {type}｜语境 {contextNote.Length} 字");
             Triggered?.Invoke(this, new ProactiveTriggerEventArgs(type, eventKey, contextNote));
         }
 

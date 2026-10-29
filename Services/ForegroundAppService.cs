@@ -10,12 +10,34 @@ namespace KfuPet.Services
     /// <summary>
     /// 应用状态检测：读取任务栏上正在运行的应用（Alt+Tab 口径：可见或最小化的顶层窗口），
     /// 供主动搭话语境与“查看正在使用的应用”工具使用。
-    /// 只读取应用名称，不读取窗口内容；任何失败都静默返回空结果，不影响主流程。
+    /// 只读取应用名称与前台应用的窗口标题，不读取窗口内容；任何失败都静默返回空结果，不影响主流程。
     /// </summary>
     internal static class ForegroundAppService
     {
         /// <summary>单次最多返回的应用数量，避免窗口很多时语境与工具结果过长。</summary>
         private const int MAX_RUNNING_APPS = 15;
+
+        /// <summary>前台应用标签使用窗口标题的最大长度，超出截断，避免语境过长。</summary>
+        private const int MAX_FOREGROUND_TITLE_LENGTH = 40;
+
+        /// <summary>允许用窗口标题代替应用名的进程名（忽略大小写）：
+        /// 这些应用的任务栏标题能反映主人正在看/编辑的内容，且隐私风险相对可控。</summary>
+        private static readonly HashSet<string> TitleAppProcessNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // 浏览器
+            "chrome", "msedge", "firefox", "brave", "opera", "vivaldi", "360chrome", "360se", "qqbrowser",
+            // IDE 与编辑器
+            "code", "devenv", "idea64", "pycharm64", "webstorm64", "clion64", "rider64", "goland64", "studio64",
+            "notepad++", "sublime_text",
+            // 办公
+            "winword", "excel", "powerpnt", "onenote", "wps", "et", "wpp",
+            // 终端
+            "windowsterminal", "pwsh", "powershell", "cmd",
+            // 笔记
+            "obsidian", "typora",
+            // 设计 / 3D
+            "photoshop", "illustrator", "figma", "blender", "unity", "unrealeditor"
+        };
 
         private const int GWL_EXSTYLE = -20;
 
@@ -60,7 +82,7 @@ namespace KfuPet.Services
             try
             {
                 var apps = new List<RunningAppInfo>();
-                var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var appIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 var foregroundWindow = GetForegroundWindow();
 
                 EnumWindowsProc callback = (window, _) =>
@@ -70,7 +92,7 @@ namespace KfuPet.Services
                         return false;
                     }
 
-                    TryAddApp(window, foregroundWindow, apps, seenNames);
+                    TryAddApp(window, foregroundWindow, apps, appIndexes);
                     return true;
                 };
 
@@ -90,7 +112,7 @@ namespace KfuPet.Services
             IntPtr window,
             IntPtr foregroundWindow,
             List<RunningAppInfo> apps,
-            HashSet<string> seenNames)
+            Dictionary<string, int> appIndexes)
         {
             if (!IsWindowVisible(window))
             {
@@ -131,14 +153,51 @@ namespace KfuPet.Services
 
             using (process)
             {
-                var name = GetDisplayName(process, title);
-                if (string.IsNullOrWhiteSpace(name) || !seenNames.Add(name))
+                var appName = GetDisplayName(process, title);
+                if (string.IsNullOrWhiteSpace(appName))
                 {
                     return;
                 }
 
-                apps.Add(new RunningAppInfo(name, window == foregroundWindow));
+                var isForeground = window == foregroundWindow;
+                var label = isForeground ? GetForegroundLabel(process, title, appName) : appName;
+
+                // 同一应用只保留一项；若后来才遇到它的前台窗口，用标题替换原先的标签
+                if (appIndexes.TryGetValue(appName, out var index))
+                {
+                    if (isForeground)
+                    {
+                        apps[index] = new RunningAppInfo(label, true);
+                    }
+
+                    return;
+                }
+
+                appIndexes[appName] = apps.Count;
+                apps.Add(new RunningAppInfo(label, isForeground));
             }
+        }
+
+        /// <summary>前台应用的显示标签：白名单内的应用改用窗口标题（过长截断），让语境能反映正在看/编辑的内容；
+        /// 其余应用仍用应用名，避免把其他窗口标题也带出去。</summary>
+        private static string GetForegroundLabel(Process process, string title, string appName)
+        {
+            try
+            {
+                if (!TitleAppProcessNames.Contains(process.ProcessName) || string.IsNullOrWhiteSpace(title))
+                {
+                    return appName;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"[应用语境] 读取前台进程名失败：{ex.Message}");
+                return appName;
+            }
+
+            return title.Length > MAX_FOREGROUND_TITLE_LENGTH
+                ? title[..MAX_FOREGROUND_TITLE_LENGTH] + "…"
+                : title;
         }
 
         /// <summary>窗口标题；没有标题时返回 null。</summary>
