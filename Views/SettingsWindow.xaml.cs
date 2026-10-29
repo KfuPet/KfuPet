@@ -130,6 +130,7 @@ namespace KfuPet.Views
             _suppressSavingEvents = false;
             UpdateCustomSavingOptionsVisibility();
             UpdateMemoryTriggerCardVisibility();
+            RefreshSavingModeSummary();
 
             // 主动搭话：读取总开关与各项参数（控件事件在此期间忽略）
             _suppressProactiveEvents = true;
@@ -457,6 +458,12 @@ namespace KfuPet.Views
             ShowOnlyPanel(currentPanel);
             PlayPageEnterAnimation(currentPanel);
 
+            // 重新进入「桌宠功能」页时回到一级页，避免仍停在「节省模型消耗」二级页
+            if (NavList.SelectedIndex == 3)
+            {
+                ShowFeaturesHomePage();
+            }
+
             if (NavList.SelectedIndex == 0)
             {
                 PlayMemoryPageEntrance();
@@ -619,6 +626,7 @@ namespace KfuPet.Views
             UpdateSavingThumb(animate: true);
             UpdateCustomSavingOptionsVisibility();
             UpdateMemoryTriggerCardVisibility();
+            RefreshSavingModeSummary();
         }
 
         /// <summary>滑块位置同步：播放滑动动画；首次布局或尺寸变化时直接落位。</summary>
@@ -753,6 +761,57 @@ namespace KfuPet.Views
             {
                 MemoryTriggerCard.Visibility = Visibility.Collapsed;
             }
+        }
+
+        /// <summary>
+        /// 点击「节省模型消耗」入口卡片进入二级页：隐藏一级页标题、入口卡片与其余功能分组，只显示二级页内容。
+        /// </summary>
+        private void SavingEntryCard_Click(object sender, RoutedEventArgs e)
+        {
+            if (SavingDetailContent.Visibility == Visibility.Visible)
+            {
+                return;
+            }
+
+            FeaturesPageTitle.Visibility = Visibility.Collapsed;
+            SavingEntryCard.Visibility = Visibility.Collapsed;
+            FeaturesRestContent.Visibility = Visibility.Collapsed;
+
+            SavingDetailContent.Visibility = Visibility.Visible;
+            PlayPageEnterAnimation(SavingDetailContent);
+            ModelFeaturesPanel.ScrollToTop();
+        }
+
+        /// <summary>二级页左上角「返回」：恢复「桌宠功能」一级页内容。</summary>
+        private void SavingDetailBackButton_Click(object sender, RoutedEventArgs e)
+        {
+            ShowFeaturesHomePage();
+        }
+
+        /// <summary>恢复一级页：标题、入口卡片与其余功能分组；离开或重新进入该页时也会调用。</summary>
+        private void ShowFeaturesHomePage()
+        {
+            if (SavingDetailContent.Visibility != Visibility.Visible)
+            {
+                return;
+            }
+
+            SavingDetailContent.Visibility = Visibility.Collapsed;
+            FeaturesPageTitle.Visibility = Visibility.Visible;
+            SavingEntryCard.Visibility = Visibility.Visible;
+            FeaturesRestContent.Visibility = Visibility.Visible;
+            ModelFeaturesPanel.ScrollToTop();
+        }
+
+        /// <summary>同步入口卡片上的当前档位摘要，不进入二级页也能确认节省是否已开启。</summary>
+        private void RefreshSavingModeSummary()
+        {
+            SavingModeSummaryText.Text = SettingsService.Instance.ModelSavingMode switch
+            {
+                SavingMode.Saving => "已开启：这些功能改用本地文案，不再消耗模型请求",
+                SavingMode.Custom => "自定义：逐项选择每个功能是否使用 AI 生成",
+                _ => "已关闭：当前全部由 AI 生成"
+            };
         }
 
         /// <summary>

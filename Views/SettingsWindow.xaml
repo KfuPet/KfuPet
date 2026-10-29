@@ -1311,7 +1311,130 @@
                         </ScrollViewer.RenderTransform>
 
                         <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="桌宠功能" Style="{StaticResource SectionTitleStyle}"/>
+                            <TextBlock x:Name="FeaturesPageTitle"
+                                       Text="桌宠功能"
+                                       Style="{StaticResource SectionTitleStyle}"/>
+
+                            <!-- 节省模型消耗入口卡片：点击进入二级页，档位与记忆相关设置都在二级页里调整 -->
+                            <Button x:Name="SavingEntryCard"
+                                    Margin="0,16,0,0"
+                                    Padding="14,12"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    Cursor="Hand"
+                                    FocusVisualStyle="{x:Null}"
+                                    Click="SavingEntryCard_Click">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="EntryBg"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="10"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="EntryBg"
+                                                        Property="BorderBrush"
+                                                        Value="{DynamicResource AppAccentBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="节省模型消耗"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                       VerticalAlignment="Center"/>
+
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="点击进入二级页：设置节省档位、记忆触发词与检索停用词。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <TextBlock x:Name="SavingModeSummaryText"
+                                                   Margin="0,4,0,0"
+                                                   Style="{StaticResource HintTextStyle}"
+                                                   Text="已关闭：当前全部由 AI 生成"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Column="1"
+                                               Text="&#xE76C;"
+                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                               FontSize="{StaticResource FontSizeIconTiny}"
+                                               Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+                            </Button>
+
+                        <!-- 节省模型消耗二级页：进入时整体替换一级页内容，含原档位设置、记忆触发词与检索停用词 -->
+                        <StackPanel x:Name="SavingDetailContent"
+                                    Visibility="Collapsed"
+                                    Opacity="0">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform/>
+                            </StackPanel.RenderTransform>
+
+                            <!-- 二级页头部：返回按钮 + 页面标题 -->
+                            <StackPanel x:Name="SavingDetailHeader">
+                                <Button x:Name="SavingDetailBackButton"
+                                        HorizontalAlignment="Left"
+                                        Background="Transparent"
+                                        Cursor="Hand"
+                                        FocusVisualStyle="{x:Null}"
+                                        Click="SavingDetailBackButton_Click">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="Transparent" Padding="0,2">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock x:Name="BackIcon"
+                                                               Text="&#xE72B;"
+                                                               FontFamily="{StaticResource FontFamilyIcon}"
+                                                               FontSize="{StaticResource FontSizeIconSmall}"
+                                                               Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,6,0"/>
+                                                    <TextBlock x:Name="BackLabel"
+                                                               Text="返回"
+                                                               FontFamily="{StaticResource FontFamilyBody}"
+                                                               FontSize="{StaticResource FontSizeCaption}"
+                                                               Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="BackIcon"
+                                                            Property="Foreground"
+                                                            Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                    <Setter TargetName="BackLabel"
+                                                            Property="Foreground"
+                                                            Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <TextBlock Text="节省模型消耗"
+                                           Style="{StaticResource SectionTitleStyle}"
+                                           Margin="0,10,0,0"/>
+                            </StackPanel>
 
                             <!-- 节省模型消耗卡片：标签居左（带说明问号），关闭 / 开启 / 自定义滑块居右 -->
                             <Border Margin="0,16,0,0"
@@ -1958,6 +2081,10 @@
                                     </Grid>
                                 </Grid>
                             </Border>
+                        </StackPanel>
+
+                        <!-- 一级页其余内容：进入“节省模型消耗”二级页时整体隐藏 -->
+                        <StackPanel x:Name="FeaturesRestContent">
 
                             <!-- 主动搭话：总开关默认开启，其余参数随总开关显隐；作为“模型功能”页内的子标题 -->
                             <TextBlock Text="主动搭话"
@@ -2622,6 +2749,7 @@
                                                   Unchecked="ForegroundAppContextToggle_Changed"/>
                                 </Grid>
                             </Border>
+                        </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
 
