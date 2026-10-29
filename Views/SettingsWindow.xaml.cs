@@ -339,7 +339,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 前台应用语境开关：保存用户授权状态；开启后主动搭话会把当前前台应用名称注入语境。
+        /// 读取应用授权开关：保存用户授权状态；开启后主动搭话会注入前台与任务栏应用语境，模型也可调用查看工具。
         /// </summary>
         private void ForegroundAppContextToggle_Changed(object sender, RoutedEventArgs e)
         {

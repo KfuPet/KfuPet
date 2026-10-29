@@ -255,23 +255,29 @@ namespace KfuPet
             _toolRegistry.Register(new FeedTool());
             _toolRegistry.Register(new MemorySearchTool(_memorySystem));
             _toolRegistry.Register(new OpenAppTool());
+            _toolRegistry.Register(new ListRunningAppsTool());
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
 
         /// <summary>
         /// 工具对模型是否可见：open_app 仅在功能已开启、且（已允许应用 或 开启完全访问）时才向模型播报；
-        /// 其余工具始终可见（不改动播报范围）。
+        /// list_running_apps 需要主人开启“读取正在使用的应用”授权；其余工具始终可见。
         /// </summary>
         private static bool ShouldAdvertiseTool(ITool tool)
         {
-            if (tool is not OpenAppTool)
+            if (tool is OpenAppTool)
             {
-                return true;
+                var settings = SettingsService.Instance;
+                return settings.OpenAppEnabled && (settings.OpenAppFullAccess || settings.AllowedApps.Count > 0);
             }
 
-            var settings = SettingsService.Instance;
-            return settings.OpenAppEnabled && (settings.OpenAppFullAccess || settings.AllowedApps.Count > 0);
+            if (tool is ListRunningAppsTool)
+            {
+                return SettingsService.Instance.ForegroundAppContextEnabled;
+            }
+
+            return true;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)

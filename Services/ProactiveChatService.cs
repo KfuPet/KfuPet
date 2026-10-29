@@ -67,6 +67,9 @@ namespace KfuPet.Services
         /// <summary>主动搭话后等待回应的时长（分钟）：超过仍未得到任何互动即判定"被无视"。</summary>
         private const int IGNORE_CHECK_MINUTES = 3;
 
+        /// <summary>应用语境里最多列出的应用数量，其余只报总数，控制 token 开销。</summary>
+        private const int MAX_CONTEXT_APP_COUNT = 6;
+
         // ── 定时问候窗口（一天内的分钟数）────────────
 
         /// <summary>早上问候窗口起点：8:00。</summary>
@@ -537,7 +540,7 @@ namespace KfuPet.Services
             EmotionService.Instance.OnIgnored(_ignoredStreak);
         }
 
-        /// <summary>拼动态语境：把当前时间、间隔时长与（用户授权后的）前台应用告诉模型，避免它凭空想象。</summary>
+        /// <summary>拼动态语境：把当前时间、间隔时长与（用户授权后的）任务栏应用告诉模型，避免它凭空想象。</summary>
         private string BuildContextNote(ProactiveTriggerType type, DateTime now)
         {
             var note = type switch
@@ -549,19 +552,33 @@ namespace KfuPet.Services
                 _ => $"现在是 {now:HH:mm}。"
             };
 
-            return note + BuildForegroundAppNote();
+            return note + BuildAppNote();
         }
 
-        /// <summary>前台应用语境：仅在用户开启授权时读取；读取失败或前台是桌宠自身时留空。</summary>
-        private static string BuildForegroundAppNote()
+        /// <summary>应用语境：仅在用户开启授权时读取任务栏上正在运行的应用，并标出当前前台应用；
+        /// 应用过多时只列前几个并报总数；读取失败或没有可用应用时留空。</summary>
+        private static string BuildAppNote()
         {
             if (!SettingsService.Instance.ForegroundAppContextEnabled)
             {
                 return string.Empty;
             }
 
-            var appName = ForegroundAppService.TryGetForegroundAppName();
-            return string.IsNullOrEmpty(appName) ? string.Empty : $"主人当前正在使用「{appName}」。";
+            var apps = ForegroundAppService.TryGetRunningApps();
+            if (apps.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var names = apps.Select(a => a.Name).ToList();
+            var list = names.Count > MAX_CONTEXT_APP_COUNT
+                ? $"{string.Join("、", names.Take(MAX_CONTEXT_APP_COUNT))} 等 {names.Count} 个"
+                : string.Join("、", names);
+
+            var foregroundName = apps.FirstOrDefault(a => a.IsForeground).Name;
+            return string.IsNullOrEmpty(foregroundName)
+                ? $"主人现在开着这些应用：{list}。"
+                : $"主人现在开着这些应用：{list}；正在使用「{foregroundName}」。";
         }
 
         /// <summary>触发类型 → 角色包 reactions.json 的事件键。</summary>

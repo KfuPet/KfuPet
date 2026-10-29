@@ -1,15 +1,50 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace KfuPet.Services
 {
+    /// <summary>任务栏上一个正在运行的应用：显示名称，以及是否为主人当前正在使用的前台应用。</summary>
+    internal readonly record struct RunningAppInfo(string Name, bool IsForeground);
+
     /// <summary>
-    /// 前台应用检测：只读取当前前台窗口所属应用的显示名称，供主动搭话补充语境。
-    /// 不截图、不读取窗口内容；任何失败都静默返回 null，不影响主流程。
+    /// 应用状态检测：读取任务栏上正在运行的应用（Alt+Tab 口径：可见或最小化的顶层窗口），
+    /// 供主动搭话语境与“查看正在使用的应用”工具使用。
+    /// 只读取应用名称，不读取窗口内容；任何失败都静默返回空结果，不影响主流程。
     /// </summary>
     internal static class ForegroundAppService
     {
+        /// <summary>单次最多返回的应用数量，避免窗口很多时语境与工具结果过长。</summary>
+        private const int MAX_RUNNING_APPS = 15;
+
+        private const int GWL_EXSTYLE = -20;
+
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
+
+        private const int DWMWA_CLOAKED = 14;
+
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetWindowTextLength(IntPtr hWnd);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmGetWindowAttribute(IntPtr hWnd, int dwAttribute, out int pvAttribute, int cbAttribute);
+
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
 
@@ -17,54 +52,157 @@ namespace KfuPet.Services
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
         /// <summary>
-        /// 当前前台应用的显示名称（优先文件描述，取不到时退回进程名）。
-        /// 前台是桌宠自身或读取失败时返回 null。
+        /// 任务栏上正在运行的应用（按显示名去重），并标记当前前台应用。
+        /// 前台是桌宠自身、窗口受保护或读取失败时对应窗口会被跳过；没有可用结果时返回空列表。
         /// </summary>
-        public static string? TryGetForegroundAppName()
+        public static IReadOnlyList<RunningAppInfo> TryGetRunningApps()
         {
             try
             {
-                var window = GetForegroundWindow();
-                if (window == IntPtr.Zero)
-                {
-                    return null;
-                }
+                var apps = new List<RunningAppInfo>();
+                var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var foregroundWindow = GetForegroundWindow();
 
-                GetWindowThreadProcessId(window, out var processId);
-                if (processId == 0 || processId == (uint)Environment.ProcessId)
+                EnumWindowsProc callback = (window, _) =>
                 {
-                    return null;
-                }
+                    if (apps.Count >= MAX_RUNNING_APPS)
+                    {
+                        return false;
+                    }
 
-                using var process = Process.GetProcessById((int)processId);
-                var name = GetDisplayName(process);
-                return string.IsNullOrWhiteSpace(name) ? null : name;
+                    TryAddApp(window, foregroundWindow, apps, seenNames);
+                    return true;
+                };
+
+                EnumWindows(callback, IntPtr.Zero);
+                return apps;
             }
             catch (Exception ex)
             {
-                // 前台进程可能受权限保护或刚好退出，读取失败时本轮不注入语境
-                Log.Debug($"[前台应用] 读取失败：{ex.Message}");
-                return null;
+                // 枚举窗口依赖系统接口，失败时本轮不注入应用语境
+                Log.Debug($"[应用语境] 读取运行应用失败：{ex.Message}");
+                return Array.Empty<RunningAppInfo>();
             }
         }
 
-        /// <summary>优先用文件描述（如“Visual Studio”），取不到时退回进程名（如“devenv”）。</summary>
-        private static string? GetDisplayName(Process process)
+        /// <summary>检查单个顶层窗口，符合任务栏应用特征时加入结果。</summary>
+        private static void TryAddApp(
+            IntPtr window,
+            IntPtr foregroundWindow,
+            List<RunningAppInfo> apps,
+            HashSet<string> seenNames)
+        {
+            if (!IsWindowVisible(window))
+            {
+                return;
+            }
+
+            var title = GetWindowTitle(window);
+            if (string.IsNullOrEmpty(title) ||
+                string.Equals(title, "Program Manager", StringComparison.OrdinalIgnoreCase))
+            {
+                // 无标题窗口多为系统壳层窗口；“Program Manager”是桌面本身
+                return;
+            }
+
+            // 工具窗口（浮动面板、提示框等）不会出现在任务栏上；被系统隐藏的窗口（如其他虚拟桌面）也跳过
+            if ((GetWindowLong(window, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0 || IsCloaked(window))
+            {
+                return;
+            }
+
+            GetWindowThreadProcessId(window, out var processId);
+            if (processId == 0 || processId == (uint)Environment.ProcessId)
+            {
+                return;
+            }
+
+            Process process;
+            try
+            {
+                process = Process.GetProcessById((int)processId);
+            }
+            catch (Exception ex)
+            {
+                // 窗口所属进程可能刚好退出或受权限保护
+                Log.Debug($"[应用语境] 读取进程 {processId} 失败：{ex.Message}");
+                return;
+            }
+
+            using (process)
+            {
+                var name = GetDisplayName(process, title);
+                if (string.IsNullOrWhiteSpace(name) || !seenNames.Add(name))
+                {
+                    return;
+                }
+
+                apps.Add(new RunningAppInfo(name, window == foregroundWindow));
+            }
+        }
+
+        /// <summary>窗口标题；没有标题时返回 null。</summary>
+        private static string? GetWindowTitle(IntPtr window)
+        {
+            var length = GetWindowTextLength(window);
+            if (length <= 0)
+            {
+                return null;
+            }
+
+            var builder = new StringBuilder(length + 1);
+            GetWindowText(window, builder, builder.Capacity);
+            var title = builder.ToString().Trim();
+            return string.IsNullOrEmpty(title) ? null : title;
+        }
+
+        /// <summary>
+        /// 优先用文件描述（如“Visual Studio”），取不到时退回进程名（如“devenv”）；
+        /// UWP 窗口的宿主进程固定是 ApplicationFrameHost，改用窗口标题作为应用名。
+        /// </summary>
+        private static string? GetDisplayName(Process process, string title)
         {
             try
             {
-                var description = process.MainModule?.FileVersionInfo.FileDescription?.Trim();
-                if (!string.IsNullOrEmpty(description))
+                var processName = process.ProcessName;
+                if (!string.Equals(processName, "ApplicationFrameHost", StringComparison.OrdinalIgnoreCase))
                 {
-                    return description;
+                    var description = process.MainModule?.FileVersionInfo.FileDescription?.Trim();
+                    return string.IsNullOrEmpty(description) ? processName : description;
                 }
             }
             catch
             {
-                // 以更高权限运行的进程不允许读取主模块信息，退回进程名
+                // 以更高权限运行的进程不允许读取主模块信息，退回窗口标题或进程名
             }
 
-            return process.ProcessName;
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                return title;
+            }
+
+            try
+            {
+                return process.ProcessName;
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"[应用语境] 读取进程名失败：{ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>窗口是否被系统隐藏（例如位于其他虚拟桌面）；查询失败按未隐藏处理。</summary>
+        private static bool IsCloaked(IntPtr window)
+        {
+            try
+            {
+                return DwmGetWindowAttribute(window, DWMWA_CLOAKED, out var cloaked, sizeof(int)) == 0 && cloaked != 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

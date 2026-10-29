@@ -156,7 +156,8 @@ namespace KfuPet.Services
             _ => true
         };
 
-        /// <summary>主动搭话时是否读取前台应用名称并注入语境（默认关闭，需用户在“应用操作”中主动开启授权）。</summary>
+        /// <summary>是否允许读取正在使用的应用（前台应用与任务栏应用，默认关闭）：
+        /// 开启后主动搭话会注入应用语境，模型也可调用查看工具。</summary>
         public bool ForegroundAppContextEnabled { get; private set; }
 
         /// <summary>是否允许模型帮忙打开应用（总开关，默认关闭）。</summary>
@@ -374,7 +375,7 @@ namespace KfuPet.Services
             Save();
         }
 
-        /// <summary>保存“主动搭话读取前台应用”开关状态。</summary>
+        /// <summary>保存“读取正在使用的应用”授权开关状态。</summary>
         public void SetForegroundAppContextEnabled(bool enabled)
         {
             ForegroundAppContextEnabled = enabled;

@@ -2572,7 +2572,7 @@
                                            TextWrapping="Wrap"/>
                             </StackPanel>
 
-                            <!-- 前台应用语境：主动搭话时读取当前前台应用名称（默认关闭，开启即视为用户授权） -->
+                            <!-- 应用语境授权：读取前台应用与任务栏应用，供主动搭话与查看工具使用（默认关闭，开启即视为用户授权） -->
                             <Border Margin="0,8,0,0"
                                     Padding="14,10"
                                     Background="{DynamicResource AppSurfaceBrush}"
@@ -2583,7 +2583,7 @@
                                     <StackPanel Orientation="Horizontal"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,16,0">
-                                        <TextBlock Text="主动搭话时读取前台应用"
+                                        <TextBlock Text="允许读取正在使用的应用"
                                                    FontFamily="{StaticResource FontFamilyBody}"
                                                    FontSize="{StaticResource FontSizeBody}"
                                                    Foreground="{DynamicResource AppTextPrimaryBrush}"
@@ -2608,7 +2608,7 @@
                                             <TextBlock.ToolTip>
                                                 <ToolTip MaxWidth="320">
                                                     <TextBlock TextWrapping="Wrap"
-                                                               Text="开启即授权桌宠在主动搭话时读取当前前台应用的名称，并作为语境发送给 AI 模型，让它更贴合你正在做的事。只读取应用名称，不读取窗口内容；默认关闭，关闭后立即停止读取。"/>
+                                                               Text="开启即授权桌宠读取当前前台应用和任务栏上打开的应用名称：主动搭话时会把这些应用作为语境发送给 AI 模型，你问起“我开了哪些应用”时也能查询。只读取应用名称，不读取窗口内容；默认关闭，关闭后立即停止读取。"/>
                                                 </ToolTip>
                                             </TextBlock.ToolTip>
                                         </TextBlock>
