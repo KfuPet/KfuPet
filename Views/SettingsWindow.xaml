@@ -1625,7 +1625,7 @@
                                        Text="桌宠功能"
                                        Style="{StaticResource SectionTitleStyle}"/>
 
-                            <!-- 节省模型消耗入口卡片：点击进入二级页，档位与记忆相关设置都在二级页里调整 -->
+                            <!-- 节省模型消耗入口卡片：点击进入二级页，逐项设置与记忆相关设置都在二级页里调整 -->
                             <Button x:Name="SavingEntryCard"
                                     Margin="0,16,0,0"
                                     Padding="14,12"
@@ -1671,7 +1671,7 @@
                                                 <TextBlock.ToolTip>
                                                     <ToolTip MaxWidth="320">
                                                         <TextBlock TextWrapping="Wrap"
-                                                                   Text="点击进入二级页：设置节省档位、记忆触发词与检索停用词。"/>
+                                                                   Text="点击进入二级页：逐项设置各功能是否使用 AI 生成、记忆触发词与检索停用词。"/>
                                                     </ToolTip>
                                                 </TextBlock.ToolTip>
                                             </TextBlock>
@@ -1680,7 +1680,7 @@
                                         <TextBlock x:Name="SavingModeSummaryText"
                                                    Margin="0,4,0,0"
                                                    Style="{StaticResource HintTextStyle}"
-                                                   Text="已关闭：当前全部由 AI 生成"/>
+                                                   Text="全部功能由 AI 生成"/>
                                     </StackPanel>
 
                                     <TextBlock Grid.Column="1"
@@ -1692,7 +1692,7 @@
                                 </Grid>
                             </Button>
 
-                        <!-- 节省模型消耗二级页：进入时整体替换一级页内容，含原档位设置、记忆触发词与检索停用词 -->
+                        <!-- 节省模型消耗二级页：进入时整体替换一级页内容，含逐项设置、记忆触发词与检索停用词 -->
                         <StackPanel x:Name="SavingDetailContent"
                                     Visibility="Collapsed"
                                     Opacity="0">
@@ -1746,96 +1746,10 @@
                                            Margin="0,10,0,0"/>
                             </StackPanel>
 
-                            <!-- 节省模型消耗卡片：标签居左（带说明问号），关闭 / 开启 / 自定义滑块居右 -->
-                            <Border Margin="0,16,0,0"
-                                    Padding="14,10"
-                                    Background="{DynamicResource AppSurfaceBrush}"
-                                    BorderBrush="{DynamicResource AppBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="10">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+                            <!-- 各项功能逐项设置：始终展开，分别选择是否使用 AI 生成 -->
+                            <StackPanel x:Name="CustomSavingOptionsPanel">
 
-                                    <StackPanel Grid.Column="0"
-                                                Orientation="Horizontal"
-                                                VerticalAlignment="Center"
-                                                Margin="0,0,16,0">
-                                        <TextBlock Text="节省模型消耗"
-                                                   FontFamily="{StaticResource FontFamilyBody}"
-                                                   FontSize="{StaticResource FontSizeBody}"
-                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
-                                                   VerticalAlignment="Center"/>
-
-                                        <!-- 说明问号：悬停显示各档位的含义 -->
-                                        <TextBlock Style="{StaticResource HelpIconStyle}">
-                                            <TextBlock.ToolTip>
-                                                <ToolTip MaxWidth="320">
-                                                    <TextBlock TextWrapping="Wrap"
-                                                               Text="关闭：保持现状，触摸反应、更新通知文案、越界回正文案与主动搭话由 AI 生成。&#x0a;开启：这些功能改用本地文案，不再消耗模型请求。&#x0a;自定义：分别设置每个功能是否使用 AI 生成。"/>
-                                                </ToolTip>
-                                            </TextBlock.ToolTip>
-                                        </TextBlock>
-                                    </StackPanel>
-
-                                    <!-- 分段滑块：关闭 / 开启 / 自定义，选中项由滑块承载 -->
-                                    <Border x:Name="SavingModeSegmented"
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Background="{DynamicResource AppSurfaceBrush}"
-                                            BorderBrush="{DynamicResource AppBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="17"
-                                            Padding="3">
-                                        <Grid x:Name="SavingModeTrack">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- 滑块：随选中项左右滑动 -->
-                                            <Border x:Name="SavingModeThumb"
-                                                    Grid.Column="0"
-                                                    Background="{DynamicResource AppBorderBrush}"
-                                                    CornerRadius="14"
-                                                    SizeChanged="SavingModeThumb_SizeChanged">
-                                                <Border.RenderTransform>
-                                                    <TranslateTransform/>
-                                                </Border.RenderTransform>
-                                            </Border>
-
-                                            <RadioButton x:Name="SavingOffRadio"
-                                                         Grid.Column="0"
-                                                         Style="{StaticResource SegmentButtonStyle}"
-                                                         Content="关闭"
-                                                         Checked="SavingModeRadio_Checked"/>
-                                            <RadioButton x:Name="SavingOnRadio"
-                                                         Grid.Column="1"
-                                                         Style="{StaticResource SegmentButtonStyle}"
-                                                         Content="开启"
-                                                         Checked="SavingModeRadio_Checked"/>
-                                            <RadioButton x:Name="SavingCustomRadio"
-                                                         Grid.Column="2"
-                                                         Style="{StaticResource SegmentButtonStyle}"
-                                                         Content="自定义"
-                                                         Checked="SavingModeRadio_Checked"/>
-                                        </Grid>
-                                    </Border>
-                                </Grid>
-                            </Border>
-
-                            <!-- 自定义细分：仅自定义模式显示，三项功能分别选择是否使用 AI 生成 -->
-                            <StackPanel x:Name="CustomSavingOptionsPanel"
-                                        Visibility="Collapsed"
-                                        Opacity="0">
-                                <StackPanel.RenderTransform>
-                                    <TranslateTransform/>
-                                </StackPanel.RenderTransform>
-
-                                <Border Margin="0,8,0,0"
+                                <Border Margin="0,16,0,0"
                                         Padding="14,10"
                                         Background="{DynamicResource AppSurfaceBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}"

@@ -118,14 +118,9 @@ namespace KfuPet.Views
             AutoStartToggle.IsChecked = _startupService.IsEnabled();
             _suppressAutoStartEvents = false;
 
-            // 节省消耗档位：按已保存的设置选中对应滑块项，并同步自定义细分选项（0 AI 生成 / 1 本地文案）
+            // 节省消耗：档位选择已移除，逐项设置直接决定每个功能是否使用 AI 生成
             _suppressSavingEvents = true;
-            (SettingsService.Instance.ModelSavingMode switch
-            {
-                SavingMode.Saving => SavingOnRadio,
-                SavingMode.Custom => SavingCustomRadio,
-                _ => SavingOffRadio
-            }).IsChecked = true;
+            MigrateLegacySavingMode();
             TouchReactionSavingComboBox.SelectedIndex = SettingsService.Instance.CustomTouchReactionUseAi ? 0 : 1;
             UpdateNotificationSavingComboBox.SelectedIndex = SettingsService.Instance.CustomUpdateNotificationUseAi ? 0 : 1;
             SnapBackSavingComboBox.SelectedIndex = SettingsService.Instance.CustomSnapBackUseAi ? 0 : 1;
@@ -133,7 +128,6 @@ namespace KfuPet.Views
             EmotionJudgeSavingComboBox.SelectedIndex = SettingsService.Instance.CustomEmotionJudgeUseAi ? 0 : 1;
             MemoryExtractionSavingComboBox.SelectedIndex = SettingsService.Instance.CustomMemoryExtractionGated ? 1 : 0;
             _suppressSavingEvents = false;
-            UpdateCustomSavingOptionsVisibility();
             UpdateMemoryTriggerCardVisibility();
             RefreshSavingModeSummary();
             RefreshLocalModelSummary();
@@ -631,55 +625,23 @@ namespace KfuPet.Views
         }
 
         /// <summary>
-        /// 节省消耗档位变化：关闭 / 开启 / 自定义，保存档位、滑动滑块并刷新自定义细分选项。
+        /// 历史上保存的「关闭 / 开启」档位迁移为逐项设置：先把当前生效值写入各项开关，再切到自定义档位，
+        /// 使迁移前后每个功能是否使用 AI 生成保持不变。
         /// </summary>
-        private void SavingModeRadio_Checked(object sender, RoutedEventArgs e)
+        private static void MigrateLegacySavingMode()
         {
-            if (_suppressSavingEvents)
+            if (SettingsService.Instance.ModelSavingMode == SavingMode.Custom)
             {
                 return;
             }
 
-            var mode = sender == SavingOnRadio ? SavingMode.Saving
-                : sender == SavingCustomRadio ? SavingMode.Custom
-                : SavingMode.Off;
-            SettingsService.Instance.SetModelSavingMode(mode);
-            UpdateSavingThumb(animate: true);
-            UpdateCustomSavingOptionsVisibility();
-            UpdateMemoryTriggerCardVisibility();
-            RefreshSavingModeSummary();
-        }
-
-        /// <summary>滑块位置同步：播放滑动动画；首次布局或尺寸变化时直接落位。</summary>
-        private void UpdateSavingThumb(bool animate)
-        {
-            var index = SavingCustomRadio.IsChecked == true ? 2 : SavingOnRadio.IsChecked == true ? 1 : 0;
-            var translate = FindTranslateTransform(SavingModeThumb);
-            if (translate == null || SavingModeThumb.ActualWidth <= 0)
-            {
-                return;
-            }
-
-            var target = index * SavingModeThumb.ActualWidth;
-            if (animate)
-            {
-                translate.BeginAnimation(TranslateTransform.XProperty,
-                    new DoubleAnimation(target, TimeSpan.FromMilliseconds(180))
-                    {
-                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                    });
-            }
-            else
-            {
-                translate.BeginAnimation(TranslateTransform.XProperty, null);
-                translate.X = target;
-            }
-        }
-
-        /// <summary>滑块尺寸随窗口或 DPI 变化后重新落位，避免停在旧位置。</summary>
-        private void SavingModeThumb_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            UpdateSavingThumb(animate: false);
+            SettingsService.Instance.SetCustomTouchReactionUseAi(SettingsService.Instance.TouchReactionUseAi);
+            SettingsService.Instance.SetCustomUpdateNotificationUseAi(SettingsService.Instance.UpdateNotificationUseAi);
+            SettingsService.Instance.SetCustomSnapBackUseAi(SettingsService.Instance.SnapBackUseAi);
+            SettingsService.Instance.SetCustomProactiveChatUseAi(SettingsService.Instance.ProactiveChatUseAi);
+            SettingsService.Instance.SetCustomEmotionJudgeUseAi(SettingsService.Instance.EmotionJudgeUseAi);
+            SettingsService.Instance.SetCustomMemoryExtractionGated(SettingsService.Instance.MemoryExtractionGated);
+            SettingsService.Instance.SetModelSavingMode(SavingMode.Custom);
         }
 
         /// <summary>
@@ -693,6 +655,7 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetCustomTouchReactionUseAi(TouchReactionSavingComboBox.SelectedIndex == 0);
+            RefreshSavingModeSummary();
         }
 
         /// <summary>
@@ -706,6 +669,7 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetCustomUpdateNotificationUseAi(UpdateNotificationSavingComboBox.SelectedIndex == 0);
+            RefreshSavingModeSummary();
         }
 
         /// <summary>
@@ -719,37 +683,7 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetCustomSnapBackUseAi(SnapBackSavingComboBox.SelectedIndex == 0);
-        }
-
-        /// <summary>
-        /// 按当前档位刷新自定义细分选项的显隐：自定义模式展开（淡入 + 上滑），其余档位收起。
-        /// </summary>
-        private void UpdateCustomSavingOptionsVisibility()
-        {
-            if (SavingCustomRadio.IsChecked == true)
-            {
-                if (CustomSavingOptionsPanel.Visibility == Visibility.Visible)
-                {
-                    return;
-                }
-
-                CustomSavingOptionsPanel.Visibility = Visibility.Visible;
-
-                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-                CustomSavingOptionsPanel.BeginAnimation(OpacityProperty,
-                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
-
-                var translate = FindTranslateTransform(CustomSavingOptionsPanel);
-                if (translate != null)
-                {
-                    translate.BeginAnimation(TranslateTransform.YProperty,
-                        new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease });
-                }
-            }
-            else if (CustomSavingOptionsPanel.Visibility == Visibility.Visible)
-            {
-                CustomSavingOptionsPanel.Visibility = Visibility.Collapsed;
-            }
+            RefreshSavingModeSummary();
         }
 
         /// <summary>
@@ -840,14 +774,22 @@ namespace KfuPet.Views
             ModelConfigPanel.ScrollToTop();
         }
 
-        /// <summary>同步入口卡片上的当前档位摘要，不进入二级页也能确认节省是否已开启。</summary>
+        /// <summary>同步入口卡片上的摘要：按逐项设置统计有多少功能改用本地文案，不进入二级页也能确认。</summary>
         private void RefreshSavingModeSummary()
         {
-            SavingModeSummaryText.Text = SettingsService.Instance.ModelSavingMode switch
+            var localCount = 0;
+            if (!SettingsService.Instance.TouchReactionUseAi) localCount++;
+            if (!SettingsService.Instance.UpdateNotificationUseAi) localCount++;
+            if (!SettingsService.Instance.SnapBackUseAi) localCount++;
+            if (!SettingsService.Instance.ProactiveChatUseAi) localCount++;
+            if (!SettingsService.Instance.EmotionJudgeUseAi) localCount++;
+            if (SettingsService.Instance.MemoryExtractionGated) localCount++;
+
+            SavingModeSummaryText.Text = localCount switch
             {
-                SavingMode.Saving => "已开启：这些功能改用本地文案，不再消耗模型请求",
-                SavingMode.Custom => "自定义：逐项选择每个功能是否使用 AI 生成",
-                _ => "已关闭：当前全部由 AI 生成"
+                0 => "全部功能由 AI 生成",
+                6 => "全部功能不再消耗模型请求",
+                _ => $"已节省 {localCount} 项功能的模型请求"
             };
         }
 
@@ -1392,6 +1334,7 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetCustomProactiveChatUseAi(ProactiveChatSavingComboBox.SelectedIndex == 0);
+            RefreshSavingModeSummary();
         }
 
         /// <summary>
@@ -1405,6 +1348,7 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetCustomEmotionJudgeUseAi(EmotionJudgeSavingComboBox.SelectedIndex == 0);
+            RefreshSavingModeSummary();
         }
 
         /// <summary>
@@ -1419,6 +1363,7 @@ namespace KfuPet.Views
 
             SettingsService.Instance.SetCustomMemoryExtractionGated(MemoryExtractionSavingComboBox.SelectedIndex == 1);
             UpdateMemoryTriggerCardVisibility();
+            RefreshSavingModeSummary();
         }
 
         /// <summary>
