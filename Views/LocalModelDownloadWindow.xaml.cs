@@ -119,7 +119,7 @@ namespace KfuPet.Views
         }
 
         /// <summary>下载按钮：未下载时开始下载；下载中再次点击则取消。</summary>
-        private async void DownloadButton_Click(object sender, RoutedEventArgs e)
+        private void DownloadButton_Click(object sender, RoutedEventArgs e)
         {
             if (_downloading)
             {
@@ -130,48 +130,72 @@ namespace KfuPet.Views
 
             if (ModelOptionList.SelectedItem is not LocalModelOption option)
             {
-                MessageBox.Show(this, "请先选择一个模型。", "模型下载",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                ShowMessage("模型下载", "请先选择一个模型。", MessageDialogKind.Info, "知道了");
                 return;
             }
 
             if (option.IsDownloaded)
             {
-                MessageBox.Show(this, "该模型已经下载，无需重复下载。", "模型下载",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                ShowMessage("模型下载", "该模型已经下载，无需重复下载。", MessageDialogKind.Info, "知道了");
                 return;
             }
 
             if (!option.CanRun)
             {
                 var vramText = _hardware.HasDedicatedGpu ? $"显存 {_hardware.VramGb:0.0} GB" : "无独显";
-
-                var proceed = MessageBox.Show(this,
+                var dialog = CreateDialog(
+                    "配置不足",
                     $"当前选中的 {option.Name} 超出本机配置，可能无法加载或运行极慢。\n\n" +
                     $"模型要求：{option.RequirementText}\n" +
-                    $"本机配置：{vramText} · 内存 {_hardware.RamGb:0.0} GB\n\n仍要继续吗？",
-                    "配置不足",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
+                    $"本机配置：{vramText} · 内存 {_hardware.RamGb:0.0} GB",
+                    MessageDialogKind.Warning,
+                    "仍要继续",
+                    showCancel: true);
 
-                if (proceed != MessageBoxResult.Yes)
-                {
-                    return;
-                }
-            }
-
-            var confirm = MessageBox.Show(this,
-                $"确认下载 {option.Name}？\n\n下载体积约 {option.SizeText}，保存到：\n{_modelDirectory}",
-                "确认下载",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (confirm != MessageBoxResult.Yes)
-            {
+                dialog.Confirmed += () => ShowDownloadConfirm(option);
+                dialog.Show();
                 return;
             }
 
-            await DownloadAsync(option);
+            ShowDownloadConfirm(option);
+        }
+
+        /// <summary>确认下载：说明体积与保存目录，确认后开始下载。</summary>
+        private void ShowDownloadConfirm(LocalModelOption option)
+        {
+            var dialog = CreateDialog(
+                "确认下载",
+                $"确认下载 {option.Name}？\n\n下载体积约 {option.SizeText}，保存到：\n{_modelDirectory}",
+                MessageDialogKind.Question,
+                "开始下载",
+                showCancel: true);
+
+            dialog.Confirmed += () => _ = DownloadAsync(option);
+            dialog.Show();
+        }
+
+        /// <summary>创建一个归属本窗口的提示弹窗；非模态显示，避免禁用桌宠窗口。</summary>
+        private MessageDialog CreateDialog(
+            string title,
+            string message,
+            MessageDialogKind kind,
+            string confirmText,
+            bool showCancel = false,
+            string? cancelText = null)
+        {
+            var dialog = new MessageDialog(title, message, kind, confirmText, showCancel, cancelText);
+            if (IsVisible)
+            {
+                dialog.Owner = this;
+            }
+
+            return dialog;
+        }
+
+        /// <summary>显示只有确认按钮的提示弹窗。</summary>
+        private void ShowMessage(string title, string message, MessageDialogKind kind, string confirmText)
+        {
+            CreateDialog(title, message, kind, confirmText).Show();
         }
 
         /// <summary>下载并写入部署记录：进度实时显示，失败按多个地址回退，取消时清理临时文件。</summary>
@@ -225,22 +249,28 @@ namespace KfuPet.Views
                 _downloadCts?.Dispose();
                 _downloadCts = null;
 
-                MessageBox.Show(this, $"{option.Name} 下载完成，已加入本地模型列表。", "模型下载",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                Close();
+                // 恢复按钮状态并刷新已下载标记，避免用户关掉提示后重复下载同一个模型
+                ResetDownloadUi();
+                LoadModelOptions();
+
+                var completedDialog = CreateDialog(
+                    "模型下载",
+                    $"{option.Name} 下载完成，已加入本地模型列表。",
+                    MessageDialogKind.Success,
+                    "知道了");
+                completedDialog.Confirmed += Close;
+                completedDialog.Show();
             }
             catch (OperationCanceledException)
             {
                 ResetDownloadUi();
-                MessageBox.Show(this, "下载已取消，临时文件已清理。", "取消下载",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                ShowMessage("取消下载", "下载已取消，临时文件已清理。", MessageDialogKind.Info, "知道了");
             }
             catch (Exception ex)
             {
                 ResetDownloadUi();
                 Log.Error($"[本地模型] 下载失败：{ex.Message}");
-                MessageBox.Show(this, $"模型下载失败：\n{ex.Message}\n\n可以稍后重试。", "下载失败",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowMessage("下载失败", $"模型下载失败：\n{ex.Message}\n\n可以稍后重试。", MessageDialogKind.Error, "知道了");
             }
             finally
             {
