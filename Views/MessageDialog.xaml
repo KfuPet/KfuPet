@@ -34,21 +34,30 @@
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="0,0,0,1"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
-                <StackPanel Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="16,0,0,0">
-                    <TextBlock x:Name="TitleIcon"
-                               FontFamily="{StaticResource FontFamilyIcon}"
-                               FontSize="{StaticResource FontSizeIcon}"
-                               VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TitleText"
-                               Margin="10,0,0,0"
-                               FontFamily="{StaticResource FontFamilyBody}"
-                               FontSize="{StaticResource FontSizeBody}"
-                               FontWeight="{StaticResource FontWeightSemiBold}"
-                               Foreground="{DynamicResource AppTextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
+                <Grid>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="16,0,46,0">
+                        <TextBlock x:Name="TitleIcon"
+                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                   FontSize="{StaticResource FontSizeIcon}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TitleText"
+                                   Margin="10,0,0,0"
+                                   FontFamily="{StaticResource FontFamilyBody}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   FontWeight="{StaticResource FontWeightSemiBold}"
+                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- 右上角关闭按钮：与 Esc 行为一致，按取消处理 -->
+                    <Button Style="{StaticResource DialogCloseButtonStyle}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            ToolTip="关闭"
+                            Click="CloseButton_Click"/>
+                </Grid>
             </Border>
 
             <!-- 内容区：状态图标 + 提示文案，窗口随内容自适应 -->

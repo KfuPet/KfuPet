@@ -32,8 +32,11 @@ namespace KfuPet.Views
         /// <summary>点击确认按钮后触发；取消或按 Esc 关闭不触发。</summary>
         public event Action? Confirmed;
 
-        /// <summary>未点确认就关闭（取消按钮 / Esc / 其他关闭方式）时触发。</summary>
+        /// <summary>未点确认就关闭（取消按钮 / Esc / 右上角关闭）时触发。</summary>
         public event Action? Canceled;
+
+        /// <summary>点击底部“取消”按钮时触发；右上角关闭与 Esc 不触发。</summary>
+        public event Action? CancelRequested;
 
         private bool _confirmed;
 
@@ -102,6 +105,13 @@ namespace KfuPet.Views
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            CancelRequested?.Invoke();
+            Close();
+        }
+
+        /// <summary>右上角关闭：与 Esc 一致，只关闭弹窗，按取消处理。</summary>
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
         }

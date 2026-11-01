@@ -66,6 +66,7 @@ namespace KfuPet.Views
         private LocalModelDownloadWindow? _localModelDownloadWindow;
         private bool _suppressLocalModelToggleEvents;
         private bool _suppressLocalModelDeviceEvents;
+        private bool _localDisablePromptOpen;
 
         private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
 
@@ -823,15 +824,20 @@ namespace KfuPet.Views
             };
         }
 
-        /// <summary>阻止提示里使用的功能名称。</summary>
+        /// <summary>阻止提示与关闭确认里使用的功能名称。</summary>
         private static string GetKindDisplayName(ModelCallKind kind)
         {
             return kind switch
             {
+                ModelCallKind.TouchReaction => "触摸反应",
+                ModelCallKind.UpdateNotification => "更新通知文案",
+                ModelCallKind.SnapBack => "越界回正文案",
+                ModelCallKind.ProactiveChat => "主动搭话",
+                ModelCallKind.EmotionJudge => "对话后情绪判断",
                 ModelCallKind.MemoryExtraction => "核心信息提取",
                 ModelCallKind.MemoryArchiveExtraction => "归档批量提炼",
-                ModelCallKind.MemorySummary => "多条总结",
                 ModelCallKind.MemoryScoring => "单条重评分",
+                ModelCallKind.MemorySummary => "多条总结",
                 _ => "该功能"
             };
         }
@@ -875,10 +881,14 @@ namespace KfuPet.Views
             }
         }
 
-        /// <summary>
-        /// 点击「节省模型消耗」入口卡片进入二级页：隐藏一级页标题、入口卡片与其余功能分组，只显示二级页内容。
-        /// </summary>
+        /// <summary>点击「节省模型消耗」入口卡片进入二级页：隐藏一级页标题、入口卡片与其余功能分组，只显示二级页内容。</summary>
         private void SavingEntryCard_Click(object sender, RoutedEventArgs e)
+        {
+            ShowSavingDetailPage();
+        }
+
+        /// <summary>展开「节省模型消耗」二级页；供入口卡片与“前往调整”跳转共用。</summary>
+        private void ShowSavingDetailPage()
         {
             if (SavingDetailContent.Visibility == Visibility.Visible)
             {
@@ -892,6 +902,13 @@ namespace KfuPet.Views
             SavingDetailContent.Visibility = Visibility.Visible;
             PlayPageEnterAnimation(SavingDetailContent);
             ModelFeaturesPanel.ScrollToTop();
+        }
+
+        /// <summary>跳转到「桌宠功能」页并展开「节省模型消耗」二级页，供用户把功能改回云端。</summary>
+        private void NavigateToSavingPage()
+        {
+            NavList.SelectedIndex = 3;
+            ShowSavingDetailPage();
         }
 
         /// <summary>二级页左上角「返回」：恢复「桌宠功能」一级页内容。</summary>
@@ -1100,6 +1117,10 @@ namespace KfuPet.Views
                     toggle.IsChecked = isActive;
                     toggle.Checked += (s2, e2) => OnLocalModelToggleChanged(item, true);
                     toggle.Unchecked += (s2, e2) => OnLocalModelToggleChanged(item, false);
+
+                    // 关闭前先拦截点击：需要确认时不让开关先切到“关”，避免动画停在错误状态
+                    toggle.PreviewMouseLeftButtonDown += (s2, e2) =>
+                        OnLocalModelTogglePreviewMouseDown(item, toggle, e2);
                 }
             };
 
@@ -1163,6 +1184,89 @@ namespace KfuPet.Views
 
             RefreshLocalModelToggles();
             RefreshLocalModelSummary();
+        }
+
+        /// <summary>开关点击前拦截：有功能使用本地模型时先弹确认，不让开关先变成关闭状态。</summary>
+        private void OnLocalModelTogglePreviewMouseDown(
+            ListBoxItem item, ToggleButton toggle, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_suppressLocalModelToggleEvents || item.Tag is not DeployedModel || toggle.IsChecked != true)
+            {
+                return;
+            }
+
+            var localFunctions = GetLocalUsingFunctionNames();
+            if (localFunctions.Count == 0)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            if (_localDisablePromptOpen)
+            {
+                return;
+            }
+
+            ShowDisableLocalModelDialog(localFunctions);
+        }
+
+        /// <summary>列出当前设置为“本地模型”的功能名称。</summary>
+        private static IReadOnlyList<string> GetLocalUsingFunctionNames()
+        {
+            var kinds = new[]
+            {
+                ModelCallKind.TouchReaction,
+                ModelCallKind.UpdateNotification,
+                ModelCallKind.SnapBack,
+                ModelCallKind.ProactiveChat,
+                ModelCallKind.EmotionJudge,
+                ModelCallKind.MemoryExtraction,
+                ModelCallKind.MemoryArchiveExtraction,
+                ModelCallKind.MemoryScoring,
+                ModelCallKind.MemorySummary
+            };
+
+            return kinds
+                .Where(kind => SettingsService.Instance.GetModelSource(kind) == ModelCallSource.Local)
+                .Select(GetKindDisplayName)
+                .ToList();
+        }
+
+        /// <summary>关闭本地模型前提示正在使用它的功能；可确认关闭，或跳转到节省页调整。</summary>
+        private void ShowDisableLocalModelDialog(IReadOnlyList<string> localFunctions)
+        {
+            var list = string.Join("\n", localFunctions.Select(name => "· " + name));
+            var message = $"以下功能正在使用本地模型：\n\n{list}\n\n" +
+                          "关闭后这些功能会自动回退到云端模型，设置仍保留为“本地模型”。";
+
+            var dialog = new MessageDialog(
+                "关闭本地模型",
+                message,
+                MessageDialogKind.Question,
+                "仍要关闭",
+                showCancel: true,
+                cancelText: "前往调整")
+            {
+                Owner = this
+            };
+
+            _localDisablePromptOpen = true;
+            dialog.Closed += (s, e) => _localDisablePromptOpen = false;
+
+            dialog.Confirmed += async () =>
+            {
+                await LocalModelService.Instance.DisableAsync();
+                RefreshLocalModelToggles();
+                RefreshLocalModelSummary();
+            };
+
+            dialog.CancelRequested += () =>
+            {
+                Log.Info("[本地模型] 用户取消关闭，跳转到节省模型消耗页调整来源");
+                NavigateToSavingPage();
+            };
+
+            dialog.Show();
         }
 
         /// <summary>依据部署记录刷新所有卡片的开关显示（同一时间只有一个模型启用）。</summary>

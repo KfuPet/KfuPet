@@ -754,6 +754,7 @@
                                               Grid.Column="2"
                                               Style="{StaticResource ToggleSwitchStyle}"
                                               VerticalAlignment="Center"
+                                              Focusable="False"
                                               ToolTip="启用该本地模型"/>
                             </Grid>
                         </Border>
