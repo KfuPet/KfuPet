@@ -32,6 +32,11 @@ namespace KfuPet.Views
         /// <summary>点击确认按钮后触发；取消或按 Esc 关闭不触发。</summary>
         public event Action? Confirmed;
 
+        /// <summary>未点确认就关闭（取消按钮 / Esc / 其他关闭方式）时触发。</summary>
+        public event Action? Canceled;
+
+        private bool _confirmed;
+
         /// <summary>
         /// 创建提示弹窗。
         /// </summary>
@@ -103,9 +108,21 @@ namespace KfuPet.Views
 
         private void ConfirmButton_Click(object sender, RoutedEventArgs e)
         {
+            _confirmed = true;
             // 先关闭当前弹窗，再触发确认回调，避免回调里再打开弹窗时出现叠层
             Close();
             Confirmed?.Invoke();
+        }
+
+        /// <summary>关闭时若没有点确认，按取消处理。</summary>
+        protected override void OnClosed(EventArgs e)
+        {
+            if (!_confirmed)
+            {
+                Canceled?.Invoke();
+            }
+
+            base.OnClosed(e);
         }
     }
 }

@@ -27,7 +27,8 @@ namespace KfuPet.Services
         /// <param name="category">调用来源分类，用于 token 用量统计。</param>
         public async Task<string> SendAsync(
             ModelConfig model, string systemPrompt, IReadOnlyList<ChatMessage> history, string userMessage,
-            TokenUsageCategory category = TokenUsageCategory.Other)
+            TokenUsageCategory category = TokenUsageCategory.Other,
+            ModelCallKind kind = ModelCallKind.None)
         {
             var messages = new List<ChatMessage>
             {
@@ -36,7 +37,7 @@ namespace KfuPet.Services
             messages.AddRange(history);
             messages.Add(new ChatMessage { Role = "user", Content = userMessage });
 
-            return await SendRawAsync(model, messages, category);
+            return await SendRawAsync(model, messages, category, kind: kind);
         }
 
         /// <summary>
@@ -45,11 +46,152 @@ namespace KfuPet.Services
         internal async Task<string> SendRawAsync(
             ModelConfig model, IReadOnlyList<ChatMessage> messages,
             TokenUsageCategory category = TokenUsageCategory.Other,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            ModelCallKind kind = ModelCallKind.None)
         {
+            if (kind != ModelCallKind.None &&
+                SettingsService.Instance.GetModelSource(kind) == ModelCallSource.Local)
+            {
+                var localReply = await TryLocalInferAsync(kind, messages, cancellationToken);
+                if (localReply != null)
+                {
+                    return localReply;
+                }
+            }
+
             var payload = BuildPayload(model, messages, null);
             var body = await PostAsync(model, payload, category, cancellationToken);
             return ExtractReply(body);
+        }
+
+        /// <summary>
+        /// 尝试用本地模型生成回复；未启用、模型能力不足或尚未加载时返回 null（本次回退远端）。
+        /// 首次碰到“已启用但未加载”时会请求后台加载，本次调用仍走远端。
+        /// </summary>
+        private static async Task<string?> TryLocalInferAsync(
+            ModelCallKind kind, IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken)
+        {
+            var service = LocalModelService.Instance;
+            var active = service.GetActiveModel();
+            if (active == null)
+            {
+                Log.Debug($"[本地模型] {kind} 本次走远端（尚未启用本地模型）");
+                return null;
+            }
+
+            if (!CanLocalHandle(kind, active))
+            {
+                Log.Warning($"[本地模型] {kind} 本次走远端（{active.ModelName} 不支持该功能）");
+                return null;
+            }
+
+            if (!service.TryGetReadyRuntime(out var runtime))
+            {
+                service.RequestWarmUp();
+                Log.Debug($"[本地模型] {kind} 本次走远端（本地模型尚未加载，已请求后台加载）");
+                return null;
+            }
+
+            // 短句调用不排队等正在进行的记忆提炼：直接回退远端，保证桌宠反应不卡顿
+            if (IsShortReply(kind) && runtime.IsBusy)
+            {
+                Log.Debug($"[本地模型] 短句推理正忙，本次走远端");
+                return null;
+            }
+
+            var (systemPrompt, userMessage) = SplitLocalPrompt(messages);
+            if (string.IsNullOrWhiteSpace(userMessage))
+            {
+                return null;
+            }
+
+            var maxTokens = GetLocalMaxTokens(kind);
+            var timeout = GetLocalTimeout(kind);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(timeout);
+
+            Log.Info($"[本地模型] {kind} 开始推理：最多 {maxTokens} tokens，超时 {timeout.TotalSeconds:0} 秒");
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                var reply = await Task.Run(
+                    () => runtime.InferAsync(systemPrompt, userMessage, maxTokens, timeoutCts.Token),
+                    timeoutCts.Token);
+                stopwatch.Stop();
+                Log.Info($"[本地模型] {kind} 推理完成：{stopwatch.ElapsedMilliseconds} ms，输出 {reply.Length} 字");
+                return reply;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                Log.Warning($"[本地模型] {kind} 推理超时（{timeout.TotalSeconds:0} 秒），本次回退远端");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[本地模型] {kind} 推理失败，本次回退远端：{ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>按模型目录的能力标记判断该模型能否承担这类调用。</summary>
+        private static bool CanLocalHandle(ModelCallKind kind, DeployedModel active)
+        {
+            return kind switch
+            {
+                ModelCallKind.MemoryExtraction or ModelCallKind.MemoryArchiveExtraction =>
+                    LocalModelCatalog.SupportsMemoryExtraction(active),
+                ModelCallKind.MemorySummary =>
+                    LocalModelCatalog.SupportsMemorySummarization(active),
+                _ => true
+            };
+        }
+
+        /// <summary>是否为短句类调用：这类调用不与后台记忆提炼排队。</summary>
+        private static bool IsShortReply(ModelCallKind kind)
+        {
+            return kind is ModelCallKind.TouchReaction or ModelCallKind.UpdateNotification
+                or ModelCallKind.SnapBack or ModelCallKind.ProactiveChat or ModelCallKind.EmotionJudge;
+        }
+
+        /// <summary>把消息拆成系统提示与单段用户文本；多轮历史按主人/桌宠前缀拼接。</summary>
+        private static (string SystemPrompt, string UserMessage) SplitLocalPrompt(
+            IReadOnlyList<ChatMessage> messages)
+        {
+            var systemPrompt = messages.FirstOrDefault(m => m.Role == "system")?.Content ?? string.Empty;
+            var turns = messages
+                .Where(m => m.Role != "system" && !string.IsNullOrWhiteSpace(m.Content))
+                .ToList();
+
+            var userMessage = turns.Count <= 1
+                ? turns.FirstOrDefault()?.Content ?? string.Empty
+                : string.Join("\n", turns.Select(m =>
+                    m.Role == "assistant" ? $"桌宠：{m.Content}" : $"主人：{m.Content}"));
+
+            return (systemPrompt, userMessage);
+        }
+
+        /// <summary>按用途给出本地推理的最大输出 token 数。</summary>
+        private static int GetLocalMaxTokens(ModelCallKind kind)
+        {
+            return kind switch
+            {
+                ModelCallKind.MemoryExtraction or ModelCallKind.MemoryArchiveExtraction => 512,
+                ModelCallKind.MemorySummary => 128,
+                ModelCallKind.MemoryScoring => 32,
+                _ => 96
+            };
+        }
+
+        /// <summary>按用途给出本地推理超时；超时后本次回退远端，不影响功能。</summary>
+        private static TimeSpan GetLocalTimeout(ModelCallKind kind)
+        {
+            return kind switch
+            {
+                ModelCallKind.MemoryExtraction or ModelCallKind.MemoryArchiveExtraction => TimeSpan.FromSeconds(180),
+                ModelCallKind.MemorySummary => TimeSpan.FromSeconds(90),
+                ModelCallKind.MemoryScoring => TimeSpan.FromSeconds(30),
+                _ => TimeSpan.FromSeconds(20)
+            };
         }
 
         /// <summary>带工具调用能力的对话：请求携带工具定义，模型返回工具调用时本地执行并回填结果，

@@ -1671,7 +1671,7 @@
                                                 <TextBlock.ToolTip>
                                                     <ToolTip MaxWidth="320">
                                                         <TextBlock TextWrapping="Wrap"
-                                                                   Text="点击进入二级页：逐项设置各功能是否使用 AI 生成、记忆触发词与检索停用词。"/>
+                                                                   Text="点击进入二级页：逐项设置各功能使用云端模型、本地模型或本地文案，以及记忆触发词与检索停用词。"/>
                                                     </ToolTip>
                                                 </TextBlock.ToolTip>
                                             </TextBlock>
@@ -1680,7 +1680,7 @@
                                         <TextBlock x:Name="SavingModeSummaryText"
                                                    Margin="0,4,0,0"
                                                    Style="{StaticResource HintTextStyle}"
-                                                   Text="全部功能由 AI 生成"/>
+                                                   Text="全部功能使用云端模型"/>
                                     </StackPanel>
 
                                     <TextBlock Grid.Column="1"
@@ -1746,7 +1746,7 @@
                                            Margin="0,10,0,0"/>
                             </StackPanel>
 
-                            <!-- 各项功能逐项设置：始终展开，分别选择是否使用 AI 生成 -->
+                            <!-- 各项功能逐项设置：始终展开，分别选择云端 / 本地 / 不调用模型 -->
                             <StackPanel x:Name="CustomSavingOptionsPanel">
 
                                 <Border Margin="0,16,0,0"
@@ -1773,7 +1773,7 @@
                                                 <TextBlock.ToolTip>
                                                     <ToolTip MaxWidth="320">
                                                         <TextBlock TextWrapping="Wrap"
-                                                                   Text="双击或抚摸角色时她的回应从哪来：AI 生成＝实时生成；角色台词＝从角色包预设台词里随机选一句。"/>
+                                                                   Text="双击或抚摸角色时她的回应从哪来：云端模型＝调用云端 AI 实时生成；角色台词＝从角色包预设台词里随机选一句。"/>
                                                     </ToolTip>
                                                 </TextBlock.ToolTip>
                                             </TextBlock>
@@ -1784,7 +1784,8 @@
                                                   Style="{StaticResource AppearanceComboStyle}"
                                                   VerticalAlignment="Center"
                                                   SelectionChanged="TouchReactionSavingComboBox_SelectionChanged">
-                                            <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="本地模型" Tag="&#xE896;"/>
                                             <ComboBoxItem Content="角色台词" Tag="&#xE8A5;"/>
                                         </ComboBox>
                                     </Grid>
@@ -1814,7 +1815,7 @@
                                                 <TextBlock.ToolTip>
                                                     <ToolTip MaxWidth="320">
                                                         <TextBlock TextWrapping="Wrap"
-                                                                   Text="发现新版本时弹窗里那句话：AI 生成＝实时生成；内置文案＝用固定文案，不消耗模型。"/>
+                                                                   Text="发现新版本时弹窗里那句话：云端模型＝调用云端 AI 实时生成；内置文案＝用固定文案，不调用模型。"/>
                                                     </ToolTip>
                                                 </TextBlock.ToolTip>
                                             </TextBlock>
@@ -1825,7 +1826,8 @@
                                                   Style="{StaticResource AppearanceComboStyle}"
                                                   VerticalAlignment="Center"
                                                   SelectionChanged="UpdateNotificationSavingComboBox_SelectionChanged">
-                                            <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="本地模型" Tag="&#xE896;"/>
                                             <ComboBoxItem Content="内置文案" Tag="&#xE8A5;"/>
                                         </ComboBox>
                                     </Grid>
@@ -1855,7 +1857,7 @@
                                                 <TextBlock.ToolTip>
                                                     <ToolTip MaxWidth="320">
                                                         <TextBlock TextWrapping="Wrap"
-                                                                   Text="角色被拖出屏幕后拉回时说的话：AI 生成＝实时生成；角色台词＝用预设台词。"/>
+                                                                   Text="角色被拖出屏幕后拉回时说的话：云端模型＝调用云端 AI 实时生成；角色台词＝用预设台词。"/>
                                                     </ToolTip>
                                                 </TextBlock.ToolTip>
                                             </TextBlock>
@@ -1866,7 +1868,8 @@
                                                   Style="{StaticResource AppearanceComboStyle}"
                                                   VerticalAlignment="Center"
                                                   SelectionChanged="SnapBackSavingComboBox_SelectionChanged">
-                                            <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="本地模型" Tag="&#xE896;"/>
                                             <ComboBoxItem Content="角色台词" Tag="&#xE8A5;"/>
                                         </ComboBox>
                                     </Grid>
@@ -1896,7 +1899,7 @@
                                                 <TextBlock.ToolTip>
                                                     <ToolTip MaxWidth="320">
                                                         <TextBlock TextWrapping="Wrap"
-                                                                   Text="角色主动开口说话时的内容：AI 生成＝实时生成；角色台词＝用预设台词。"/>
+                                                                   Text="角色主动开口说话时的内容：云端模型＝调用云端 AI 实时生成；角色台词＝用预设台词。"/>
                                                     </ToolTip>
                                                 </TextBlock.ToolTip>
                                             </TextBlock>
@@ -1907,7 +1910,8 @@
                                                   Style="{StaticResource AppearanceComboStyle}"
                                                   VerticalAlignment="Center"
                                                   SelectionChanged="ProactiveChatSavingComboBox_SelectionChanged">
-                                            <ComboBoxItem Content="AI 生成" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="本地模型" Tag="&#xE896;"/>
                                             <ComboBoxItem Content="角色台词" Tag="&#xE8A5;"/>
                                         </ComboBox>
                                     </Grid>
@@ -1937,7 +1941,7 @@
                                                 <TextBlock.ToolTip>
                                                     <ToolTip MaxWidth="320">
                                                         <TextBlock TextWrapping="Wrap"
-                                                                   Text="聊完天后额外判断你这句话让她开心还是难过：AI 判断＝做一次判断；不判断＝跳过，省一次模型请求。"/>
+                                                                   Text="聊完天后额外判断你这句话让她开心还是难过：云端模型＝做一次判断；不判断＝跳过，省一次模型请求。"/>
                                                     </ToolTip>
                                                 </TextBlock.ToolTip>
                                             </TextBlock>
@@ -1948,7 +1952,7 @@
                                                   Style="{StaticResource AppearanceComboStyle}"
                                                   VerticalAlignment="Center"
                                                   SelectionChanged="EmotionJudgeSavingComboBox_SelectionChanged">
-                                            <ComboBoxItem Content="AI 判断" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
                                             <ComboBoxItem Content="不判断" Tag="&#xE8A5;"/>
                                         </ComboBox>
                                     </Grid>
@@ -1984,13 +1988,161 @@
                                             </TextBlock>
                                         </StackPanel>
 
-                                        <ComboBox x:Name="MemoryExtractionSavingComboBox"
+                                        <StackPanel Grid.Column="1"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="来源"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,6,0"/>
+                                            <ComboBox x:Name="MemoryExtractionSourceComboBox"
+                                                      Style="{StaticResource AppearanceComboStyle}"
+                                                      VerticalAlignment="Center"
+                                                      SelectionChanged="MemoryExtractionSourceComboBox_SelectionChanged">
+                                                <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
+                                                <ComboBoxItem Content="本地模型" Tag="&#xE896;"/>
+                                            </ComboBox>
+                                            <TextBlock Text="时机"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="12,0,6,0"/>
+                                            <ComboBox x:Name="MemoryExtractionSavingComboBox"
+                                                      Style="{StaticResource AppearanceComboStyle}"
+                                                      VerticalAlignment="Center"
+                                                      SelectionChanged="MemoryExtractionSavingComboBox_SelectionChanged">
+                                                <ComboBoxItem Content="每轮提取" Tag="&#xE8BD;"/>
+                                                <ComboBoxItem Content="使用触发词" Tag="&#xE8A5;"/>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 归档批量提炼：归档满后从多轮对话里提炼信息点并评分 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,16,0">
+                                            <TextBlock Text="归档批量提炼"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="归档满时从多轮对话里提炼值得长期记住的信息点并评分；可选择云端或本地模型。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <ComboBox x:Name="MemoryArchiveExtractionSourceComboBox"
                                                   Grid.Column="1"
                                                   Style="{StaticResource AppearanceComboStyle}"
                                                   VerticalAlignment="Center"
-                                                  SelectionChanged="MemoryExtractionSavingComboBox_SelectionChanged">
-                                            <ComboBoxItem Content="每轮提取" Tag="&#xE8BD;"/>
-                                            <ComboBoxItem Content="使用触发词" Tag="&#xE8A5;"/>
+                                                  SelectionChanged="MemoryArchiveExtractionSourceComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="本地模型" Tag="&#xE896;"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 单条重评分：总结条目丢弃前重新评估重要性 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,16,0">
+                                            <TextBlock Text="单条重评分"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="对准备丢弃的总结条目重新评估重要性；可选择云端或本地模型。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <ComboBox x:Name="MemoryScoringSourceComboBox"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource AppearanceComboStyle}"
+                                                  VerticalAlignment="Center"
+                                                  SelectionChanged="MemoryScoringSourceComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="本地模型" Tag="&#xE896;"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 多条总结：把多条零散信息合并成一句话 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,16,0">
+                                            <TextBlock Text="多条总结"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="把多条零散信息合并成一句话；可选择云端或本地模型。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <ComboBox x:Name="MemorySummarySourceComboBox"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource AppearanceComboStyle}"
+                                                  VerticalAlignment="Center"
+                                                  SelectionChanged="MemorySummarySourceComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="本地模型" Tag="&#xE896;"/>
                                         </ComboBox>
                                     </Grid>
                                 </Border>

@@ -16,6 +16,53 @@ namespace KfuPet.Services
         Custom
     }
 
+    /// <summary>调用点使用的模型来源。</summary>
+    internal enum ModelCallSource
+    {
+        /// <summary>使用远端 AI 模型。</summary>
+        Remote = 0,
+
+        /// <summary>使用已启用的本地模型。</summary>
+        Local = 1,
+
+        /// <summary>不调用模型，使用角色台词 / 内置文案 / 不判断。</summary>
+        Disabled = 2
+    }
+
+    /// <summary>需要选择模型来源的调用点。</summary>
+    internal enum ModelCallKind
+    {
+        /// <summary>主对话等不参与本设置的调用。</summary>
+        None = 0,
+
+        /// <summary>触摸反应。</summary>
+        TouchReaction,
+
+        /// <summary>更新通知文案。</summary>
+        UpdateNotification,
+
+        /// <summary>拖动越界回正文案。</summary>
+        SnapBack,
+
+        /// <summary>主动搭话。</summary>
+        ProactiveChat,
+
+        /// <summary>对话后情绪判断。</summary>
+        EmotionJudge,
+
+        /// <summary>实时核心信息提取。</summary>
+        MemoryExtraction,
+
+        /// <summary>归档批量提炼。</summary>
+        MemoryArchiveExtraction,
+
+        /// <summary>单条信息重评分。</summary>
+        MemoryScoring,
+
+        /// <summary>多条信息总结。</summary>
+        MemorySummary
+    }
+
     /// <summary>主动搭话频度档位：决定独处判定阈值、冷却时长与触发概率。</summary>
     internal enum ProactiveFrequency
     {
@@ -81,45 +128,47 @@ namespace KfuPet.Services
         /// <summary>自定义模式下核心信息提取是否走触发词门控；false 表示每轮对话都提取。</summary>
         public bool CustomMemoryExtractionGated { get; private set; }
 
-        /// <summary>触摸反应是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
-        public bool TouchReactionUseAi => ModelSavingMode switch
-        {
-            SavingMode.Saving => false,
-            SavingMode.Custom => CustomTouchReactionUseAi,
-            _ => true
-        };
+        /// <summary>触摸反应的模型来源（默认远端）。</summary>
+        public ModelCallSource TouchReactionSource { get; private set; } = ModelCallSource.Remote;
 
-        /// <summary>更新通知文案是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
-        public bool UpdateNotificationUseAi => ModelSavingMode switch
-        {
-            SavingMode.Saving => false,
-            SavingMode.Custom => CustomUpdateNotificationUseAi,
-            _ => true
-        };
+        /// <summary>更新通知文案的模型来源（默认远端）。</summary>
+        public ModelCallSource UpdateNotificationSource { get; private set; } = ModelCallSource.Remote;
 
-        /// <summary>越界回正文案是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
-        public bool SnapBackUseAi => ModelSavingMode switch
-        {
-            SavingMode.Saving => false,
-            SavingMode.Custom => CustomSnapBackUseAi,
-            _ => true
-        };
+        /// <summary>拖动越界回正文案的模型来源（默认远端）。</summary>
+        public ModelCallSource SnapBackSource { get; private set; } = ModelCallSource.Remote;
 
-        /// <summary>对话后的情绪判断是否使用 AI：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
-        public bool EmotionJudgeUseAi => ModelSavingMode switch
-        {
-            SavingMode.Saving => false,
-            SavingMode.Custom => CustomEmotionJudgeUseAi,
-            _ => true
-        };
+        /// <summary>主动搭话的模型来源（默认远端）。</summary>
+        public ModelCallSource ProactiveChatSource { get; private set; } = ModelCallSource.Remote;
 
-        /// <summary>核心信息提取是否走触发词门控：关闭模式每轮都提取；节省模式始终门控；自定义模式按细分开关。</summary>
-        public bool MemoryExtractionGated => ModelSavingMode switch
-        {
-            SavingMode.Saving => true,
-            SavingMode.Custom => CustomMemoryExtractionGated,
-            _ => false
-        };
+        /// <summary>对话后情绪判断的模型来源（默认远端）。</summary>
+        public ModelCallSource EmotionJudgeSource { get; private set; } = ModelCallSource.Remote;
+
+        /// <summary>实时核心信息提取的模型来源（默认远端）。</summary>
+        public ModelCallSource MemoryExtractionSource { get; private set; } = ModelCallSource.Remote;
+
+        /// <summary>归档批量提炼的模型来源（默认远端）。</summary>
+        public ModelCallSource MemoryArchiveExtractionSource { get; private set; } = ModelCallSource.Remote;
+
+        /// <summary>单条信息重评分的模型来源（默认远端）。</summary>
+        public ModelCallSource MemoryScoringSource { get; private set; } = ModelCallSource.Remote;
+
+        /// <summary>多条信息总结的模型来源（默认远端）。</summary>
+        public ModelCallSource MemorySummarySource { get; private set; } = ModelCallSource.Remote;
+
+        /// <summary>触摸反应是否使用模型：远端或本地都算；关闭时改用角色台词。</summary>
+        public bool TouchReactionUseAi => TouchReactionSource != ModelCallSource.Disabled;
+
+        /// <summary>更新通知文案是否使用模型：远端或本地都算；关闭时改用内置文案。</summary>
+        public bool UpdateNotificationUseAi => UpdateNotificationSource != ModelCallSource.Disabled;
+
+        /// <summary>越界回正文案是否使用模型：远端或本地都算；关闭时改用角色台词。</summary>
+        public bool SnapBackUseAi => SnapBackSource != ModelCallSource.Disabled;
+
+        /// <summary>对话后的情绪判断是否使用模型：远端或本地都算；关闭时跳过判断。</summary>
+        public bool EmotionJudgeUseAi => EmotionJudgeSource != ModelCallSource.Disabled;
+
+        /// <summary>核心信息提取是否走触发词门控：true 仅命中触发词才提取。</summary>
+        public bool MemoryExtractionGated => CustomMemoryExtractionGated;
 
         /// <summary>是否启用主动搭话（总开关，默认开启）。</summary>
         public bool ProactiveChatEnabled { get; private set; }
@@ -148,13 +197,8 @@ namespace KfuPet.Services
         /// <summary>自定义模式下主动搭话是否使用 AI 生成；false 表示改用角色台词。</summary>
         public bool CustomProactiveChatUseAi { get; private set; }
 
-        /// <summary>主动搭话是否使用 AI 生成：关闭模式保持现状；节省模式始终不用；自定义模式按细分开关。</summary>
-        public bool ProactiveChatUseAi => ModelSavingMode switch
-        {
-            SavingMode.Saving => false,
-            SavingMode.Custom => CustomProactiveChatUseAi,
-            _ => true
-        };
+        /// <summary>主动搭话是否使用模型：远端或本地都算；关闭时改用角色台词。</summary>
+        public bool ProactiveChatUseAi => ProactiveChatSource != ModelCallSource.Disabled;
 
         /// <summary>是否允许读取正在使用的应用（前台应用与任务栏应用，默认关闭）：
         /// 开启后主动搭话会注入应用语境，模型也可调用查看工具。</summary>
@@ -224,6 +268,15 @@ namespace KfuPet.Services
             CustomSnapBackUseAi = true;
             CustomEmotionJudgeUseAi = true;
             CustomMemoryExtractionGated = false;
+            TouchReactionSource = ModelCallSource.Remote;
+            UpdateNotificationSource = ModelCallSource.Remote;
+            SnapBackSource = ModelCallSource.Remote;
+            ProactiveChatSource = ModelCallSource.Remote;
+            EmotionJudgeSource = ModelCallSource.Remote;
+            MemoryExtractionSource = ModelCallSource.Remote;
+            MemoryArchiveExtractionSource = ModelCallSource.Remote;
+            MemoryScoringSource = ModelCallSource.Remote;
+            MemorySummarySource = ModelCallSource.Remote;
             ProactiveChatEnabled = true;
             ProactiveChatFrequency = ProactiveFrequency.Medium;
             QuietHoursEnabled = true;
@@ -323,6 +376,72 @@ namespace KfuPet.Services
         public void SetCustomMemoryExtractionGated(bool gated)
         {
             CustomMemoryExtractionGated = gated;
+            Save();
+        }
+
+        /// <summary>读取指定调用点使用的模型来源。</summary>
+        public ModelCallSource GetModelSource(ModelCallKind kind)
+        {
+            return kind switch
+            {
+                ModelCallKind.TouchReaction => TouchReactionSource,
+                ModelCallKind.UpdateNotification => UpdateNotificationSource,
+                ModelCallKind.SnapBack => SnapBackSource,
+                ModelCallKind.ProactiveChat => ProactiveChatSource,
+                ModelCallKind.EmotionJudge => EmotionJudgeSource,
+                ModelCallKind.MemoryExtraction => MemoryExtractionSource,
+                ModelCallKind.MemoryArchiveExtraction => MemoryArchiveExtractionSource,
+                ModelCallKind.MemoryScoring => MemoryScoringSource,
+                ModelCallKind.MemorySummary => MemorySummarySource,
+                _ => ModelCallSource.Remote
+            };
+        }
+
+        /// <summary>保存指定调用点使用的模型来源。</summary>
+        public void SetModelSource(ModelCallKind kind, ModelCallSource source)
+        {
+            // 情绪判断未经过本地模型稳定性测试，不允许保存为本地
+            if (kind == ModelCallKind.EmotionJudge && source == ModelCallSource.Local)
+            {
+                source = ModelCallSource.Remote;
+            }
+
+            var previous = GetModelSource(kind);
+
+            switch (kind)
+            {
+                case ModelCallKind.TouchReaction:
+                    TouchReactionSource = source;
+                    break;
+                case ModelCallKind.UpdateNotification:
+                    UpdateNotificationSource = source;
+                    break;
+                case ModelCallKind.SnapBack:
+                    SnapBackSource = source;
+                    break;
+                case ModelCallKind.ProactiveChat:
+                    ProactiveChatSource = source;
+                    break;
+                case ModelCallKind.EmotionJudge:
+                    EmotionJudgeSource = source;
+                    break;
+                case ModelCallKind.MemoryExtraction:
+                    MemoryExtractionSource = source;
+                    break;
+                case ModelCallKind.MemoryArchiveExtraction:
+                    MemoryArchiveExtractionSource = source;
+                    break;
+                case ModelCallKind.MemoryScoring:
+                    MemoryScoringSource = source;
+                    break;
+                case ModelCallKind.MemorySummary:
+                    MemorySummarySource = source;
+                    break;
+                default:
+                    return;
+            }
+
+            Log.Info($"[设置] {kind} 模型来源：{previous} → {source}");
             Save();
         }
 
@@ -580,6 +699,9 @@ namespace KfuPet.Services
                     CustomMemoryExtractionGated = memoryExtractionGatedElement.GetBoolean();
                 }
 
+                // 模型来源：新配置直接读取；旧配置按原有“是否使用 AI”迁移
+                LoadModelSources(root);
+
                 if (root.TryGetProperty("ForegroundAppContextEnabled", out var foregroundAppElement) &&
                     foregroundAppElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
                 {
@@ -645,6 +767,78 @@ namespace KfuPet.Services
             }
         }
 
+        /// <summary>读取各调用点的模型来源；旧版配置按“关闭 / 节省 / 自定义”迁移为远端或不用模型。</summary>
+        private void LoadModelSources(JsonElement root)
+        {
+            if (root.TryGetProperty("TouchReactionSource", out _))
+            {
+                TouchReactionSource = ReadModelSource(root, "TouchReactionSource", TouchReactionSource);
+                UpdateNotificationSource = ReadModelSource(root, "UpdateNotificationSource", UpdateNotificationSource);
+                SnapBackSource = ReadModelSource(root, "SnapBackSource", SnapBackSource);
+                ProactiveChatSource = ReadModelSource(root, "ProactiveChatSource", ProactiveChatSource);
+                EmotionJudgeSource = ReadModelSource(root, "EmotionJudgeSource", EmotionJudgeSource);
+                MemoryExtractionSource = ReadModelSource(root, "MemoryExtractionSource", MemoryExtractionSource);
+                MemoryArchiveExtractionSource = ReadModelSource(root, "MemoryArchiveExtractionSource", MemoryArchiveExtractionSource);
+                MemoryScoringSource = ReadModelSource(root, "MemoryScoringSource", MemoryScoringSource);
+                MemorySummarySource = ReadModelSource(root, "MemorySummarySource", MemorySummarySource);
+
+                // 情绪判断不在本地模型测试清单内，旧配置若存成本地则改回远端
+                if (EmotionJudgeSource == ModelCallSource.Local)
+                {
+                    EmotionJudgeSource = ModelCallSource.Remote;
+                }
+            }
+            else
+            {
+                TouchReactionSource = LegacyUseAi(ModelSavingMode, CustomTouchReactionUseAi);
+                UpdateNotificationSource = LegacyUseAi(ModelSavingMode, CustomUpdateNotificationUseAi);
+                SnapBackSource = LegacyUseAi(ModelSavingMode, CustomSnapBackUseAi);
+                ProactiveChatSource = LegacyUseAi(ModelSavingMode, CustomProactiveChatUseAi);
+                EmotionJudgeSource = LegacyUseAi(ModelSavingMode, CustomEmotionJudgeUseAi);
+                MemoryExtractionSource = ModelCallSource.Remote;
+                MemoryArchiveExtractionSource = ModelCallSource.Remote;
+                MemoryScoringSource = ModelCallSource.Remote;
+                MemorySummarySource = ModelCallSource.Remote;
+
+                // 旧版“节省”档位此前强制启用触发词门控
+                if (ModelSavingMode == SavingMode.Saving)
+                {
+                    CustomMemoryExtractionGated = true;
+                }
+            }
+
+            // 统一为逐项设置，后续不再使用旧的“档位”概念
+            ModelSavingMode = SavingMode.Custom;
+        }
+
+        /// <summary>旧版“是否使用 AI”换算成模型来源。</summary>
+        private static ModelCallSource LegacyUseAi(SavingMode mode, bool customUseAi)
+        {
+            var useAi = mode switch
+            {
+                SavingMode.Saving => false,
+                SavingMode.Custom => customUseAi,
+                _ => true
+            };
+
+            return useAi ? ModelCallSource.Remote : ModelCallSource.Disabled;
+        }
+
+        /// <summary>读取字符串形式的模型来源；缺失或非法时回退到默认值。</summary>
+        private static ModelCallSource ReadModelSource(
+            JsonElement root, string propertyName, ModelCallSource fallback)
+        {
+            if (root.TryGetProperty(propertyName, out var element) &&
+                element.ValueKind == JsonValueKind.String &&
+                Enum.TryParse<ModelCallSource>(element.GetString(), ignoreCase: true, out var source) &&
+                Enum.IsDefined(source))
+            {
+                return source;
+            }
+
+            return fallback;
+        }
+
         private void Save()
         {
             try
@@ -679,7 +873,16 @@ namespace KfuPet.Services
                     OpenAppFullAccess,
                     AllowedApps,
                     LocalModelDirectory,
-                    LocalModelDevice = LocalModelDevice.ToString()
+                    LocalModelDevice = LocalModelDevice.ToString(),
+                    TouchReactionSource = TouchReactionSource.ToString(),
+                    UpdateNotificationSource = UpdateNotificationSource.ToString(),
+                    SnapBackSource = SnapBackSource.ToString(),
+                    ProactiveChatSource = ProactiveChatSource.ToString(),
+                    EmotionJudgeSource = EmotionJudgeSource.ToString(),
+                    MemoryExtractionSource = MemoryExtractionSource.ToString(),
+                    MemoryArchiveExtractionSource = MemoryArchiveExtractionSource.ToString(),
+                    MemoryScoringSource = MemoryScoringSource.ToString(),
+                    MemorySummarySource = MemorySummarySource.ToString()
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

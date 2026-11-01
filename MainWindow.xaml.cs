@@ -922,7 +922,8 @@ namespace KfuPet
                     {
                         var reply = await _chatService.SendAsync(
                             model, _memorySystem.BuildBaseSystemPrompt(),
-                            Array.Empty<ChatMessage>(), eventPrompt, TokenUsageCategory.SnapBack);
+                            Array.Empty<ChatMessage>(), eventPrompt,
+                            TokenUsageCategory.SnapBack, ModelCallKind.SnapBack);
                         line = NormalizeReactionLine(reply);
                         source = "AI";
                     }
@@ -1072,7 +1073,8 @@ namespace KfuPet
                 {
                     var reply = await _chatService.SendAsync(
                         model, _memorySystem.BuildBaseSystemPrompt(),
-                        Array.Empty<ChatMessage>(), eventPrompt, TokenUsageCategory.TouchReaction);
+                        Array.Empty<ChatMessage>(), eventPrompt,
+                        TokenUsageCategory.TouchReaction, ModelCallKind.TouchReaction);
                     line = NormalizeReactionLine(reply);
                     source = "AI";
                 }
@@ -1349,7 +1351,8 @@ namespace KfuPet
             try
             {
                 var messages = EmotionJudgeService.BuildMessages(userMessage, assistantReply);
-                var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.EmotionJudge);
+                var reply = await _chatService.SendRawAsync(
+                    model, messages, TokenUsageCategory.EmotionJudge, kind: ModelCallKind.EmotionJudge);
 
                 if (!EmotionJudgeService.TryParse(reply, out var result))
                 {
@@ -1638,7 +1641,7 @@ namespace KfuPet
                         var stopwatch = Stopwatch.StartNew();
                         var reply = await _chatService.SendAsync(
                             model, _memorySystem.BuildBaseSystemPrompt(), history, eventPrompt,
-                            TokenUsageCategory.ProactiveChat);
+                            TokenUsageCategory.ProactiveChat, ModelCallKind.ProactiveChat);
                         line = NormalizeReactionLine(reply);
                         source = "AI";
                         Log.Debug($"[主动搭话] {e.Type} AI 回复（{stopwatch.ElapsedMilliseconds} ms，{line.Length} 字）：{line}");

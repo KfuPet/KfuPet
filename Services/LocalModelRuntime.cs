@@ -34,6 +34,9 @@ namespace KfuPet.Services
         /// <summary>模型是否已加载（true 表示可以推理）。</summary>
         public bool IsRunning => _weights != null;
 
+        /// <summary>当前是否已有一路推理正在进行（用于短句调用快速回退远端，避免排队等待）。</summary>
+        public bool IsBusy => _inferenceGate.CurrentCount == 0;
+
         /// <summary>当前已加载的模型文件路径；未加载时为空。</summary>
         public string? LoadedPath { get; private set; }
 

@@ -343,7 +343,8 @@ namespace KfuPet
                     _mainWindow.MemorySystem.BuildBaseSystemPrompt(),
                     Array.Empty<ChatMessage>(),
                     UpdateNotificationService.BuildEventPrompt(result),
-                    TokenUsageCategory.Notification);
+                    TokenUsageCategory.Notification,
+                    ModelCallKind.UpdateNotification);
 
                 var line = UpdateNotificationService.NormalizeLine(reply);
                 if (!string.IsNullOrEmpty(line))

@@ -459,7 +459,8 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = $"用户说：{user}\n助手回复：{assistant}" }
             };
 
-            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
+            var reply = await _chatService.SendRawAsync(
+                model, messages, TokenUsageCategory.Memory, kind: ModelCallKind.MemoryExtraction);
             return ParseItems(reply);
         }
 
@@ -673,7 +674,8 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = sb.ToString() }
             };
 
-            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
+            var reply = await _chatService.SendRawAsync(
+                model, messages, TokenUsageCategory.Memory, kind: ModelCallKind.MemoryArchiveExtraction);
             return ParseItems(reply);
         }
 
@@ -693,7 +695,8 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = $"信息：{content}" }
             };
 
-            var reply = await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory);
+            var reply = await _chatService.SendRawAsync(
+                model, messages, TokenUsageCategory.Memory, kind: ModelCallKind.MemoryScoring);
             return ParseScore(reply);
         }
 
@@ -713,7 +716,8 @@ namespace KfuPet.Services
                 new() { Role = "user", Content = joined }
             };
 
-            return (await _chatService.SendRawAsync(model, messages, TokenUsageCategory.Memory)).Trim();
+            return (await _chatService.SendRawAsync(
+                model, messages, TokenUsageCategory.Memory, kind: ModelCallKind.MemorySummary)).Trim();
         }
 
         /// <summary>解析信息点数组 JSON（失败时返回空列表）。</summary>

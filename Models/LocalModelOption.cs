@@ -63,6 +63,12 @@ namespace KfuPet.Models
         /// <summary>产品默认档（4B），与硬件无关。</summary>
         public bool IsDefault { get; init; }
 
+        /// <summary>是否支持实时核心信息提取与归档批量提炼；1.7B 在调用点清单里标注为不可用。</summary>
+        public bool SupportsMemoryExtraction { get; init; } = true;
+
+        /// <summary>是否支持多条信息总结；1.7B 在调用点清单里标注为不可用。</summary>
+        public bool SupportsMemorySummarization { get; init; } = true;
+
         /// <summary>是否显示“默认”徽章。</summary>
         public bool ShowDefaultBadge => IsDefault;
 

@@ -26,12 +26,73 @@ namespace KfuPet.Services
         private readonly SemaphoreSlim _loadGate = new(1, 1);
 
         private Task<bool>? _loadTask;
+        private string? _failedFileName;
+        private bool _suspendWarmUp;
         private bool _disposed;
+
+        /// <summary>当前是否有模型已加载（可以立即本地推理）。</summary>
+        public bool IsLoaded => _runtime.IsRunning;
 
         /// <summary>读取当前启用的模型；未启用时返回 null。</summary>
         public DeployedModel? GetActiveModel()
         {
             return _deployment.LoadActive();
+        }
+
+        /// <summary>读取当前已加载到内存的模型；未加载时返回 null。</summary>
+        public DeployedModel? GetLoadedModel()
+        {
+            if (!_runtime.IsRunning || string.IsNullOrEmpty(_runtime.LoadedPath))
+            {
+                return null;
+            }
+
+            return _deployment.LoadAll().FirstOrDefault(m =>
+                string.Equals(m.FilePath, _runtime.LoadedPath, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// 当前启用模型的运行时是否已就绪；就绪时返回可直接推理的运行时。
+        /// 未启用、未加载或加载的仍是别的模型时返回 false。
+        /// </summary>
+        public bool TryGetReadyRuntime(out LocalModelRuntime runtime)
+        {
+            runtime = _runtime;
+            var active = _deployment.LoadActive();
+            return active != null && IsReady(active.FilePath);
+        }
+
+        /// <summary>
+        /// 请求后台加载当前启用的模型：立即返回，不阻塞本次调用。
+        /// 用于应用启动后第一次需要本地推理的场景（启动、重启、开机自启动都不会提前加载）。
+        /// 已有加载任务在进行、已加载同名模型或上次加载失败时不会重复触发。
+        /// </summary>
+        public void RequestWarmUp()
+        {
+            if (_disposed || _suspendWarmUp)
+            {
+                return;
+            }
+
+            var active = _deployment.LoadActive();
+            if (active == null || !File.Exists(active.FilePath))
+            {
+                return;
+            }
+
+            if (IsReady(active.FilePath) || _loadTask is { IsCompleted: false })
+            {
+                return;
+            }
+
+            if (_failedFileName != null &&
+                string.Equals(_failedFileName, active.FileName, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            Log.Info($"[本地模型] 请求后台加载：{active.ModelName}");
+            _loadTask = Task.Run(() => LoadAsync(active));
         }
 
         /// <summary>
@@ -59,6 +120,7 @@ namespace KfuPet.Services
                 _deployment.SetActive(target.FileName);
             }
 
+            _failedFileName = null;
             Log.Info($"[本地模型] 已启用：{target.ModelName}（立即加载）");
             _loadTask = LoadAsync(target);
             return await _loadTask;
@@ -68,8 +130,18 @@ namespace KfuPet.Services
         public async Task DisableAsync()
         {
             var active = _deployment.LoadActive();
-            await StopRuntimeAsync();
-            _deployment.ClearActive();
+            _suspendWarmUp = true;
+            try
+            {
+                await StopRuntimeAsync();
+                _deployment.ClearActive();
+            }
+            finally
+            {
+                _suspendWarmUp = false;
+            }
+
+            _failedFileName = null;
             Log.Info(active != null ? $"[本地模型] 已停用：{active.ModelName}" : "[本地模型] 已停用");
         }
 
@@ -82,12 +154,22 @@ namespace KfuPet.Services
             var isLoaded = _runtime.IsRunning &&
                            string.Equals(_runtime.LoadedPath, model.FilePath, StringComparison.OrdinalIgnoreCase);
 
-            if (isActive || isLoaded)
+            _suspendWarmUp = true;
+            try
             {
-                await StopRuntimeAsync();
+                if (isActive || isLoaded)
+                {
+                    await StopRuntimeAsync();
+                }
+
+                await Task.Run(() => _deployment.DeleteFiles(model));
+            }
+            finally
+            {
+                _suspendWarmUp = false;
             }
 
-            await Task.Run(() => _deployment.DeleteFiles(model));
+            _failedFileName = null;
         }
 
         /// <summary>加载当前启用的模型；等锁期间若已切换/停用则放弃本次加载。</summary>
@@ -134,11 +216,13 @@ namespace KfuPet.Services
                     return false;
                 }
 
+                _failedFileName = null;
                 Log.Info("[本地模型] 加载完成");
                 return true;
             }
             catch (Exception ex)
             {
+                _failedFileName = target.FileName;
                 Log.Error($"[本地模型] 加载失败：{target.ModelName}（{ex.Message}）");
                 return false;
             }

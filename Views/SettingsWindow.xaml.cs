@@ -118,15 +118,20 @@ namespace KfuPet.Views
             AutoStartToggle.IsChecked = _startupService.IsEnabled();
             _suppressAutoStartEvents = false;
 
-            // 节省消耗：档位选择已移除，逐项设置直接决定每个功能是否使用 AI 生成
+            // 节省消耗：档位选择已移除，逐项设置直接决定每个功能使用远端、本地还是不调用模型
             _suppressSavingEvents = true;
-            MigrateLegacySavingMode();
-            TouchReactionSavingComboBox.SelectedIndex = SettingsService.Instance.CustomTouchReactionUseAi ? 0 : 1;
-            UpdateNotificationSavingComboBox.SelectedIndex = SettingsService.Instance.CustomUpdateNotificationUseAi ? 0 : 1;
-            SnapBackSavingComboBox.SelectedIndex = SettingsService.Instance.CustomSnapBackUseAi ? 0 : 1;
-            ProactiveChatSavingComboBox.SelectedIndex = SettingsService.Instance.CustomProactiveChatUseAi ? 0 : 1;
-            EmotionJudgeSavingComboBox.SelectedIndex = SettingsService.Instance.CustomEmotionJudgeUseAi ? 0 : 1;
-            MemoryExtractionSavingComboBox.SelectedIndex = SettingsService.Instance.CustomMemoryExtractionGated ? 1 : 0;
+            SetSourceComboIndex(TouchReactionSavingComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.TouchReaction), true);
+            SetSourceComboIndex(UpdateNotificationSavingComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.UpdateNotification), true);
+            SetSourceComboIndex(SnapBackSavingComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.SnapBack), true);
+            SetSourceComboIndex(ProactiveChatSavingComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.ProactiveChat), true);
+            // 情绪判断未在本地模型测试表内，只保留“AI 判断 / 不判断”两档
+            EmotionJudgeSavingComboBox.SelectedIndex =
+                SettingsService.Instance.GetModelSource(ModelCallKind.EmotionJudge) == ModelCallSource.Disabled ? 1 : 0;
+            SetSourceComboIndex(MemoryExtractionSourceComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.MemoryExtraction), false);
+            SetSourceComboIndex(MemoryArchiveExtractionSourceComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.MemoryArchiveExtraction), false);
+            SetSourceComboIndex(MemoryScoringSourceComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.MemoryScoring), false);
+            SetSourceComboIndex(MemorySummarySourceComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.MemorySummary), false);
+            MemoryExtractionSavingComboBox.SelectedIndex = SettingsService.Instance.MemoryExtractionGated ? 1 : 0;
             _suppressSavingEvents = false;
             UpdateMemoryTriggerCardVisibility();
             RefreshSavingModeSummary();
@@ -624,66 +629,218 @@ namespace KfuPet.Views
             }
         }
 
-        /// <summary>
-        /// 历史上保存的「关闭 / 开启」档位迁移为逐项设置：先把当前生效值写入各项开关，再切到自定义档位，
-        /// 使迁移前后每个功能是否使用 AI 生成保持不变。
-        /// </summary>
-        private static void MigrateLegacySavingMode()
-        {
-            if (SettingsService.Instance.ModelSavingMode == SavingMode.Custom)
-            {
-                return;
-            }
-
-            SettingsService.Instance.SetCustomTouchReactionUseAi(SettingsService.Instance.TouchReactionUseAi);
-            SettingsService.Instance.SetCustomUpdateNotificationUseAi(SettingsService.Instance.UpdateNotificationUseAi);
-            SettingsService.Instance.SetCustomSnapBackUseAi(SettingsService.Instance.SnapBackUseAi);
-            SettingsService.Instance.SetCustomProactiveChatUseAi(SettingsService.Instance.ProactiveChatUseAi);
-            SettingsService.Instance.SetCustomEmotionJudgeUseAi(SettingsService.Instance.EmotionJudgeUseAi);
-            SettingsService.Instance.SetCustomMemoryExtractionGated(SettingsService.Instance.MemoryExtractionGated);
-            SettingsService.Instance.SetModelSavingMode(SavingMode.Custom);
-        }
-
-        /// <summary>
-        /// 自定义细分：触摸反应是否使用 AI 生成（0 AI 生成 / 1 角色台词）。
-        /// </summary>
+        /// <summary>触摸反应模型来源：远端 / 本地模型 / 角色台词。</summary>
         private void TouchReactionSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_suppressSavingEvents)
-            {
-                return;
-            }
-
-            SettingsService.Instance.SetCustomTouchReactionUseAi(TouchReactionSavingComboBox.SelectedIndex == 0);
-            RefreshSavingModeSummary();
+            ApplySourceSelection(TouchReactionSavingComboBox, ModelCallKind.TouchReaction, hasDisabledOption: true);
         }
 
-        /// <summary>
-        /// 自定义细分：更新通知文案是否使用 AI 生成（0 AI 生成 / 1 固定文案）。
-        /// </summary>
+        /// <summary>更新通知文案模型来源：远端 / 本地模型 / 内置文案。</summary>
         private void UpdateNotificationSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_suppressSavingEvents)
-            {
-                return;
-            }
+            ApplySourceSelection(UpdateNotificationSavingComboBox, ModelCallKind.UpdateNotification, hasDisabledOption: true);
+        }
 
-            SettingsService.Instance.SetCustomUpdateNotificationUseAi(UpdateNotificationSavingComboBox.SelectedIndex == 0);
-            RefreshSavingModeSummary();
+        /// <summary>越界回正文案模型来源：远端 / 本地模型 / 角色台词。</summary>
+        private void SnapBackSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySourceSelection(SnapBackSavingComboBox, ModelCallKind.SnapBack, hasDisabledOption: true);
         }
 
         /// <summary>
-        /// 自定义细分：越界回正文案是否使用 AI 生成（0 AI 生成 / 1 角色台词）。
+        /// 通用模型来源切换：选择本地模型时检查是否已加载、当前模型能否胜任；
+        /// 未加载时询问是否前往本地模型页启动，取消则回退原选项。
         /// </summary>
-        private void SnapBackSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ApplySourceSelection(ComboBox combo, ModelCallKind kind, bool hasDisabledOption)
         {
             if (_suppressSavingEvents)
             {
                 return;
             }
 
-            SettingsService.Instance.SetCustomSnapBackUseAi(SnapBackSavingComboBox.SelectedIndex == 0);
-            RefreshSavingModeSummary();
+            var source = ReadSourceFromIndex(combo.SelectedIndex, hasDisabledOption);
+            var previous = SettingsService.Instance.GetModelSource(kind);
+            if (source == previous)
+            {
+                RefreshSavingModeSummary();
+                return;
+            }
+
+            if (source != ModelCallSource.Local)
+            {
+                SettingsService.Instance.SetModelSource(kind, source);
+                RefreshSavingModeSummary();
+                return;
+            }
+
+            // 当前模型（已加载优先，否则看启用项）在 1.7B 等能力不足时必须阻止
+            var current = LocalModelService.Instance.GetLoadedModel()
+                          ?? LocalModelService.Instance.GetActiveModel();
+            if (current != null && !CanLocalModelHandle(kind, current))
+            {
+                Log.Warning($"[本地模型] 已阻止 {kind} 使用本地模型：{current.ModelName} 不支持");
+                ResetSourceCombo(combo, previous, hasDisabledOption);
+                RefreshSavingModeSummary();
+                new MessageDialog(
+                    "本地模型",
+                    $"当前的本地模型是 {current.ModelName}，本地模型不支持“{GetKindDisplayName(kind)}”。\n\n" +
+                    "请改用 4B / 8B 模型，或把该功能改为云端模型。",
+                    MessageDialogKind.Warning,
+                    "知道了")
+                {
+                    Owner = this
+                }.Show();
+                return;
+            }
+
+            if (LocalModelService.Instance.IsLoaded)
+            {
+                SettingsService.Instance.SetModelSource(kind, ModelCallSource.Local);
+                RefreshSavingModeSummary();
+                return;
+            }
+
+            PromptLocalModelNotStarted(combo, kind, previous, hasDisabledOption);
+        }
+
+        /// <summary>本地模型尚未启动：询问是否前往本地模型配置页；取消则回退下拉选项。</summary>
+        private void PromptLocalModelNotStarted(
+            ComboBox combo, ModelCallKind kind, ModelCallSource previous, bool hasDisabledOption)
+        {
+            var active = LocalModelService.Instance.GetActiveModel();
+            var message = active != null
+                ? $"当前启用的是 {active.ModelName}，但本地模型尚未加载到内存。\n\n是否前往本地模型配置页启动？"
+                : "还没有启用任何本地模型。\n\n是否前往本地模型配置页选择并启用？";
+
+            Log.Info($"[本地模型] {kind} 选择本地模型但尚未加载，提示前往本地模型配置页");
+
+            var dialog = new MessageDialog(
+                "本地模型",
+                message,
+                MessageDialogKind.Question,
+                "前往启动",
+                showCancel: true,
+                cancelText: "暂不")
+            {
+                Owner = this
+            };
+
+            dialog.Confirmed += () =>
+            {
+                SettingsService.Instance.SetModelSource(kind, ModelCallSource.Local);
+                RefreshSavingModeSummary();
+                NavigateToLocalModelPage();
+
+                // 已有启用项但未加载：直接帮用户启动；没有启用项时由用户在新页面选择
+                if (active != null)
+                {
+                    _ = StartLocalModelForUserAsync(active);
+                }
+            };
+
+            dialog.Canceled += () =>
+            {
+                Log.Info($"[本地模型] 用户取消前往启动，{kind} 选项已回退");
+                ResetSourceCombo(combo, previous, hasDisabledOption);
+                RefreshSavingModeSummary();
+            };
+
+            dialog.Show();
+        }
+
+        /// <summary>用户确认前往启动后加载已启用的模型；失败时提示，不影响页面跳转。</summary>
+        private async Task StartLocalModelForUserAsync(DeployedModel model)
+        {
+            var loaded = await LocalModelService.Instance.EnableAsync(model.FileName);
+            if (loaded)
+            {
+                Log.Info($"[本地模型] 用户从节省页跳转，已启动 {model.ModelName}");
+                return;
+            }
+
+            var active = LocalModelService.Instance.GetActiveModel();
+            if (active == null ||
+                !string.Equals(active.FileName, model.FileName, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            new MessageDialog(
+                "本地模型",
+                $"{model.ModelName} 加载失败，详见日志。\n\n可关闭开关后重新开启重试。",
+                MessageDialogKind.Error,
+                "知道了")
+            {
+                Owner = this
+            }.Show();
+        }
+
+        /// <summary>把下拉索引换算成模型来源；三档下拉的最后一项是不调用模型。</summary>
+        private static ModelCallSource ReadSourceFromIndex(int index, bool hasDisabledOption)
+        {
+            return index switch
+            {
+                1 => ModelCallSource.Local,
+                >= 2 when hasDisabledOption => ModelCallSource.Disabled,
+                _ => ModelCallSource.Remote
+            };
+        }
+
+        /// <summary>按模型来源选中下拉项。</summary>
+        private static void SetSourceComboIndex(ComboBox combo, ModelCallSource source, bool hasDisabledOption)
+        {
+            combo.SelectedIndex = ToSourceIndex(source, hasDisabledOption);
+        }
+
+        private static int ToSourceIndex(ModelCallSource source, bool hasDisabledOption)
+        {
+            return source switch
+            {
+                ModelCallSource.Local => 1,
+                ModelCallSource.Disabled => hasDisabledOption ? 2 : 1,
+                _ => 0
+            };
+        }
+
+        /// <summary>用户取消时把下拉恢复为原选项，期间不触发保存。</summary>
+        private void ResetSourceCombo(ComboBox combo, ModelCallSource source, bool hasDisabledOption)
+        {
+            _suppressSavingEvents = true;
+            combo.SelectedIndex = ToSourceIndex(source, hasDisabledOption);
+            _suppressSavingEvents = false;
+        }
+
+        /// <summary>当前本地模型能否承担该调用（1.7B 不支持信息提取与多条总结）。</summary>
+        private static bool CanLocalModelHandle(ModelCallKind kind, DeployedModel model)
+        {
+            return kind switch
+            {
+                ModelCallKind.MemoryExtraction or ModelCallKind.MemoryArchiveExtraction =>
+                    LocalModelCatalog.SupportsMemoryExtraction(model),
+                ModelCallKind.MemorySummary =>
+                    LocalModelCatalog.SupportsMemorySummarization(model),
+                _ => true
+            };
+        }
+
+        /// <summary>阻止提示里使用的功能名称。</summary>
+        private static string GetKindDisplayName(ModelCallKind kind)
+        {
+            return kind switch
+            {
+                ModelCallKind.MemoryExtraction => "核心信息提取",
+                ModelCallKind.MemoryArchiveExtraction => "归档批量提炼",
+                ModelCallKind.MemorySummary => "多条总结",
+                ModelCallKind.MemoryScoring => "单条重评分",
+                _ => "该功能"
+            };
+        }
+
+        /// <summary>跳转到「模型」页并展开「本地模型配置」二级页，供用户启用或切换模型。</summary>
+        private void NavigateToLocalModelPage()
+        {
+            NavList.SelectedIndex = 2;
+            ShowLocalModelDetailPage();
         }
 
         /// <summary>
@@ -774,22 +931,46 @@ namespace KfuPet.Views
             ModelConfigPanel.ScrollToTop();
         }
 
-        /// <summary>同步入口卡片上的摘要：按逐项设置统计有多少功能改用本地文案，不进入二级页也能确认。</summary>
+        /// <summary>同步入口卡片上的摘要：按逐项设置统计有多少功能改用本地模型或不再调用远端。</summary>
         private void RefreshSavingModeSummary()
         {
-            var localCount = 0;
-            if (!SettingsService.Instance.TouchReactionUseAi) localCount++;
-            if (!SettingsService.Instance.UpdateNotificationUseAi) localCount++;
-            if (!SettingsService.Instance.SnapBackUseAi) localCount++;
-            if (!SettingsService.Instance.ProactiveChatUseAi) localCount++;
-            if (!SettingsService.Instance.EmotionJudgeUseAi) localCount++;
-            if (SettingsService.Instance.MemoryExtractionGated) localCount++;
-
-            SavingModeSummaryText.Text = localCount switch
+            var kinds = new[]
             {
-                0 => "全部功能由 AI 生成",
-                6 => "全部功能不再消耗模型请求",
-                _ => $"已节省 {localCount} 项功能的模型请求"
+                ModelCallKind.TouchReaction,
+                ModelCallKind.UpdateNotification,
+                ModelCallKind.SnapBack,
+                ModelCallKind.ProactiveChat,
+                ModelCallKind.EmotionJudge,
+                ModelCallKind.MemoryExtraction,
+                ModelCallKind.MemoryArchiveExtraction,
+                ModelCallKind.MemoryScoring,
+                ModelCallKind.MemorySummary
+            };
+
+            var nonRemoteCount = 0;
+            var localCount = 0;
+            foreach (var kind in kinds)
+            {
+                var source = SettingsService.Instance.GetModelSource(kind);
+                if (source != ModelCallSource.Remote)
+                {
+                    nonRemoteCount++;
+                }
+
+                if (source == ModelCallSource.Local)
+                {
+                    localCount++;
+                }
+            }
+
+            SavingModeSummaryText.Text = nonRemoteCount switch
+            {
+                0 => "全部功能使用云端模型",
+                _ when nonRemoteCount == kinds.Length && localCount > 0 =>
+                    $"全部功能不使用云端模型（{localCount} 项使用本地模型）",
+                _ when nonRemoteCount == kinds.Length => "全部功能不使用云端模型",
+                _ when localCount > 0 => $"已减少 {nonRemoteCount} 项云端请求，其中 {localCount} 项使用本地模型",
+                _ => $"已减少 {nonRemoteCount} 项云端请求"
             };
         }
 
@@ -811,6 +992,12 @@ namespace KfuPet.Views
 
         /// <summary>点击「本地模型配置」入口卡片进入二级页：隐藏模型页一级内容，只显示本地模型列表。</summary>
         private void LocalModelEntryCard_Click(object sender, RoutedEventArgs e)
+        {
+            ShowLocalModelDetailPage();
+        }
+
+        /// <summary>展开「本地模型配置」二级页；供入口卡片与“前往启动”跳转共用。</summary>
+        private void ShowLocalModelDetailPage()
         {
             if (LocalModelDetailContent.Visibility == Visibility.Visible)
             {
@@ -1323,23 +1510,13 @@ namespace KfuPet.Views
             SettingsService.Instance.SetProactiveGreetingEnabled(ProactiveGreetingToggle.IsChecked == true);
         }
 
-        /// <summary>
-        /// 自定义细分：主动搭话是否使用 AI 生成（0 AI 生成 / 1 角色台词）。
-        /// </summary>
+        /// <summary>主动搭话模型来源：远端 / 本地模型 / 角色台词。</summary>
         private void ProactiveChatSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_suppressSavingEvents)
-            {
-                return;
-            }
-
-            SettingsService.Instance.SetCustomProactiveChatUseAi(ProactiveChatSavingComboBox.SelectedIndex == 0);
-            RefreshSavingModeSummary();
+            ApplySourceSelection(ProactiveChatSavingComboBox, ModelCallKind.ProactiveChat, hasDisabledOption: true);
         }
 
-        /// <summary>
-        /// 自定义细分：对话后的情绪判断是否使用 AI（0 AI 判断 / 1 不判断）。
-        /// </summary>
+        /// <summary>对话后情绪判断：只支持 AI 判断 / 不判断，不提供本地模型（未经过稳定性测试）。</summary>
         private void EmotionJudgeSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_suppressSavingEvents)
@@ -1347,12 +1524,39 @@ namespace KfuPet.Views
                 return;
             }
 
-            SettingsService.Instance.SetCustomEmotionJudgeUseAi(EmotionJudgeSavingComboBox.SelectedIndex == 0);
+            var source = EmotionJudgeSavingComboBox.SelectedIndex == 0
+                ? ModelCallSource.Remote
+                : ModelCallSource.Disabled;
+            SettingsService.Instance.SetModelSource(ModelCallKind.EmotionJudge, source);
             RefreshSavingModeSummary();
         }
 
+        /// <summary>核心信息提取模型来源：远端 / 本地模型。</summary>
+        private void MemoryExtractionSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySourceSelection(MemoryExtractionSourceComboBox, ModelCallKind.MemoryExtraction, hasDisabledOption: false);
+        }
+
+        /// <summary>归档批量提炼模型来源：远端 / 本地模型。</summary>
+        private void MemoryArchiveExtractionSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySourceSelection(MemoryArchiveExtractionSourceComboBox, ModelCallKind.MemoryArchiveExtraction, hasDisabledOption: false);
+        }
+
+        /// <summary>单条重评分模型来源：远端 / 本地模型。</summary>
+        private void MemoryScoringSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySourceSelection(MemoryScoringSourceComboBox, ModelCallKind.MemoryScoring, hasDisabledOption: false);
+        }
+
+        /// <summary>多条总结模型来源：远端 / 本地模型。</summary>
+        private void MemorySummarySourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySourceSelection(MemorySummarySourceComboBox, ModelCallKind.MemorySummary, hasDisabledOption: false);
+        }
+
         /// <summary>
-        /// 自定义细分：核心信息提取方式（0 每轮提取 / 1 使用触发词）。
+        /// 核心信息提取时机（0 每轮提取 / 1 使用触发词）。
         /// </summary>
         private void MemoryExtractionSavingComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {

@@ -40,7 +40,9 @@ namespace KfuPet.Services
                 RecommendedRamBytes = (long)(8 * GbUnit),
                 CpuFallbackAllowed = true,
                 RequirementText = "无独显也可运行 · 最低内存 4 GB",
-                Note = "最轻量档，台词与情绪判断够用"
+                Note = "最轻量档，台词与情绪判断够用",
+                SupportsMemoryExtraction = false,
+                SupportsMemorySummarization = false
             },
             new()
             {
@@ -85,6 +87,40 @@ namespace KfuPet.Services
             }
         };
 
+        /// <summary>按文件名找到目录中的模型定义；找不到返回 null。</summary>
+        public static LocalModelOption? FindByFileName(string? fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return null;
+            }
+
+            return All.FirstOrDefault(m =>
+                string.Equals(m.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>按部署记录判断是否支持信息提取；自定义模型默认按支持处理。</summary>
+        public static bool SupportsMemoryExtraction(DeployedModel? model)
+        {
+            if (model == null)
+            {
+                return false;
+            }
+
+            return FindByFileName(model.FileName)?.SupportsMemoryExtraction ?? true;
+        }
+
+        /// <summary>按部署记录判断是否支持多条总结；1.7B 在调用点清单里标注为不可用。</summary>
+        public static bool SupportsMemorySummarization(DeployedModel? model)
+        {
+            if (model == null)
+            {
+                return false;
+            }
+
+            return FindByFileName(model.FileName)?.SupportsMemorySummarization ?? true;
+        }
+
         /// <summary>为当前硬件计算每个模型的运行状态，并选出推荐档（能流畅运行的最大模型）。</summary>
         public static IReadOnlyList<LocalModelOption> Recommend(HardwareInfo hardware)
         {
@@ -103,7 +139,9 @@ namespace KfuPet.Services
                 CpuFallbackAllowed = m.CpuFallbackAllowed,
                 RequirementText = m.RequirementText,
                 Note = m.Note,
-                IsDefault = m.IsDefault
+                IsDefault = m.IsDefault,
+                SupportsMemoryExtraction = m.SupportsMemoryExtraction,
+                SupportsMemorySummarization = m.SupportsMemorySummarization
             }).ToList();
 
             foreach (var option in options)
