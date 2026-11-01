@@ -915,6 +915,7 @@ namespace KfuPet.Views
 
             UpdateLocalModelEmptyVisibility();
             RefreshLocalModelSummary();
+            Log.Debug($"[本地模型] 已下载模型列表刷新：{LocalModelList.Items.Count} 个");
         }
 
         /// <summary>向列表添加一张本地模型卡片，并绑定删除按钮与启用开关事件。</summary>

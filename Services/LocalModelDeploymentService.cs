@@ -78,6 +78,10 @@ namespace KfuPet.Services
                     library.ActiveFileName = fileName;
                     Write(library);
                 }
+                else
+                {
+                    Log.Warning($"[本地模型] 要启用的模型不在部署记录中：{fileName}");
+                }
             }
         }
 
@@ -114,9 +118,10 @@ namespace KfuPet.Services
                         File.Delete(model.FilePath);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // 文件删不掉时记录已移除，下次启动不会再引用它
+                    Log.Warning($"[本地模型] 模型文件删除失败：{model.FilePath}（{ex.Message}）");
                 }
             }
         }
@@ -137,6 +142,7 @@ namespace KfuPet.Services
                 if (recovered != null)
                 {
                     Write(recovered);
+                    Log.Info($"[本地模型] 部署记录缺失，已按模型目录重建 {recovered.Models.Count} 条");
                     return recovered;
                 }
             }
@@ -154,6 +160,7 @@ namespace KfuPet.Services
 
             if (missing > 0)
             {
+                Log.Warning($"[本地模型] 有 {missing} 条部署记录对应的模型文件已不存在，已从记录中移除");
                 Write(library);
             }
 
@@ -231,9 +238,10 @@ namespace KfuPet.Services
                     };
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // 配置损坏时按空库处理
+                Log.Warning($"[本地模型] 部署记录读取失败，按空库处理：{ex.Message}");
             }
 
             return new DeployedModelLibrary();
@@ -247,9 +255,10 @@ namespace KfuPet.Services
                 File.WriteAllText(ConfigFilePath,
                     JsonSerializer.Serialize(library, JsonOptions));
             }
-            catch
+            catch (Exception ex)
             {
                 // 记录写入失败不影响当前会话；下次启动会按文件存在性重新校验
+                Log.Error($"[本地模型] 部署记录写入失败：{ex.Message}");
             }
         }
     }

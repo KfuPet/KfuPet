@@ -92,17 +92,20 @@ namespace KfuPet.Services
             {
                 try
                 {
+                    Log.Debug($"[本地模型] 尝试下载地址：{url}");
                     var sha256 = await DownloadFromUrlAsync(url, partPath, progress, cancellationToken);
                     File.Move(partPath, targetPath, overwrite: true);
                     return sha256;
                 }
                 catch (OperationCanceledException)
                 {
+                    Log.Info($"[本地模型] 下载已取消：{option.Name}");
                     TryDelete(partPath);
                     throw;
                 }
                 catch (Exception ex)
                 {
+                    Log.Warning($"[本地模型] 下载地址失败：{url}（{ex.Message}）");
                     lastError = ex;
                     TryDelete(partPath);
                 }

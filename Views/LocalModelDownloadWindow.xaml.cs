@@ -27,6 +27,8 @@ namespace KfuPet.Views
                 : "核显 / 无独显，CPU 推理";
             HardwareRamText.Text = $"{_hardware.RamGb:0.0} GB";
             HardwareCpuText.Text = $"{_hardware.LogicalCores} 线程";
+            Log.Info($"[本地模型] 打开下载窗口：{_hardware.GpuName} · 独显显存 {_hardware.VramGb:0.0} GB · " +
+                     $"内存 {_hardware.RamGb:0.0} GB · {_hardware.LogicalCores} 线程；存放目录 {_modelDirectory}");
 
             UpdateStoragePath();
             LoadModelOptions();
@@ -70,6 +72,9 @@ namespace KfuPet.Views
                                            ?? options.FirstOrDefault(o => o.CanRun && !o.IsDownloaded)
                                            ?? options.FirstOrDefault(o => !o.IsDownloaded);
             UpdateSelectionText();
+
+            Log.Debug($"[本地模型] 可下载模型刷新：已下载 {downloaded.Count} 个；" +
+                      $"推荐 {options.FirstOrDefault(o => o.IsRecommended)?.Name ?? "无"}");
         }
 
         private void ModelOptionList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -108,6 +113,7 @@ namespace KfuPet.Views
 
             _modelDirectory = dialog.FolderName;
             SettingsService.Instance.SetLocalModelDirectory(_modelDirectory);
+            Log.Info($"[本地模型] 存放目录已更改：{_modelDirectory}");
             UpdateStoragePath();
             LoadModelOptions();
         }
@@ -117,6 +123,7 @@ namespace KfuPet.Views
         {
             if (_downloading)
             {
+                Log.Info("[本地模型] 用户请求取消下载");
                 _downloadCts?.Cancel();
                 return;
             }
@@ -184,6 +191,7 @@ namespace KfuPet.Views
             ProgressSpeedText.Text = string.Empty;
 
             var targetPath = _deployment.GetTargetPath(option, _modelDirectory);
+            Log.Info($"[本地模型] 开始下载：{option.Name}（{option.SizeText}）→ {targetPath}");
             var progress = new Progress<DownloadProgress>(value =>
             {
                 DownloadProgressBar.Value = value.Percent;
@@ -210,7 +218,7 @@ namespace KfuPet.Views
                 };
 
                 _deployment.Save(deployed);
-                Log.Info($"[本地模型] 下载完成：{option.Name} → {targetPath}");
+                Log.Info($"[本地模型] 下载完成：{option.Name}（{deployed.SizeText}）→ {targetPath}");
 
                 // 先清掉下载状态，否则 Closing 会拦截由关闭窗口触发的退出
                 _downloading = false;
