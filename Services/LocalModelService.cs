@@ -10,7 +10,6 @@ namespace KfuPet.Services
     /// <summary>
     /// 本地模型运行协调器：只负责用户手动启用/停用与加载释放。
     /// 手动启用时立即加载到内存；停用、切换、删除或退出应用时释放显存与内存。
-    /// 目前不向任何 AI 调用点提供推理，避免与“节省模型消耗”功能冲突。
     /// </summary>
     internal sealed class LocalModelService : IDisposable
     {
