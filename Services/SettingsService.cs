@@ -175,6 +175,9 @@ namespace KfuPet.Services
         /// <summary>本地模型存放目录；空串表示尚未自定义，使用缓存根目录下的 Models。</summary>
         public string LocalModelDirectory { get; private set; } = string.Empty;
 
+        /// <summary>本地模型推理设备（默认自动：按显存与模型体积判断是否用 GPU）。</summary>
+        public InferenceDevice LocalModelDevice { get; private set; } = InferenceDevice.Auto;
+
         private SettingsService()
         {
             ApplyDefaults();
@@ -235,6 +238,7 @@ namespace KfuPet.Services
             AllowedApps = Array.Empty<AllowedAppEntry>();
             OpenAppFullAccess = false;
             LocalModelDirectory = string.Empty;
+            LocalModelDevice = InferenceDevice.Auto;
         }
 
         /// <summary>保存用户的外观选择：true 深色，false 浅色，null 跟随系统。</summary>
@@ -411,6 +415,13 @@ namespace KfuPet.Services
         public void SetLocalModelDirectory(string path)
         {
             LocalModelDirectory = path?.Trim() ?? string.Empty;
+            Save();
+        }
+
+        /// <summary>保存本地模型推理设备选择。</summary>
+        public void SetLocalModelDevice(InferenceDevice device)
+        {
+            LocalModelDevice = device;
             Save();
         }
 
@@ -618,6 +629,14 @@ namespace KfuPet.Services
                 {
                     LocalModelDirectory = localModelDirectoryElement.GetString()?.Trim() ?? string.Empty;
                 }
+
+                if (root.TryGetProperty("LocalModelDevice", out var localModelDeviceElement) &&
+                    localModelDeviceElement.ValueKind == JsonValueKind.String &&
+                    Enum.TryParse<InferenceDevice>(localModelDeviceElement.GetString(), ignoreCase: true, out var localModelDevice) &&
+                    Enum.IsDefined(localModelDevice))
+                {
+                    LocalModelDevice = localModelDevice;
+                }
             }
             catch (Exception ex)
             {
@@ -659,7 +678,8 @@ namespace KfuPet.Services
                     OpenAppEnabled,
                     OpenAppFullAccess,
                     AllowedApps,
-                    LocalModelDirectory
+                    LocalModelDirectory,
+                    LocalModelDevice = LocalModelDevice.ToString()
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

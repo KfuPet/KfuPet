@@ -556,6 +556,9 @@ namespace KfuPet
             _mutex?.Dispose();
             Services.SkeletonService.CleanupCache();
 
+            // 释放本地模型运行时占用的显存与内存
+            Services.LocalModelService.Instance.Dispose();
+
             // token 用量统计收尾：把去抖窗口内尚未落盘的记录写出
             TokenUsageService.Instance.Flush();
 

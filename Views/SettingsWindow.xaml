@@ -1487,14 +1487,38 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock Text="本地模型配置"
                                                Style="{StaticResource SectionTitleStyle}"
                                                VerticalAlignment="Center"/>
 
+                                    <!-- 推理设备选择：自动 / GPU / CPU，紧邻模型下载入口 -->
+                                    <StackPanel Grid.Column="1"
+                                                Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,10,0">
+                                        <TextBlock Text="推理设备"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0"/>
+                                        <ComboBox x:Name="LocalModelDeviceComboBox"
+                                                  MinWidth="104"
+                                                  Style="{StaticResource AppearanceComboStyle}"
+                                                  VerticalAlignment="Center"
+                                                  ToolTip="自动：显存足够时使用 GPU；也可强制 GPU 或纯 CPU 运行"
+                                                  SelectionChanged="LocalModelDeviceComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="自动"/>
+                                            <ComboBoxItem Content="GPU"/>
+                                            <ComboBoxItem Content="CPU"/>
+                                        </ComboBox>
+                                    </StackPanel>
+
                                     <Button x:Name="LocalModelDownloadButton"
-                                            Grid.Column="1"
+                                            Grid.Column="2"
                                             Padding="14,8"
                                             Background="{DynamicResource AppSuccessBrush}"
                                             Foreground="{DynamicResource AppSuccessForegroundBrush}"

@@ -65,6 +65,7 @@ namespace KfuPet.Views
         private readonly LocalModelDeploymentService _localModelDeployment = new();
         private LocalModelDownloadWindow? _localModelDownloadWindow;
         private bool _suppressLocalModelToggleEvents;
+        private bool _suppressLocalModelDeviceEvents;
 
         private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
 
@@ -136,6 +137,16 @@ namespace KfuPet.Views
             UpdateMemoryTriggerCardVisibility();
             RefreshSavingModeSummary();
             RefreshLocalModelSummary();
+
+            // 本地模型推理设备：按已保存的选择选中对应项（0 自动 / 1 GPU / 2 CPU）
+            _suppressLocalModelDeviceEvents = true;
+            LocalModelDeviceComboBox.SelectedIndex = SettingsService.Instance.LocalModelDevice switch
+            {
+                InferenceDevice.Gpu => 1,
+                InferenceDevice.Cpu => 2,
+                _ => 0
+            };
+            _suppressLocalModelDeviceEvents = false;
 
             // 主动搭话：读取总开关与各项参数（控件事件在此期间忽略）
             _suppressProactiveEvents = true;
@@ -882,6 +893,25 @@ namespace KfuPet.Views
             ShowModelConfigHomePage();
         }
 
+        /// <summary>推理设备下拉：0 自动 / 1 GPU / 2 CPU，切换后写入设置，下次加载模型时生效。</summary>
+        private void LocalModelDeviceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressLocalModelDeviceEvents)
+            {
+                return;
+            }
+
+            var device = LocalModelDeviceComboBox.SelectedIndex switch
+            {
+                1 => InferenceDevice.Gpu,
+                2 => InferenceDevice.Cpu,
+                _ => InferenceDevice.Auto
+            };
+
+            SettingsService.Instance.SetLocalModelDevice(device);
+            Log.Info($"[本地模型] 推理设备已切换：{device}");
+        }
+
         /// <summary>右上角“模型下载”：打开独立的模型下载窗口，关闭后刷新已下载列表。</summary>
         private void LocalModelDownloadButton_Click(object sender, RoutedEventArgs e)
         {
@@ -965,8 +995,8 @@ namespace KfuPet.Views
                 : Visibility.Collapsed;
         }
 
-        /// <summary>启用开关切换：勾选表示启用该本地模型，取消勾选表示不启用任何本地模型。</summary>
-        private void OnLocalModelToggleChanged(ListBoxItem item, bool isChecked)
+        /// <summary>启用开关切换：勾选启用该模型（首次调用时后台加载），取消勾选立即释放并停用。</summary>
+        private async void OnLocalModelToggleChanged(ListBoxItem item, bool isChecked)
         {
             if (_suppressLocalModelToggleEvents || item.Tag is not DeployedModel model)
             {
@@ -975,13 +1005,31 @@ namespace KfuPet.Views
 
             if (isChecked)
             {
-                _localModelDeployment.SetActive(model.FileName);
-                Log.Info($"[本地模型] 已启用：{model.ModelName}");
+                // EnableAsync 会同步写入新的启用项；先刷新开关，避免两个模型同时显示开启
+                var enableTask = LocalModelService.Instance.EnableAsync(model.FileName);
+                RefreshLocalModelToggles();
+                RefreshLocalModelSummary();
+
+                var loaded = await enableTask;
+
+                // 仅当模型仍是当前启用项时才提示加载失败；用户中途切走/停用则不需要打扰
+                var active = LocalModelService.Instance.GetActiveModel();
+                if (!loaded && active != null &&
+                    string.Equals(active.FileName, model.FileName, StringComparison.OrdinalIgnoreCase))
+                {
+                    new MessageDialog(
+                        "本地模型",
+                        $"{model.ModelName} 加载失败，详见日志。\n\n可关闭开关后重新开启重试。",
+                        MessageDialogKind.Error,
+                        "知道了")
+                    {
+                        Owner = this
+                    }.Show();
+                }
             }
             else
             {
-                _localModelDeployment.ClearActive();
-                Log.Info($"[本地模型] 已停用：{model.ModelName}");
+                await LocalModelService.Instance.DisableAsync();
             }
 
             RefreshLocalModelToggles();
@@ -1018,10 +1066,10 @@ namespace KfuPet.Views
             dialog.Show();
         }
 
-        /// <summary>确认删除后执行：后台删除模型文件，卡片淡出后从列表移除。</summary>
+        /// <summary>确认删除后执行：先释放运行时（若该模型正在使用），后台删除文件，卡片淡出后从列表移除。</summary>
         private async void RemoveLocalModelCardConfirmed(ListBoxItem item, DeployedModel model)
         {
-            await Task.Run(() => _localModelDeployment.DeleteFiles(model));
+            await LocalModelService.Instance.DeleteModelAsync(model);
             Log.Info($"[本地模型] 已删除：{model.ModelName}");
 
             var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(200))
