@@ -28,6 +28,9 @@ namespace KfuPet.Services
         /// <summary>日志目录（KfuPet-*.log）。</summary>
         public static string LogsDirectory { get; } = Path.Combine(CacheRoot, "Logs");
 
+        /// <summary>本地模型默认存放目录（缓存根目录下的 Models；可在设置里改到其他磁盘）。</summary>
+        public static string ModelsDirectory { get; } = Path.Combine(CacheRoot, "Models");
+
         /// <summary>
         /// 把缓存根目录写入注册表：等于默认目录时删除记录（恢复默认），否则写入自定义路径。
         /// 返回值表示是否写入成功。

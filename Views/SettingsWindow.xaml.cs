@@ -62,6 +62,10 @@ namespace KfuPet.Views
         private DateTime _lastVersionBadgeClickTime;
         private DispatcherTimer? _toastHideTimer;
 
+        private readonly LocalModelDeploymentService _localModelDeployment = new();
+        private LocalModelDownloadWindow? _localModelDownloadWindow;
+        private bool _suppressLocalModelToggleEvents;
+
         private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
 
         public SettingsWindow(MainWindow mainWindow)
@@ -131,6 +135,7 @@ namespace KfuPet.Views
             UpdateCustomSavingOptionsVisibility();
             UpdateMemoryTriggerCardVisibility();
             RefreshSavingModeSummary();
+            RefreshLocalModelSummary();
 
             // 主动搭话：读取总开关与各项参数（控件事件在此期间忽略）
             _suppressProactiveEvents = true;
@@ -458,7 +463,12 @@ namespace KfuPet.Views
             ShowOnlyPanel(currentPanel);
             PlayPageEnterAnimation(currentPanel);
 
-            // 重新进入「桌宠功能」页时回到一级页，避免仍停在「节省模型消耗」二级页
+            // 重新进入页面时回到一级页：桌宠功能页避免停在“节省模型消耗”，模型页避免停在“本地模型配置”
+            if (NavList.SelectedIndex == 2)
+            {
+                ShowModelConfigHomePage();
+            }
+
             if (NavList.SelectedIndex == 3)
             {
                 ShowFeaturesHomePage();
@@ -803,6 +813,22 @@ namespace KfuPet.Views
             ModelFeaturesPanel.ScrollToTop();
         }
 
+        /// <summary>恢复「模型」一级页：标题、添加按钮与模型列表；离开或重新进入该页时也会调用。</summary>
+        private void ShowModelConfigHomePage()
+        {
+            if (LocalModelDetailContent.Visibility != Visibility.Visible)
+            {
+                return;
+            }
+
+            LocalModelDetailContent.Visibility = Visibility.Collapsed;
+            ModelConfigHeader.Visibility = Visibility.Visible;
+            ModelList.Visibility = Visibility.Visible;
+            UpdateModelListVisibility();
+            LocalModelEntryCard.Visibility = Visibility.Visible;
+            ModelConfigPanel.ScrollToTop();
+        }
+
         /// <summary>同步入口卡片上的当前档位摘要，不进入二级页也能确认节省是否已开启。</summary>
         private void RefreshSavingModeSummary()
         {
@@ -812,6 +838,209 @@ namespace KfuPet.Views
                 SavingMode.Custom => "自定义：逐项选择每个功能是否使用 AI 生成",
                 _ => "已关闭：当前全部由 AI 生成"
             };
+        }
+
+        /// <summary>同步入口卡片上的本地模型摘要：尚未下载、已下载数量或当前启用的模型。</summary>
+        private void RefreshLocalModelSummary()
+        {
+            var downloaded = _localModelDeployment.LoadAll();
+            if (downloaded.Count == 0)
+            {
+                LocalModelSummaryText.Text = "尚未下载本地模型";
+                return;
+            }
+
+            var active = _localModelDeployment.LoadActive();
+            LocalModelSummaryText.Text = active != null
+                ? $"已启用：{active.ModelName}"
+                : $"已下载 {downloaded.Count} 个本地模型，未启用";
+        }
+
+        /// <summary>点击「本地模型配置」入口卡片进入二级页：隐藏模型页一级内容，只显示本地模型列表。</summary>
+        private void LocalModelEntryCard_Click(object sender, RoutedEventArgs e)
+        {
+            if (LocalModelDetailContent.Visibility == Visibility.Visible)
+            {
+                return;
+            }
+
+            LoadLocalModels();
+
+            ModelConfigHeader.Visibility = Visibility.Collapsed;
+            ModelList.Visibility = Visibility.Collapsed;
+            ModelEmptyText.Visibility = Visibility.Collapsed;
+            LocalModelEntryCard.Visibility = Visibility.Collapsed;
+
+            LocalModelDetailContent.Visibility = Visibility.Visible;
+            PlayPageEnterAnimation(LocalModelDetailContent);
+            ModelConfigPanel.ScrollToTop();
+        }
+
+        /// <summary>本地模型二级页左上角「返回」：恢复「模型」一级页内容。</summary>
+        private void LocalModelDetailBackButton_Click(object sender, RoutedEventArgs e)
+        {
+            ShowModelConfigHomePage();
+        }
+
+        /// <summary>右上角“模型下载”：打开独立的模型下载窗口，关闭后刷新已下载列表。</summary>
+        private void LocalModelDownloadButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_localModelDownloadWindow != null)
+            {
+                _localModelDownloadWindow.Activate();
+                return;
+            }
+
+            _localModelDownloadWindow = new LocalModelDownloadWindow { Owner = this };
+            _localModelDownloadWindow.Closed += (s, args) =>
+            {
+                _localModelDownloadWindow = null;
+                LoadLocalModels();
+            };
+            _localModelDownloadWindow.Show();
+        }
+
+        /// <summary>重新加载已下载模型列表，并同步各卡片的启用开关。</summary>
+        private void LoadLocalModels()
+        {
+            LocalModelList.Items.Clear();
+
+            var active = _localModelDeployment.LoadActive();
+            foreach (var model in _localModelDeployment.LoadAll())
+            {
+                var isActive = active != null &&
+                               string.Equals(active.FileName, model.FileName, StringComparison.OrdinalIgnoreCase);
+                AddLocalModelCard(model, isActive);
+            }
+
+            UpdateLocalModelEmptyVisibility();
+            RefreshLocalModelSummary();
+        }
+
+        /// <summary>向列表添加一张本地模型卡片，并绑定删除按钮与启用开关事件。</summary>
+        private void AddLocalModelCard(DeployedModel model, bool isActive)
+        {
+            var item = new ListBoxItem
+            {
+                Tag = model,
+                DataContext = model,
+                RenderTransform = new TranslateTransform()
+            };
+
+            // 等模板应用后再找删除按钮与开关并挂事件
+            item.Loaded += (s, e) =>
+            {
+                if (item.Template.FindName("LocalModelDeleteButton", item) is Button deleteButton)
+                {
+                    deleteButton.Click += (s2, e2) => RemoveLocalModelCard(item);
+                }
+
+                if (item.Template.FindName("LocalModelToggle", item) is ToggleButton toggle)
+                {
+                    toggle.IsChecked = isActive;
+                    toggle.Checked += (s2, e2) => OnLocalModelToggleChanged(item, true);
+                    toggle.Unchecked += (s2, e2) => OnLocalModelToggleChanged(item, false);
+                }
+            };
+
+            LocalModelList.Items.Add(item);
+
+            // 入场动画
+            item.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+
+            if (item.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(240)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            }
+        }
+
+        /// <summary>根据列表是否为空切换空状态提示的显示。</summary>
+        private void UpdateLocalModelEmptyVisibility()
+        {
+            LocalModelEmptyText.Visibility = LocalModelList.Items.Count == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        /// <summary>启用开关切换：勾选表示启用该本地模型，取消勾选表示不启用任何本地模型。</summary>
+        private void OnLocalModelToggleChanged(ListBoxItem item, bool isChecked)
+        {
+            if (_suppressLocalModelToggleEvents || item.Tag is not DeployedModel model)
+            {
+                return;
+            }
+
+            if (isChecked)
+            {
+                _localModelDeployment.SetActive(model.FileName);
+                Log.Info($"[本地模型] 已启用：{model.ModelName}");
+            }
+            else
+            {
+                _localModelDeployment.ClearActive();
+                Log.Info($"[本地模型] 已停用：{model.ModelName}");
+            }
+
+            RefreshLocalModelToggles();
+            RefreshLocalModelSummary();
+        }
+
+        /// <summary>依据部署记录刷新所有卡片的开关显示（同一时间只有一个模型启用）。</summary>
+        private void RefreshLocalModelToggles()
+        {
+            _suppressLocalModelToggleEvents = true;
+            var active = _localModelDeployment.LoadActive();
+            foreach (var item in LocalModelList.Items.OfType<ListBoxItem>())
+            {
+                if (item.Template.FindName("LocalModelToggle", item) is ToggleButton toggle)
+                {
+                    toggle.IsChecked = active != null && item.Tag is DeployedModel model &&
+                                       string.Equals(active.FileName, model.FileName, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            _suppressLocalModelToggleEvents = false;
+        }
+
+        /// <summary>删除本地模型：先弹确认对话框，确认后删除模型文件与部署记录。</summary>
+        private void RemoveLocalModelCard(ListBoxItem item)
+        {
+            if (item.Tag is not DeployedModel model)
+            {
+                return;
+            }
+
+            var dialog = new DeleteModelDialog($"{model.ModelName}（含本地模型文件）");
+            dialog.DeleteConfirmed += () => RemoveLocalModelCardConfirmed(item, model);
+            // 用非模态 Show()：ShowDialog 会禁用同一线程上的所有窗口（含桌宠），导致桌宠无法点击拖动
+            dialog.Show();
+        }
+
+        /// <summary>确认删除后执行：后台删除模型文件，卡片淡出后从列表移除。</summary>
+        private async void RemoveLocalModelCardConfirmed(ListBoxItem item, DeployedModel model)
+        {
+            await Task.Run(() => _localModelDeployment.DeleteFiles(model));
+            Log.Info($"[本地模型] 已删除：{model.ModelName}");
+
+            var fadeOut = new DoubleAnimation(0, TimeSpan.FromMilliseconds(200))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            fadeOut.Completed += (s, e) =>
+            {
+                LocalModelList.Items.Remove(item);
+                UpdateLocalModelEmptyVisibility();
+                RefreshLocalModelToggles();
+                RefreshLocalModelSummary();
+            };
+            item.BeginAnimation(OpacityProperty, fadeOut);
+
+            if (item.RenderTransform is TranslateTransform translate)
+            {
+                translate.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(0, -8, TimeSpan.FromMilliseconds(200)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } });
+            }
         }
 
         /// <summary>

@@ -172,6 +172,9 @@ namespace KfuPet.Services
         /// </summary>
         public bool OpenAppFullAccess { get; private set; }
 
+        /// <summary>本地模型存放目录；空串表示尚未自定义，使用缓存根目录下的 Models。</summary>
+        public string LocalModelDirectory { get; private set; } = string.Empty;
+
         private SettingsService()
         {
             ApplyDefaults();
@@ -231,6 +234,7 @@ namespace KfuPet.Services
             OpenAppEnabled = false;
             AllowedApps = Array.Empty<AllowedAppEntry>();
             OpenAppFullAccess = false;
+            LocalModelDirectory = string.Empty;
         }
 
         /// <summary>保存用户的外观选择：true 深色，false 浅色，null 跟随系统。</summary>
@@ -400,6 +404,13 @@ namespace KfuPet.Services
         public void SetOpenAppFullAccess(bool enabled)
         {
             OpenAppFullAccess = enabled;
+            Save();
+        }
+
+        /// <summary>保存本地模型存放目录；传入空串表示恢复使用默认目录。</summary>
+        public void SetLocalModelDirectory(string path)
+        {
+            LocalModelDirectory = path?.Trim() ?? string.Empty;
             Save();
         }
 
@@ -601,6 +612,12 @@ namespace KfuPet.Services
 
                     AllowedApps = apps;
                 }
+
+                if (root.TryGetProperty("LocalModelDirectory", out var localModelDirectoryElement) &&
+                    localModelDirectoryElement.ValueKind == JsonValueKind.String)
+                {
+                    LocalModelDirectory = localModelDirectoryElement.GetString()?.Trim() ?? string.Empty;
+                }
             }
             catch (Exception ex)
             {
@@ -641,7 +658,8 @@ namespace KfuPet.Services
                     ForegroundAppContextEnabled,
                     OpenAppEnabled,
                     OpenAppFullAccess,
-                    AllowedApps
+                    AllowedApps,
+                    LocalModelDirectory
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

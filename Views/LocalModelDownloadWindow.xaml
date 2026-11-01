@@ -1,0 +1,435 @@
+<Window x:Class="KfuPet.Views.LocalModelDownloadWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="模型下载"
+        Width="720" Height="700"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        Background="{x:Null}">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="LocalModelBoolToVis"/>
+
+        <!-- 可下载模型列表项：圆角卡片，悬停描边加深，选中时描边强调色 -->
+        <Style x:Key="DownloadModelItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="DownloadModelCard"
+                                Background="{DynamicResource AppBackgroundBrush}"
+                                BorderBrush="{DynamicResource AppBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="12,10">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="DownloadModelCard"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource AppTextDisabledBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="DownloadModelCard"
+                                        Property="Background"
+                                        Value="{DynamicResource AppSurfaceBrush}"/>
+                                <Setter TargetName="DownloadModelCard"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource AppAccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDownloaded}" Value="True">
+                    <Setter Property="IsEnabled" Value="False"/>
+                    <Setter Property="Opacity" Value="0.55"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate x:Key="DownloadModelTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Name}"
+                                   FontFamily="{StaticResource FontFamilyBody}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   FontWeight="{StaticResource FontWeightSemiBold}"
+                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+
+                        <Border Background="{DynamicResource AppBorderBrush}"
+                                CornerRadius="4"
+                                Padding="6,1"
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding ShowDefaultBadge, Converter={StaticResource LocalModelBoolToVis}}">
+                            <TextBlock Text="默认"
+                                       FontSize="{StaticResource FontSizeIconTiny}"
+                                       Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                        </Border>
+
+                        <Border Background="{DynamicResource AppBorderBrush}"
+                                CornerRadius="4"
+                                Padding="6,1"
+                                Margin="6,0,0,0"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding ShowRecommendedBadge, Converter={StaticResource LocalModelBoolToVis}}">
+                            <TextBlock Text="推荐"
+                                       FontSize="{StaticResource FontSizeIconTiny}"
+                                       Foreground="{DynamicResource AppInfoBrush}"/>
+                        </Border>
+
+                        <Border Background="{DynamicResource AppBorderBrush}"
+                                CornerRadius="4"
+                                Padding="6,1"
+                                Margin="6,0,0,0"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding ShowDownloadedBadge, Converter={StaticResource LocalModelBoolToVis}}">
+                            <TextBlock Text="已下载"
+                                       FontSize="{StaticResource FontSizeIconTiny}"
+                                       Foreground="{DynamicResource AppTextDisabledBrush}"/>
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock Margin="0,4,0,0"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource AppTextSecondaryBrush}">
+                        <Run Text="{Binding Parameters, Mode=OneWay}"/> 参数 ·
+                        <Run Text="{Binding Quantization, Mode=OneWay}"/> · 下载
+                        <Run Text="{Binding SizeText, Mode=OneWay}"/>
+                    </TextBlock>
+
+                    <TextBlock Text="{Binding RequirementText}"
+                               Margin="0,2,0,0"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{DynamicResource AppTextDisabledBrush}"/>
+                </StackPanel>
+
+                <TextBlock x:Name="DownloadModelStatusText"
+                           Grid.Column="1"
+                           Text="{Binding StatusText}"
+                           FontFamily="{StaticResource FontFamilyBody}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           Foreground="{DynamicResource AppAccentBrush}"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0"/>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding StatusText}" Value="可运行（配置偏低）">
+                    <Setter TargetName="DownloadModelStatusText"
+                            Property="Foreground"
+                            Value="#D97706"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusText}" Value="配置不足">
+                    <Setter TargetName="DownloadModelStatusText"
+                            Property="Foreground"
+                            Value="{DynamicResource AppTextDisabledBrush}"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- 下载进度条：细长圆角，绿色进度 -->
+        <Style x:Key="DownloadProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="6"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppSuccessBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}" CornerRadius="3"/>
+                            <Grid x:Name="PART_Track">
+                                <Border x:Name="PART_Indicator"
+                                        Background="{TemplateBinding Foreground}"
+                                        CornerRadius="3"
+                                        HorizontalAlignment="Left"/>
+                            </Grid>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- 圆角卡片：Margin 为投影留出空间 -->
+    <Border Margin="16"
+            Background="{DynamicResource AppBackgroundBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="12">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.35" Color="Black"/>
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 标题栏 -->
+            <Border Grid.Row="0"
+                    Background="Transparent"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <TextBlock Text="模型下载"
+                               Margin="16,0,0,0"
+                               VerticalAlignment="Center"
+                               FontFamily="{StaticResource FontFamilyBody}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               FontWeight="{StaticResource FontWeightSemiBold}"
+                               Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                    <Button Style="{StaticResource DialogCloseButtonStyle}"
+                            HorizontalAlignment="Right"
+                            Click="CloseButton_Click"/>
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Row="1"
+                          Style="{StaticResource OverlayScrollViewerStyle}"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="16,12,16,16">
+                    <!-- 硬件信息 -->
+                    <Border Padding="12,10"
+                            Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                <TextBlock Text="显卡"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                <TextBlock x:Name="HardwareGpuText"
+                                           Margin="0,4,0,0"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           FontWeight="{StaticResource FontWeightSemiBold}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="HardwareVramText"
+                                           Margin="0,3,0,0"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                <TextBlock Text="内存"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                <TextBlock x:Name="HardwareRamText"
+                                           Margin="0,4,0,0"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           FontWeight="{StaticResource FontWeightSemiBold}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="处理器"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                <TextBlock x:Name="HardwareCpuText"
+                                           Margin="0,4,0,0"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           FontWeight="{StaticResource FontWeightSemiBold}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- 存储位置 -->
+                    <Border Margin="0,8,0,0"
+                            Padding="12,10"
+                            Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                <TextBlock Text="存储位置"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                <TextBlock x:Name="StoragePathText"
+                                           Margin="0,2,0,0"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+
+                            <Button x:Name="ChooseFolderButton"
+                                    Grid.Column="1"
+                                    Style="{StaticResource DialogButtonStyle}"
+                                    Padding="12,5"
+                                    VerticalAlignment="Center"
+                                    Click="ChooseFolderButton_Click">
+                                <TextBlock Text="更改目录"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- 可下载模型 -->
+                    <Border Margin="0,8,0,0"
+                            Padding="12,10"
+                            Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="10">
+                        <StackPanel>
+                            <TextBlock Text="可下载模型"
+                                       Margin="0,0,0,8"
+                                       FontFamily="{StaticResource FontFamilyBody}"
+                                       FontSize="{StaticResource FontSizeBody}"
+                                       FontWeight="{StaticResource FontWeightSemiBold}"
+                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+
+                            <ListBox x:Name="ModelOptionList"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                     ItemContainerStyle="{StaticResource DownloadModelItemStyle}"
+                                     ItemTemplate="{StaticResource DownloadModelTemplate}"
+                                     SelectionChanged="ModelOptionList_SelectionChanged"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 下载进度 -->
+                    <Border x:Name="DownloadPanel"
+                            Margin="0,8,0,0"
+                            Visibility="Collapsed"
+                            Padding="12,10"
+                            Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="10">
+                        <StackPanel>
+                            <Grid>
+                                <TextBlock x:Name="ProgressTitleText"
+                                           Text="正在下载模型…"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           FontWeight="{StaticResource FontWeightSemiBold}"
+                                           Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                <TextBlock x:Name="ProgressPercentText"
+                                           Text="0%"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           FontWeight="{StaticResource FontWeightSemiBold}"
+                                           Foreground="{DynamicResource AppAccentBrush}"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <ProgressBar x:Name="DownloadProgressBar"
+                                         Style="{StaticResource DownloadProgressBarStyle}"
+                                         Minimum="0"
+                                         Maximum="100"
+                                         Value="0"
+                                         Margin="0,8,0,6"/>
+
+                            <Grid>
+                                <TextBlock x:Name="ProgressDetailText"
+                                           Text="准备中…"
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                                <TextBlock x:Name="ProgressSpeedText"
+                                           Text=""
+                                           FontFamily="{StaticResource FontFamilyBody}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 底部操作：选中的模型 + 下载按钮 -->
+                    <Grid Margin="0,12,0,0">
+                        <TextBlock x:Name="SelectionText"
+                                   Text="尚未选择模型"
+                                   FontFamily="{StaticResource FontFamilyBody}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+
+                        <Button x:Name="DownloadButton"
+                                HorizontalAlignment="Right"
+                                Padding="18,9"
+                                Background="{DynamicResource AppSuccessBrush}"
+                                Foreground="{DynamicResource AppSuccessForegroundBrush}"
+                                Cursor="Hand"
+                                FocusVisualStyle="{x:Null}"
+                                Click="DownloadButton_Click">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="DownloadButtonBg"
+                                            Background="{TemplateBinding Background}"
+                                            CornerRadius="8"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="DownloadButtonBg"
+                                                    Property="Background"
+                                                    Value="{DynamicResource AppSuccessHoverBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+
+                            <TextBlock x:Name="DownloadButtonText"
+                                       Text="下载并配置"
+                                       FontFamily="{StaticResource FontFamilyBody}"
+                                       FontSize="{StaticResource FontSizeBody}"
+                                       FontWeight="{StaticResource FontWeightSemiBold}"
+                                       Foreground="{DynamicResource AppSuccessForegroundBrush}"/>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</Window>
