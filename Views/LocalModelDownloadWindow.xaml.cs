@@ -10,6 +10,9 @@ namespace KfuPet.Views
     /// <summary>模型下载窗口：按本机配置推荐三档模型，下载 GGUF 文件并写入部署记录。</summary>
     public partial class LocalModelDownloadWindow : Window
     {
+        /// <summary>下载前磁盘空间检查预留的余量（256 MB），避免把磁盘写满。</summary>
+        private const long DiskSafetyMarginBytes = 256L * 1024 * 1024;
+
         private readonly LocalModelDeploymentService _deployment = new();
         private readonly HardwareInfo _hardware;
         private string _modelDirectory = LocalModelDeploymentService.ResolveDirectory();
@@ -198,9 +201,29 @@ namespace KfuPet.Views
             CreateDialog(title, message, kind, confirmText).Show();
         }
 
-        /// <summary>下载并写入部署记录：进度实时显示，失败按多个地址回退，取消时清理临时文件。</summary>
+        /// <summary>下载并写入部署记录：空间预检、断点续传、SHA256 校验，失败按多个地址回退。</summary>
         private async Task DownloadAsync(LocalModelOption option)
         {
+            var targetPath = _deployment.GetTargetPath(option, _modelDirectory);
+            var partPath = LocalModelDownloadService.GetPartPath(targetPath);
+            var resumedBytes = File.Exists(partPath) ? new FileInfo(partPath).Length : 0;
+
+            // 先检查剩余空间，不够就直接提示，避免下到一半才失败
+            var requiredBytes = LocalModelDownloadService.GetRemainingBytes(option, targetPath);
+            var availableBytes = LocalModelDownloadService.GetAvailableBytes(targetPath);
+            if (availableBytes >= 0 && availableBytes < requiredBytes + DiskSafetyMarginBytes)
+            {
+                Log.Warning($"[本地模型] 磁盘空间不足：还需要 {requiredBytes} 字节，剩余 {availableBytes} 字节");
+                ShowMessage(
+                    "磁盘空间不足",
+                    $"下载 {option.Name} 还需要约 {FormatSpace(requiredBytes)}，" +
+                    $"但保存目录所在磁盘仅剩 {FormatSpace(availableBytes)}。\n\n" +
+                    "请清理磁盘空间或更换存放目录后重试。",
+                    MessageDialogKind.Warning,
+                    "知道了");
+                return;
+            }
+
             _downloading = true;
             _downloadCts = new CancellationTokenSource();
 
@@ -211,11 +234,13 @@ namespace KfuPet.Views
             ProgressTitleText.Text = $"正在下载 {option.Name}";
             DownloadProgressBar.Value = 0;
             ProgressPercentText.Text = "0%";
-            ProgressDetailText.Text = "正在连接下载地址…";
+            ProgressDetailText.Text = resumedBytes > 0
+                ? $"检测到未完成的下载，从 {FormatSpace(resumedBytes)} 处继续…"
+                : "正在连接下载地址…";
             ProgressSpeedText.Text = string.Empty;
 
-            var targetPath = _deployment.GetTargetPath(option, _modelDirectory);
-            Log.Info($"[本地模型] 开始下载：{option.Name}（{option.SizeText}）→ {targetPath}");
+            Log.Info($"[本地模型] 开始下载：{option.Name}（{option.SizeText}）→ {targetPath}" +
+                     (resumedBytes > 0 ? $"，断点 {FormatSpace(resumedBytes)}" : string.Empty));
             var progress = new Progress<DownloadProgress>(value =>
             {
                 DownloadProgressBar.Value = value.Percent;
@@ -264,13 +289,18 @@ namespace KfuPet.Views
             catch (OperationCanceledException)
             {
                 ResetDownloadUi();
-                ShowMessage("取消下载", "下载已取消，临时文件已清理。", MessageDialogKind.Info, "知道了");
+                ShowMessage("取消下载", "下载已取消，断点已保存，下次下载会从中断处继续。",
+                    MessageDialogKind.Info, "知道了");
             }
             catch (Exception ex)
             {
                 ResetDownloadUi();
                 Log.Error($"[本地模型] 下载失败：{ex.Message}");
-                ShowMessage("下载失败", $"模型下载失败：\n{ex.Message}\n\n可以稍后重试。", MessageDialogKind.Error, "知道了");
+                var hint = File.Exists(partPath)
+                    ? "已保留下载进度，重试时会自动续传。"
+                    : "可以稍后重试。";
+                ShowMessage("下载失败", $"模型下载失败：\n{ex.Message}\n\n{hint}",
+                    MessageDialogKind.Error, "知道了");
             }
             finally
             {
@@ -286,6 +316,14 @@ namespace KfuPet.Views
             DownloadButtonText.Text = "下载并配置";
             ModelOptionList.IsEnabled = true;
             ChooseFolderButton.IsEnabled = true;
+        }
+
+        /// <summary>把字节数格式化为空间提示文本（GB / MB）。</summary>
+        private static string FormatSpace(long bytes)
+        {
+            return bytes >= 1024L * 1024 * 1024
+                ? $"{bytes / 1024d / 1024d / 1024d:0.0} GB"
+                : $"{bytes / 1024d / 1024d:0.0} MB";
         }
 
         /// <summary>下载过程中禁止关闭窗口，先取消下载再退出。</summary>
