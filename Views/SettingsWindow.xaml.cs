@@ -67,6 +67,7 @@ namespace KfuPet.Views
         private bool _suppressLocalModelToggleEvents;
         private bool _suppressLocalModelDeviceEvents;
         private bool _localDisablePromptOpen;
+        private bool _localSwitchPromptOpen;
 
         private ModelConfigService ModelConfigService => _mainWindow.ModelConfigService;
 
@@ -1145,7 +1146,7 @@ namespace KfuPet.Views
                 : Visibility.Collapsed;
         }
 
-        /// <summary>启用开关切换：勾选启用该模型（首次调用时后台加载），取消勾选立即释放并停用。</summary>
+        /// <summary>启用开关切换：勾选启用该模型（立即加载），取消勾选立即释放并停用。</summary>
         private async void OnLocalModelToggleChanged(ListBoxItem item, bool isChecked)
         {
             if (_suppressLocalModelToggleEvents || item.Tag is not DeployedModel model)
@@ -1155,35 +1156,120 @@ namespace KfuPet.Views
 
             if (isChecked)
             {
-                // EnableAsync 会同步写入新的启用项；先刷新开关，避免两个模型同时显示开启
-                var enableTask = LocalModelService.Instance.EnableAsync(model.FileName);
-                RefreshLocalModelToggles();
-                RefreshLocalModelSummary();
-
-                var loaded = await enableTask;
-
-                // 仅当模型仍是当前启用项时才提示加载失败；用户中途切走/停用则不需要打扰
-                var active = LocalModelService.Instance.GetActiveModel();
-                if (!loaded && active != null &&
-                    string.Equals(active.FileName, model.FileName, StringComparison.OrdinalIgnoreCase))
+                // 切换启用模型前先检查：已设为“本地模型”的功能是否会被新模型降级到云端
+                var unsupported = GetLocalFunctionsUnsupportedBy(model);
+                if (unsupported.Count > 0)
                 {
-                    new MessageDialog(
-                        "本地模型",
-                        $"{model.ModelName} 加载失败，详见日志。\n\n可关闭开关后重新开启重试。",
-                        MessageDialogKind.Error,
-                        "知道了")
-                    {
-                        Owner = this
-                    }.Show();
+                    PromptUnsupportedLocalFunctions(model, unsupported);
+                    return;
                 }
+
+                await EnableLocalModelAsync(model);
+                return;
             }
-            else
+
+            await LocalModelService.Instance.DisableAsync();
+            RefreshLocalModelToggles();
+            RefreshLocalModelSummary();
+        }
+
+        /// <summary>真正执行启用：写入启用项并立即加载，加载失败且仍是当前启用项时提示用户。</summary>
+        private async Task EnableLocalModelAsync(DeployedModel model)
+        {
+            // EnableAsync 会同步写入新的启用项；先刷新开关，避免两个模型同时显示开启
+            var enableTask = LocalModelService.Instance.EnableAsync(model.FileName);
+            RefreshLocalModelToggles();
+            RefreshLocalModelSummary();
+
+            var loaded = await enableTask;
+
+            // 仅当模型仍是当前启用项时才提示加载失败；用户中途切走/停用则不需要打扰
+            var active = LocalModelService.Instance.GetActiveModel();
+            if (!loaded && active != null &&
+                string.Equals(active.FileName, model.FileName, StringComparison.OrdinalIgnoreCase))
             {
-                await LocalModelService.Instance.DisableAsync();
+                new MessageDialog(
+                    "本地模型",
+                    $"{model.ModelName} 加载失败，详见日志。\n\n可关闭开关后重新开启重试。",
+                    MessageDialogKind.Error,
+                    "知道了")
+                {
+                    Owner = this
+                }.Show();
             }
 
             RefreshLocalModelToggles();
             RefreshLocalModelSummary();
+        }
+
+        /// <summary>列出当前设为“本地模型”、但指定模型不支持的功能名称（1.7B 不支持信息提取与多条总结）。</summary>
+        private static IReadOnlyList<string> GetLocalFunctionsUnsupportedBy(DeployedModel model)
+        {
+            var kinds = new[]
+            {
+                ModelCallKind.TouchReaction,
+                ModelCallKind.UpdateNotification,
+                ModelCallKind.SnapBack,
+                ModelCallKind.ProactiveChat,
+                ModelCallKind.EmotionJudge,
+                ModelCallKind.MemoryExtraction,
+                ModelCallKind.MemoryArchiveExtraction,
+                ModelCallKind.MemoryScoring,
+                ModelCallKind.MemorySummary
+            };
+
+            return kinds
+                .Where(kind => SettingsService.Instance.GetModelSource(kind) == ModelCallSource.Local)
+                .Where(kind => !CanLocalModelHandle(kind, model))
+                .Select(GetKindDisplayName)
+                .ToList();
+        }
+
+        /// <summary>
+        /// 切换启用模型前的提示：新模型不支持某些已设为本地的功能。
+        /// 确认后照常启用（运行时自动回退云端），取消则把开关恢复为当前启用项。
+        /// </summary>
+        private void PromptUnsupportedLocalFunctions(DeployedModel model, IReadOnlyList<string> unsupported)
+        {
+            if (_localSwitchPromptOpen)
+            {
+                RefreshLocalModelToggles();
+                return;
+            }
+
+            var hasCloudModel = ModelConfigService.Models.Any(m => m.IsActive);
+            var consequence = hasCloudModel
+                ? "启用后，这些功能会自动回退到云端模型（会消耗云端 token）。"
+                : "当前没有启用中的云端模型，这些功能会退回角色包文案，不再请求模型。";
+
+            Log.Warning($"[本地模型] 切换 {model.ModelName} 前发现不支持的功能：{string.Join("、", unsupported)}");
+
+            var dialog = new MessageDialog(
+                "本地模型",
+                $"即将启用 {model.ModelName}。\n\n" +
+                $"该模型不支持以下功能的本地运行：\n{string.Join("、", unsupported)}\n\n" +
+                $"{consequence}\n\n是否继续启用？",
+                MessageDialogKind.Warning,
+                "继续启用",
+                showCancel: true,
+                cancelText: "取消")
+            {
+                Owner = this
+            };
+
+            _localSwitchPromptOpen = true;
+            dialog.Closed += (s, e) =>
+            {
+                _localSwitchPromptOpen = false;
+
+                // 取消时开关已被点成开启状态，这里恢复为当前真实的启用项
+                RefreshLocalModelToggles();
+                RefreshLocalModelSummary();
+            };
+
+            dialog.Confirmed += () => _ = EnableLocalModelAsync(model);
+
+            dialog.Show();
         }
 
         /// <summary>开关点击前拦截：有功能使用本地模型时先弹确认，不让开关先变成关闭状态。</summary>
