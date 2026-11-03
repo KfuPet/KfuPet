@@ -181,6 +181,99 @@ namespace KfuPet.Services
         }
 
         /// <summary>
+        /// 找出与给定内容相似、但尚未达到本地自动合并阈值的记忆（灰区候选），
+        /// 供上层交给模型判断是否同一事实。已完成本地判定的重复不会返回。
+        /// </summary>
+        /// <param name="content">待写入的新记忆内容。</param>
+        /// <param name="minSimilarity">候选的最低二元组相似度，低于该值视为全新信息。</param>
+        /// <param name="maxCount">最多返回的候选条数。</param>
+        public IReadOnlyList<MemoryEntry> FindNearDuplicateCandidates(
+            string content, double minSimilarity, int maxCount)
+        {
+            if (maxCount <= 0)
+            {
+                return Array.Empty<MemoryEntry>();
+            }
+
+            var normalized = NormalizeForCompare(content);
+            if (normalized.Length < MinSimilarityLength)
+            {
+                return Array.Empty<MemoryEntry>();
+            }
+
+            lock (_lock)
+            {
+                var matches = new List<(MemoryEntry Entry, double Similarity)>();
+                foreach (var existing in _entries)
+                {
+                    var existingNormalized = NormalizeForCompare(existing.Content);
+
+                    // 本地已能判定为同一事实的，交给 StoreAsync 自动合并，不必再问模型
+                    if (IsSameFact(normalized, existingNormalized))
+                    {
+                        continue;
+                    }
+
+                    var similarity = BigramSimilarity(normalized, existingNormalized);
+                    if (similarity >= minSimilarity)
+                    {
+                        matches.Add((existing, similarity));
+                    }
+                }
+
+                return matches
+                    .OrderByDescending(m => m.Similarity)
+                    .Take(maxCount)
+                    .Select(m => m.Entry)
+                    .ToList();
+            }
+        }
+
+        /// <summary>判断指定 id 的记忆是否仍然存在（模型判定期间可能被压缩或手动删除）。</summary>
+        public bool ContainsId(string id)
+        {
+            lock (_lock)
+            {
+                return _entries.Any(e => e.Id == id);
+            }
+        }
+
+        /// <summary>
+        /// 模型确认两条记忆为同一事实时，若新内容更完整则替换旧内容，重要性取较高者。
+        /// 返回是否发生了替换。
+        /// </summary>
+        public bool ReplaceIfMoreComplete(string id, string content, int importance)
+        {
+            content = content.Trim();
+            if (string.IsNullOrEmpty(content))
+            {
+                return false;
+            }
+
+            var normalized = NormalizeForCompare(content);
+
+            lock (_lock)
+            {
+                var entry = _entries.FirstOrDefault(e => e.Id == id);
+                if (entry == null)
+                {
+                    return false;
+                }
+
+                // 旧内容更完整时保留旧内容，避免模型改写反而丢细节
+                if (normalized.Length <= NormalizeForCompare(entry.Content).Length)
+                {
+                    return false;
+                }
+
+                entry.Content = content;
+                entry.Importance = Math.Max(entry.Importance, Math.Clamp(importance, 0, 5));
+                _store.Save(_entries);
+                return true;
+            }
+        }
+
+        /// <summary>
         /// 判断两条归一化后的记忆是否为同一事实：完全相同、一方包含另一方，
         /// 或字符二元组相似度达到阈值（允许「的」这类虚词差异）。
         /// </summary>

@@ -2147,6 +2147,48 @@
                                         </ComboBox>
                                     </Grid>
                                 </Border>
+                                <!-- 记忆去重判断：写入长期记忆前，对本地相似度灰区的疑似重复内容做一次模型判定 -->
+                                <Border Margin="0,8,0,0"
+                                        Padding="14,10"
+                                        Background="{DynamicResource AppSurfaceBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,16,0">
+                                            <TextBlock Text="记忆去重判断"
+                                                       FontFamily="{StaticResource FontFamilyBody}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+                                            <TextBlock Style="{StaticResource HelpIconStyle}">
+                                                <TextBlock.ToolTip>
+                                                    <ToolTip MaxWidth="320">
+                                                        <TextBlock TextWrapping="Wrap"
+                                                                   Text="写入长期记忆前，对疑似重复的内容做一次模型判定，避免同一件事换个说法被记两遍。关闭后只用本地相似度去重，不再额外调用模型，但改写幅度较大的重复可能漏过。"/>
+                                                    </ToolTip>
+                                                </TextBlock.ToolTip>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <ComboBox x:Name="MemoryDedupJudgeSourceComboBox"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource AppearanceComboStyle}"
+                                                  VerticalAlignment="Center"
+                                                  SelectionChanged="MemoryDedupJudgeSourceComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="云端模型" Tag="&#xE8BD;"/>
+                                            <ComboBoxItem Content="本地模型" Tag="&#xE896;"/>
+                                            <ComboBoxItem Content="关闭" Tag="&#xE8A5;"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
 
                             <!-- 检索停用词卡片：关键词检索时过滤虚词，图标 + 预览 + 编辑按钮 -->

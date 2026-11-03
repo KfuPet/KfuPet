@@ -17,6 +17,7 @@
 | --- | --- |
 | `ExtractCoreInfoAsync` | 命中记忆触发词时的实时核心信息提取（仅 importance ≥ 3 立即入库） |
 | `ExtractFromConversationsAsync` | 归档满时批量提炼值得长期记住的信息并评分 |
+| `JudgeDuplicateItemsAsync` | 对本地相似度灰区的疑似重复记忆做批量「是否同一事实」判定（可在「节省模型消耗」二级页选择云端 / 本地 / 关闭） |
 | `ScoreContentAsync` | 对单条信息重新评分（总结条目丢弃前的评估） |
 | `SummarizeAsync` | 把多条零散信息总结成一句话 |
 
@@ -30,6 +31,7 @@
 | 更新通知正文 | 能 | 可用 | 可用 | 可用 |
 | `ExtractCoreInfoAsync`（实时核心信息提取） | 能 | 不可用 | 可用 | 可用 |
 | `ExtractFromConversationsAsync`（归档批量提炼） | 能 | 不可用 | 可用 | 可用 |
+| `JudgeDuplicateItemsAsync`（记忆去重判定） | 能 | 不可用（回退云端） | 可用 | 可用 |
 | `ScoreContentAsync`（单条重评分） | 能 | 可用 | 可用 | 可用 |
 | `SummarizeAsync`（多条总结） | 能 | 不可用 | 可用 | 可用 |
 

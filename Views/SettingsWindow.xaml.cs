@@ -133,6 +133,7 @@ namespace KfuPet.Views
             SetSourceComboIndex(MemoryArchiveExtractionSourceComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.MemoryArchiveExtraction), false);
             SetSourceComboIndex(MemoryScoringSourceComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.MemoryScoring), false);
             SetSourceComboIndex(MemorySummarySourceComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.MemorySummary), false);
+            SetSourceComboIndex(MemoryDedupJudgeSourceComboBox, SettingsService.Instance.GetModelSource(ModelCallKind.MemoryDedupJudge), true);
             MemoryExtractionSavingComboBox.SelectedIndex = SettingsService.Instance.MemoryExtractionGated ? 1 : 0;
             _suppressSavingEvents = false;
             UpdateMemoryTriggerCardVisibility();
@@ -817,7 +818,8 @@ namespace KfuPet.Views
         {
             return kind switch
             {
-                ModelCallKind.MemoryExtraction or ModelCallKind.MemoryArchiveExtraction =>
+                ModelCallKind.MemoryExtraction or ModelCallKind.MemoryArchiveExtraction
+                    or ModelCallKind.MemoryDedupJudge =>
                     LocalModelCatalog.SupportsMemoryExtraction(model),
                 ModelCallKind.MemorySummary =>
                     LocalModelCatalog.SupportsMemorySummarization(model),
@@ -839,6 +841,7 @@ namespace KfuPet.Views
                 ModelCallKind.MemoryArchiveExtraction => "归档批量提炼",
                 ModelCallKind.MemoryScoring => "单条重评分",
                 ModelCallKind.MemorySummary => "多条总结",
+                ModelCallKind.MemoryDedupJudge => "记忆去重判断",
                 _ => "该功能"
             };
         }
@@ -962,7 +965,8 @@ namespace KfuPet.Views
                 ModelCallKind.MemoryExtraction,
                 ModelCallKind.MemoryArchiveExtraction,
                 ModelCallKind.MemoryScoring,
-                ModelCallKind.MemorySummary
+                ModelCallKind.MemorySummary,
+                ModelCallKind.MemoryDedupJudge
             };
 
             var nonRemoteCount = 0;
@@ -1215,7 +1219,8 @@ namespace KfuPet.Views
                 ModelCallKind.MemoryExtraction,
                 ModelCallKind.MemoryArchiveExtraction,
                 ModelCallKind.MemoryScoring,
-                ModelCallKind.MemorySummary
+                ModelCallKind.MemorySummary,
+                ModelCallKind.MemoryDedupJudge
             };
 
             return kinds
@@ -1309,7 +1314,8 @@ namespace KfuPet.Views
                 ModelCallKind.MemoryExtraction,
                 ModelCallKind.MemoryArchiveExtraction,
                 ModelCallKind.MemoryScoring,
-                ModelCallKind.MemorySummary
+                ModelCallKind.MemorySummary,
+                ModelCallKind.MemoryDedupJudge
             };
 
             return kinds
@@ -1758,6 +1764,14 @@ namespace KfuPet.Views
             SettingsService.Instance.SetCustomMemoryExtractionGated(MemoryExtractionSavingComboBox.SelectedIndex == 1);
             UpdateMemoryTriggerCardVisibility();
             RefreshSavingModeSummary();
+        }
+
+        /// <summary>
+        /// 记忆去重判断模型来源：云端模型 / 本地模型 / 关闭。
+        /// </summary>
+        private void MemoryDedupJudgeSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySourceSelection(MemoryDedupJudgeSourceComboBox, ModelCallKind.MemoryDedupJudge, hasDisabledOption: true);
         }
 
         /// <summary>

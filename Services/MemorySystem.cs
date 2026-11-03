@@ -13,6 +13,15 @@ namespace KfuPet.Services
         private const int ArchiveMemoryLimit = 40;
         private const int LongMemoryLimit = 500;
 
+        /// <summary>灰区候选的最低二元组相似度：低于该值视为全新信息，不交给模型判断。</summary>
+        private const double DedupCandidateMinSimilarity = 0.35;
+
+        /// <summary>每条疑似重复信息最多提供给模型的候选记忆条数。</summary>
+        private const int DedupCandidateMaxCount = 3;
+
+        /// <summary>单次去重判定请求最多包含的新信息条数，避免本地模型上下文过长。</summary>
+        private const int DedupJudgeBatchSize = 8;
+
         /// <summary>每轮固定注入的重要性最高的长期记忆条数（核心事实不依赖关键词命中也能带上）。</summary>
         private const int AlwaysInjectMemoryCount = 5;
 
@@ -429,11 +438,7 @@ namespace KfuPet.Services
                 _logService.Debug(coreItems.Count > 0
                     ? $"[记忆] 实时通道：提取到 {coreItems.Count} 条信息"
                     : "[记忆] 实时通道：未发现需要立即记住的信息");
-                foreach (var item in coreItems)
-                {
-                    await _memoryManager.StoreAsync(item.Content, item.Importance);
-                    _logService.Info($"[记忆] 实时入库核心信息：{item.Content}（重要性 {item.Importance}）");
-                }
+                await StoreItemsAsync(model, coreItems, "实时入库核心信息");
 
                 // 只有真正写入长期记忆的对话才算处理完，归档分析据此跳过、不重复提炼；
                 // 没有写入任何信息的对话保持未标记，继续等待归档统一处理（3 分以下的内容也在归档里总结）
@@ -643,12 +648,8 @@ namespace KfuPet.Services
                 }
             }
 
-            // 3. 入选信息写入长期记忆
-            foreach (var item in longTermItems)
-            {
-                await _memoryManager.StoreAsync(item.Content, item.Importance);
-                _logService.Info($"[记忆] 已写入长期记忆：{item.Content}（重要性 {item.Importance}）");
-            }
+            // 3. 入选信息写入长期记忆（疑似重复的条目会先交给模型判定）
+            await StoreItemsAsync(model, longTermItems, "已写入长期记忆");
 
             // 4. 未入选信息：总结成一条 / 暂留 / 清空
             ArchiveEntry? remaining = null;
@@ -703,6 +704,224 @@ namespace KfuPet.Services
 
             // 6. 长期记忆满 500 时去重 + 压缩
             TryTriggerLongMemoryCompaction(model);
+        }
+
+        /// <summary>
+        /// 统一的长期记忆写入入口：先用本地相似度找灰区候选，只有疑似重复的条目才交给模型批量判定；
+        /// 判定失败或模型不可用时回落到本地去重，保证记忆不丢。
+        /// </summary>
+        private async Task StoreItemsAsync(ModelConfig model, IReadOnlyList<MemoryItem> items, string logPrefix)
+        {
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            // 用户在「节省模型消耗」页把去重判断设为关闭后，只保留本地相似度去重，不再额外发起模型请求
+            if (SettingsService.Instance.GetModelSource(ModelCallKind.MemoryDedupJudge) == ModelCallSource.Disabled)
+            {
+                _logService.Debug("[记忆] 去重判断已关闭，仅使用本地去重");
+                foreach (var item in items)
+                {
+                    await _memoryManager.StoreAsync(item.Content, item.Importance);
+                    _logService.Info($"[记忆] {logPrefix}：{item.Content}（重要性 {item.Importance}）");
+                }
+
+                return;
+            }
+
+            var plainItems = new List<MemoryItem>();
+            var suspects = new List<(MemoryItem Item, IReadOnlyList<MemoryEntry> Candidates)>();
+            foreach (var item in items)
+            {
+                var candidates = _memoryManager.FindNearDuplicateCandidates(
+                    item.Content, DedupCandidateMinSimilarity, DedupCandidateMaxCount);
+
+                if (candidates.Count == 0)
+                {
+                    plainItems.Add(item);
+                }
+                else
+                {
+                    suspects.Add((item, candidates));
+                }
+            }
+
+            foreach (var item in plainItems)
+            {
+                await _memoryManager.StoreAsync(item.Content, item.Importance);
+                _logService.Info($"[记忆] {logPrefix}：{item.Content}（重要性 {item.Importance}）");
+            }
+
+            for (var offset = 0; offset < suspects.Count; offset += DedupJudgeBatchSize)
+            {
+                var chunk = suspects.Skip(offset).Take(DedupJudgeBatchSize).ToList();
+                IReadOnlyList<MemoryEntry?> matches;
+                try
+                {
+                    matches = await JudgeDuplicateItemsAsync(model, chunk);
+                }
+                catch (Exception ex)
+                {
+                    _logService.Warning($"[记忆] 去重判定失败，回落到本地去重：{ex.Message}");
+                    matches = new MemoryEntry?[chunk.Count];
+                }
+
+                for (var i = 0; i < chunk.Count; i++)
+                {
+                    var item = chunk[i].Item;
+                    var match = i < matches.Count ? matches[i] : null;
+                    if (match != null)
+                    {
+                        // 模型确认是同一事实：新内容更完整就替换，否则保留旧内容
+                        if (_memoryManager.ReplaceIfMoreComplete(match.Id, item.Content, item.Importance))
+                        {
+                            _logService.Info($"[记忆] 近重复记忆已合并（模型判定同一事实）：{item.Content}");
+                        }
+                        else if (_memoryManager.ContainsId(match.Id))
+                        {
+                            _logService.Info($"[记忆] 跳过重复记忆（模型判定同一事实）：{item.Content}");
+                        }
+                        else
+                        {
+                            // 判定期间原记忆被压缩或删除，按新记忆写入，避免丢失
+                            await _memoryManager.StoreAsync(item.Content, item.Importance);
+                            _logService.Info($"[记忆] {logPrefix}：{item.Content}（重要性 {item.Importance}）");
+                        }
+
+                        continue;
+                    }
+
+                    await _memoryManager.StoreAsync(item.Content, item.Importance);
+                    _logService.Info($"[记忆] {logPrefix}：{item.Content}（重要性 {item.Importance}）");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 把一批疑似重复的新信息与各自的候选记忆一起交给模型判断是否同一事实。
+        /// 返回与入参等长的匹配结果，null 表示不是重复（按新记忆写入）。
+        /// </summary>
+        private async Task<IReadOnlyList<MemoryEntry?>> JudgeDuplicateItemsAsync(
+            ModelConfig model,
+            IReadOnlyList<(MemoryItem Item, IReadOnlyList<MemoryEntry> Candidates)> suspects)
+        {
+            const string prompt = """
+                你是记忆去重判断器。判断每条「新信息」是否与「候选记忆」中的某一条描述的是同一件具体事实。
+                判定为同一事实：主语和事实相同，只是措辞或详略不同；新信息补充了细节也算同一事实。
+                注意：只是同属一个话题但事实不同的，不算同一事实，例如「喜欢 C#」和「喜欢 WPF」是两条不同偏好。
+
+                请只输出一个 JSON 数组，每条新信息对应一项，不要包含其他任何文字或代码块标记：
+                [{"n": 1, "same": true, "c": 2}]
+                n 是新信息编号；same 为 true 时，c 是最匹配的候选编号；不是同一事实时输出 {"n": 1, "same": false}，不要输出 c。
+                """;
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("候选记忆：");
+            var candidates = new List<MemoryEntry>();
+            foreach (var group in suspects)
+            {
+                foreach (var candidate in group.Candidates)
+                {
+                    candidates.Add(candidate);
+                    sb.AppendLine($"C{candidates.Count}. {candidate.Content}");
+                }
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("新信息：");
+            for (var i = 0; i < suspects.Count; i++)
+            {
+                sb.AppendLine($"N{i + 1}. {suspects[i].Item.Content}");
+            }
+
+            var messages = new List<ChatMessage>
+            {
+                new() { Role = "system", Content = prompt },
+                new() { Role = "user", Content = sb.ToString() }
+            };
+
+            var reply = await _chatService.SendRawAsync(
+                model, messages, TokenUsageCategory.Memory, kind: ModelCallKind.MemoryDedupJudge);
+
+            var matches = new MemoryEntry?[suspects.Count];
+            var confirmed = 0;
+            foreach (var decision in ParseDedupDecisions(reply))
+            {
+                var index = decision.NewIndex - 1;
+                if (index < 0 || index >= suspects.Count || !decision.Same)
+                {
+                    continue;
+                }
+
+                // 优先采用模型点名的候选；编号越界或不属于该组时回落到该组相似度最高的候选
+                MemoryEntry? match = null;
+                if (decision.CandidateIndex >= 1 && decision.CandidateIndex <= candidates.Count)
+                {
+                    var candidate = candidates[decision.CandidateIndex - 1];
+                    if (suspects[index].Candidates.Contains(candidate))
+                    {
+                        match = candidate;
+                    }
+                }
+
+                match ??= suspects[index].Candidates.FirstOrDefault();
+                if (match == null || matches[index] != null)
+                {
+                    continue;
+                }
+
+                matches[index] = match;
+                confirmed++;
+            }
+
+            if (confirmed > 0)
+            {
+                _logService.Info($"[记忆] 去重判定：{suspects.Count} 条疑似重复中确认 {confirmed} 条");
+            }
+            else
+            {
+                _logService.Debug($"[记忆] 去重判定：{suspects.Count} 条疑似重复均未命中");
+            }
+
+            return matches;
+        }
+
+        /// <summary>解析去重判定 JSON（失败时返回空列表，后续按非重复处理）。</summary>
+        private static List<DedupDecision> ParseDedupDecisions(string reply)
+        {
+            var result = new List<DedupDecision>();
+            var text = StripCodeFence(reply);
+            try
+            {
+                using var doc = JsonDocument.Parse(text);
+                if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                {
+                    return result;
+                }
+
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    if (item.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    var newIndex = item.TryGetProperty("n", out var n) && n.TryGetInt32(out var nv) ? nv : 0;
+                    var same = item.TryGetProperty("same", out var s) && s.ValueKind == JsonValueKind.True;
+                    var candidateIndex = item.TryGetProperty("c", out var c) && c.TryGetInt32(out var cv) ? cv : 0;
+                    if (newIndex > 0)
+                    {
+                        result.Add(new DedupDecision(newIndex, same, candidateIndex));
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // 解析失败按未命中处理，后续回落到本地去重
+            }
+
+            return result;
         }
 
         /// <summary>长期记忆超限处理：先去重，再对最旧 100 条总结成一条。</summary>
@@ -938,5 +1157,7 @@ namespace KfuPet.Services
         /// <summary>一条提炼出的信息点：内容 + 重要性评分。</summary>
         private sealed record MemoryItem(string Content, int Importance);
 
+        /// <summary>模型返回的单条去重判定：新信息编号、是否同一事实、匹配的候选编号。</summary>
+        private sealed record DedupDecision(int NewIndex, bool Same, int CandidateIndex);
     }
 }

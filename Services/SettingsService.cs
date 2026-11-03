@@ -60,7 +60,10 @@ namespace KfuPet.Services
         MemoryScoring,
 
         /// <summary>多条信息总结。</summary>
-        MemorySummary
+        MemorySummary,
+
+        /// <summary>长期记忆去重判断。</summary>
+        MemoryDedupJudge
     }
 
     /// <summary>主动搭话频度档位：决定独处判定阈值、冷却时长与触发概率。</summary>
@@ -154,6 +157,9 @@ namespace KfuPet.Services
 
         /// <summary>多条信息总结的模型来源（默认远端）。</summary>
         public ModelCallSource MemorySummarySource { get; private set; } = ModelCallSource.Remote;
+
+        /// <summary>长期记忆去重判断的模型来源（默认远端）。</summary>
+        public ModelCallSource MemoryDedupJudgeSource { get; private set; } = ModelCallSource.Remote;
 
         /// <summary>触摸反应是否使用模型：远端或本地都算；关闭时改用角色台词。</summary>
         public bool TouchReactionUseAi => TouchReactionSource != ModelCallSource.Disabled;
@@ -277,6 +283,7 @@ namespace KfuPet.Services
             MemoryArchiveExtractionSource = ModelCallSource.Remote;
             MemoryScoringSource = ModelCallSource.Remote;
             MemorySummarySource = ModelCallSource.Remote;
+            MemoryDedupJudgeSource = ModelCallSource.Remote;
             ProactiveChatEnabled = true;
             ProactiveChatFrequency = ProactiveFrequency.Medium;
             QuietHoursEnabled = true;
@@ -393,6 +400,7 @@ namespace KfuPet.Services
                 ModelCallKind.MemoryArchiveExtraction => MemoryArchiveExtractionSource,
                 ModelCallKind.MemoryScoring => MemoryScoringSource,
                 ModelCallKind.MemorySummary => MemorySummarySource,
+                ModelCallKind.MemoryDedupJudge => MemoryDedupJudgeSource,
                 _ => ModelCallSource.Remote
             };
         }
@@ -436,6 +444,9 @@ namespace KfuPet.Services
                     break;
                 case ModelCallKind.MemorySummary:
                     MemorySummarySource = source;
+                    break;
+                case ModelCallKind.MemoryDedupJudge:
+                    MemoryDedupJudgeSource = source;
                     break;
                 default:
                     return;
@@ -781,6 +792,15 @@ namespace KfuPet.Services
                 MemoryArchiveExtractionSource = ReadModelSource(root, "MemoryArchiveExtractionSource", MemoryArchiveExtractionSource);
                 MemoryScoringSource = ReadModelSource(root, "MemoryScoringSource", MemoryScoringSource);
                 MemorySummarySource = ReadModelSource(root, "MemorySummarySource", MemorySummarySource);
+                MemoryDedupJudgeSource = ReadModelSource(root, "MemoryDedupJudgeSource", MemoryDedupJudgeSource);
+
+                // 兼容刚加入的临时开关配置：旧 MemoryDedupJudgeEnabled=false 视为关闭
+                if (!root.TryGetProperty("MemoryDedupJudgeSource", out _) &&
+                    root.TryGetProperty("MemoryDedupJudgeEnabled", out var legacyDedupJudge) &&
+                    legacyDedupJudge.ValueKind == JsonValueKind.False)
+                {
+                    MemoryDedupJudgeSource = ModelCallSource.Disabled;
+                }
 
                 // 情绪判断不在本地模型测试清单内，旧配置若存成本地则改回远端
                 if (EmotionJudgeSource == ModelCallSource.Local)
@@ -799,6 +819,7 @@ namespace KfuPet.Services
                 MemoryArchiveExtractionSource = ModelCallSource.Remote;
                 MemoryScoringSource = ModelCallSource.Remote;
                 MemorySummarySource = ModelCallSource.Remote;
+                MemoryDedupJudgeSource = ModelCallSource.Remote;
 
                 // 旧版“节省”档位此前强制启用触发词门控
                 if (ModelSavingMode == SavingMode.Saving)
@@ -882,7 +903,8 @@ namespace KfuPet.Services
                     MemoryExtractionSource = MemoryExtractionSource.ToString(),
                     MemoryArchiveExtractionSource = MemoryArchiveExtractionSource.ToString(),
                     MemoryScoringSource = MemoryScoringSource.ToString(),
-                    MemorySummarySource = MemorySummarySource.ToString()
+                    MemorySummarySource = MemorySummarySource.ToString(),
+                    MemoryDedupJudgeSource = MemoryDedupJudgeSource.ToString()
                 }, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
             }

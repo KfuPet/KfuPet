@@ -138,7 +138,8 @@ namespace KfuPet.Services
         {
             return kind switch
             {
-                ModelCallKind.MemoryExtraction or ModelCallKind.MemoryArchiveExtraction =>
+                ModelCallKind.MemoryExtraction or ModelCallKind.MemoryArchiveExtraction
+                    or ModelCallKind.MemoryDedupJudge =>
                     LocalModelCatalog.SupportsMemoryExtraction(active),
                 ModelCallKind.MemorySummary =>
                     LocalModelCatalog.SupportsMemorySummarization(active),
@@ -189,6 +190,7 @@ namespace KfuPet.Services
             {
                 ModelCallKind.MemoryExtraction or ModelCallKind.MemoryArchiveExtraction => TimeSpan.FromSeconds(180),
                 ModelCallKind.MemorySummary => TimeSpan.FromSeconds(90),
+                ModelCallKind.MemoryDedupJudge => TimeSpan.FromSeconds(45),
                 ModelCallKind.MemoryScoring => TimeSpan.FromSeconds(30),
                 _ => TimeSpan.FromSeconds(20)
             };
