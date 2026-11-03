@@ -33,7 +33,12 @@ namespace KfuPet.Services
         private readonly List<ShortMemoryEntry> _shortEntries;
         private readonly List<ArchiveEntry> _archiveEntries;
         private readonly object _archiveLock = new();
-        private volatile bool _isAnalyzing;
+
+        /// <summary>仍在实时提炼中的短期条目：归档分析遇到这些对话时跳过并保留，避免同一轮被两个通道同时提炼。</summary>
+        private readonly HashSet<ShortMemoryEntry> _pendingRealtimeTurns = new();
+
+        /// <summary>归档分析的并发闸门：0 = 空闲，1 = 分析进行中，避免多个触发同时启动分析。</summary>
+        private int _archiveAnalysisRunning;
 
         /// <summary>长期记忆压缩的并发闸门：0 = 空闲，1 = 压缩进行中，避免实时通道与归档分析同时触发。</summary>
         private int _longCompactionRunning;
@@ -316,6 +321,12 @@ namespace KfuPet.Services
             // 节省模式下走触发词门控，仅命中触发词才发起，避免每轮对话都额外消耗一次模型
             if (!SettingsService.Instance.MemoryExtractionGated || _triggerService.Matches(user))
             {
+                // 先登记为「提炼中」，归档分析据此跳过这一轮，避免同一轮被两个通道同时提炼
+                lock (_archiveLock)
+                {
+                    _pendingRealtimeTurns.Add(turnEntry);
+                }
+
                 _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant, turnEntry));
             }
             else
@@ -323,12 +334,27 @@ namespace KfuPet.Services
                 _logService.Debug("[记忆] 实时通道：节省模式下未命中触发词，跳过核心信息提取（仍由归档批处理兜底）");
             }
 
-            // 归档满 40 条，后台异步分析
-            if (_archiveEntries.Count >= ArchiveMemoryLimit && !_isAnalyzing)
+            // 归档满 40 条，后台异步分析；仍在实时提炼中的对话会在分析时被排除并保留
+            TryStartArchiveAnalysis(model);
+        }
+
+        /// <summary>归档达到上限且当前没有分析在跑时，启动后台分析。</summary>
+        private void TryStartArchiveAnalysis(ModelConfig model)
+        {
+            lock (_archiveLock)
             {
-                _isAnalyzing = true;
-                _ = Task.Run(() => RunArchiveAnalysisAsync(model));
+                if (_archiveEntries.Count < ArchiveMemoryLimit)
+                {
+                    return;
+                }
             }
+
+            if (Interlocked.CompareExchange(ref _archiveAnalysisRunning, 1, 0) != 0)
+            {
+                return;
+            }
+
+            _ = Task.Run(() => RunArchiveAnalysisAsync(model));
         }
 
         /// <summary>
@@ -387,7 +413,7 @@ namespace KfuPet.Services
             }
             finally
             {
-                _isAnalyzing = false;
+                Interlocked.Exchange(ref _archiveAnalysisRunning, 0);
             }
         }
 
@@ -423,6 +449,16 @@ namespace KfuPet.Services
             {
                 _logService.Warning($"[记忆] 实时提取失败：{ex.Message}");
             }
+            finally
+            {
+                // 无论成功、失败还是没提取到内容，都要退出「提炼中」状态，否则归档会一直保留这一轮
+                lock (_archiveLock)
+                {
+                    _pendingRealtimeTurns.Remove(turnEntry);
+                }
+
+                TryStartArchiveAnalysis(model);
+            }
         }
 
         /// <summary>标记该轮对话已由实时通道提炼并写入长期记忆，并立即落盘，避免重启后标记丢失。</summary>
@@ -431,8 +467,70 @@ namespace KfuPet.Services
             lock (_archiveLock)
             {
                 turnEntry.RealtimeExtracted = true;
+
+                // 设置页 Reload 可能已把短期列表换成新的对象，按时间与内容把当前列表里的同一轮也标记上
+                foreach (var entry in _shortEntries)
+                {
+                    if (!entry.RealtimeExtracted && IsSameTurn(entry, turnEntry))
+                    {
+                        entry.RealtimeExtracted = true;
+                    }
+                }
+
+                // 该轮可能在实时提炼完成前就已溢出到归档，归档里是复制出来的另一个对象；
+                // 必须按时间与内容找到对应副本一起标记，否则归档分析会再提炼一遍
+                var propagated = 0;
+                foreach (var entry in _archiveEntries)
+                {
+                    if (entry.IsSummary || entry.RealtimeExtracted || !IsSameTurn(entry, turnEntry))
+                    {
+                        continue;
+                    }
+
+                    entry.RealtimeExtracted = true;
+                    propagated++;
+                }
+
                 _shortStore.Save(_shortEntries);
+                if (propagated > 0)
+                {
+                    _archiveStore.Save(_archiveEntries);
+                    _logService.Debug($"[记忆] 已回写 {propagated} 条归档副本的实时提炼标记");
+                }
+
+                _pendingRealtimeTurns.Remove(turnEntry);
             }
+        }
+
+        /// <summary>判断归档副本是否对应同一轮短期对话（溢出时时间与内容原样复制）。</summary>
+        private static bool IsSameTurn(ArchiveEntry entry, ShortMemoryEntry turn)
+        {
+            return entry.Time == turn.Time &&
+                   string.Equals(entry.User, turn.User, StringComparison.Ordinal) &&
+                   string.Equals(entry.Assistant, turn.Assistant, StringComparison.Ordinal);
+        }
+
+        /// <summary>判断两条短期记忆是否为同一轮对话（Reload 后对象会被替换，只能按内容匹配）。</summary>
+        private static bool IsSameTurn(ShortMemoryEntry left, ShortMemoryEntry right)
+        {
+            return left.Time == right.Time &&
+                   string.Equals(left.User, right.User, StringComparison.Ordinal) &&
+                   string.Equals(left.Assistant, right.Assistant, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// 判断两条归档记录是否为同一条数据。分析期间设置页可能触发 Reload 替换列表对象，
+        /// 不能再用引用相等来移除，否则分析完成也删不掉，归档会一直停在 40 条以上。
+        /// </summary>
+        private static bool IsSameArchiveEntry(ArchiveEntry left, ArchiveEntry right)
+        {
+            return left.IsSummary == right.IsSummary &&
+                   left.Time == right.Time &&
+                   string.Equals(left.Type, right.Type, StringComparison.Ordinal) &&
+                   string.Equals(left.User, right.User, StringComparison.Ordinal) &&
+                   string.Equals(left.Assistant, right.Assistant, StringComparison.Ordinal) &&
+                   string.Equals(left.Content, right.Content, StringComparison.Ordinal) &&
+                   left.Importance == right.Importance;
         }
 
         /// <summary>
@@ -470,9 +568,15 @@ namespace KfuPet.Services
         private async Task AnalyzeArchiveAsync(ModelConfig model)
         {
             List<ArchiveEntry> snapshot;
+            HashSet<ArchiveEntry> pendingEntries;
             lock (_archiveLock)
             {
                 snapshot = new List<ArchiveEntry>(_archiveEntries);
+
+                // 仍在实时提炼中的对话不参与本次归档分析，分析结束后原样保留，等标记写回后再处理
+                pendingEntries = snapshot
+                    .Where(e => !e.IsSummary && _pendingRealtimeTurns.Any(t => IsSameTurn(e, t)))
+                    .ToHashSet();
             }
 
             if (snapshot.Count == 0)
@@ -480,13 +584,23 @@ namespace KfuPet.Services
                 return;
             }
 
-            _logService.Debug($"[记忆] 归档已满（{snapshot.Count} 条），开始分析筛选...");
+            _logService.Debug($"[记忆] 归档已满（{snapshot.Count} 条），开始分析筛选..." +
+                              (pendingEntries.Count > 0 ? $"，其中 {pendingEntries.Count} 条仍在实时提炼中" : string.Empty));
+
+            // 快照里全部是提炼中的对话时直接让出，避免跑一轮什么都不做的分析
+            if (pendingEntries.Count == snapshot.Count)
+            {
+                _logService.Debug("[记忆] 归档分析暂缓：快照内对话都仍在实时提炼中");
+                return;
+            }
 
             var summaryEntries = snapshot.Where(e => e.IsSummary).ToList();
 
             // 已由实时通道写入长期记忆的对话直接丢弃，不再重复提炼；没有入库的对话照常参与批量分析
-            var conversationEntries = snapshot.Where(e => !e.IsSummary && !e.RealtimeExtracted).ToList();
-            var skippedEntries = snapshot.Count(e => !e.IsSummary && e.RealtimeExtracted);
+            var conversationEntries = snapshot
+                .Where(e => !e.IsSummary && !e.RealtimeExtracted && !pendingEntries.Contains(e))
+                .ToList();
+            var skippedEntries = snapshot.Count(e => !e.IsSummary && e.RealtimeExtracted && !pendingEntries.Contains(e));
             if (skippedEntries > 0)
             {
                 _logService.Debug($"[记忆] 归档分析直接丢弃 {skippedEntries} 条已由实时通道入库的对话");
@@ -563,19 +677,29 @@ namespace KfuPet.Services
                 _logService.Debug("[记忆] 1 条未入选信息暂留归档");
             }
 
-            // 5. 归档重建：只移除本轮已处理的快照条目，保留分析期间新产生的对话，避免数据丢失
+            // 5. 归档重建：移除本轮已处理的快照条目（含直接丢弃的已提炼对话），
+            //    保留分析期间新产生的对话和仍在实时提炼中的对话，避免数据丢失。
+            //    这里按内容匹配而不是引用：分析期间设置页可能 Reload，列表对象会被整体替换。
             lock (_archiveLock)
             {
-                var processed = new HashSet<ArchiveEntry>(snapshot);
-                _archiveEntries.RemoveAll(e => processed.Contains(e));
+                var processed = snapshot
+                    .Where(e => !pendingEntries.Contains(e))
+                    .ToList();
+                var removed = processed.Count == 0
+                    ? 0
+                    : _archiveEntries.RemoveAll(e => processed.Any(s => IsSameArchiveEntry(e, s)));
+
                 if (remaining != null)
                 {
                     _archiveEntries.Add(remaining);
                 }
                 _archiveStore.Save(_archiveEntries);
+
+                _logService.Debug($"[记忆] 归档已移除 {removed} 条已处理对话，当前剩余 {_archiveEntries.Count} 条");
             }
 
-            _logService.Debug($"[记忆] 归档分析完成：入选 {longTermItems.Count} 条，总结/暂留 {lowItems.Count} 条");
+            _logService.Debug($"[记忆] 归档分析完成：入选 {longTermItems.Count} 条，总结/暂留 {lowItems.Count} 条" +
+                              (pendingEntries.Count > 0 ? $"，保留 {pendingEntries.Count} 条提炼中的对话" : string.Empty));
 
             // 6. 长期记忆满 500 时去重 + 压缩
             TryTriggerLongMemoryCompaction(model);
@@ -813,5 +937,6 @@ namespace KfuPet.Services
 
         /// <summary>一条提炼出的信息点：内容 + 重要性评分。</summary>
         private sealed record MemoryItem(string Content, int Importance);
+
     }
 }
