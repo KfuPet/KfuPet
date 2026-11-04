@@ -249,7 +249,7 @@ namespace KfuPet
             _chatService = new ChatService();
             _memorySystem = new MemorySystem(_chatService, LogService, StopWordsService, MemoryTriggerService);
             _toolRegistry = new ToolRegistry();
-            _toolRegistry.Register(new WebSearchTool());
+            _toolRegistry.Register(new WebSearchTool(ModelConfigService));
             _toolRegistry.Register(new BalanceTool(ModelConfigService));
             _toolRegistry.Register(new EmotionTool());
             _toolRegistry.Register(new FeedTool());

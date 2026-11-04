@@ -94,7 +94,6 @@ The following items are planned but NOT implemented. Do NOT implement them unles
 - Performance monitor
 - Click-through mode and adaptive window sizing
 - Vision service (`VisionService` is a stub)
-- Web search backend (`WebSearchTool` is wired into the tool call chain, but the search backend is a stub)
 - Android debugging HTTP server
 
 `docs/备忘录.md` tracks these stubs. Update it when a stub becomes a real implementation.
@@ -464,7 +463,7 @@ Rules:
 - `OpenAppTool` must respect the allowed-app list; full access requires the existing confirmation flow.
 - Do not add hidden tools that are not filtered by user settings.
 - Tools must not block the UI thread and must handle cancellation where applicable.
-- `WebSearchTool` has no backend yet. Do not pretend it works or silently return fabricated results.
+- `WebSearchTool` reuses the active model's provider key and calls the provider's official search API (DeepSeek or Kimi `/v1/tools/search`). It must return the provider's real results or an explicit failure; never fabricate results.
 
 ---
 
