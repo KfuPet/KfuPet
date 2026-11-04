@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using KfuPet.Helpers;
 using KfuPet.Models;
 using KfuPet.Services.Tools;
 
@@ -37,7 +38,8 @@ namespace KfuPet.Services
             messages.AddRange(history);
             messages.Add(new ChatMessage { Role = "user", Content = userMessage });
 
-            return await SendRawAsync(model, messages, category, kind: kind);
+            // 面向用户的回复统一去掉链接，避免气泡里出现网址
+            return ModelReplyText.StripLinks(await SendRawAsync(model, messages, category, kind: kind));
         }
 
         /// <summary>
@@ -223,13 +225,15 @@ namespace KfuPet.Services
 
             try
             {
-                return await RunToolLoopAsync(model, messages, tools, executeToolAsync, category);
+                // 面向用户的回复统一去掉链接，避免气泡与记忆里出现网址
+                return ModelReplyText.StripLinks(
+                    await RunToolLoopAsync(model, messages, tools, executeToolAsync, category));
             }
             catch (InvalidOperationException ex) when (IsToolUnsupportedError(ex.Message))
             {
                 // 模型不支持工具调用（或工具相关参数错误）时，降级为普通对话。
                 Log.Warning($"[对话] 工具调用不可用，降级为普通对话：{ex.Message}");
-                return await SendRawAsync(model, messages, category);
+                return ModelReplyText.StripLinks(await SendRawAsync(model, messages, category));
             }
         }
 

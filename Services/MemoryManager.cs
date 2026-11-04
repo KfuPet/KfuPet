@@ -1,4 +1,5 @@
 using KfuPet.Core.Memory;
+using KfuPet.Helpers;
 
 namespace KfuPet.Services
 {
@@ -134,7 +135,7 @@ namespace KfuPet.Services
         /// </summary>
         public Task StoreAsync(string content, int importance)
         {
-            content = content.Trim();
+            content = ModelReplyText.StripLinks(content).Trim();
             if (string.IsNullOrEmpty(content))
             {
                 return Task.CompletedTask;
@@ -244,7 +245,7 @@ namespace KfuPet.Services
         /// </summary>
         public bool ReplaceIfMoreComplete(string id, string content, int importance)
         {
-            content = content.Trim();
+            content = ModelReplyText.StripLinks(content).Trim();
             if (string.IsNullOrEmpty(content))
             {
                 return false;

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using KfuPet.Core.Memory;
+using KfuPet.Helpers;
 using KfuPet.Models;
 
 namespace KfuPet.Services
@@ -321,6 +322,9 @@ namespace KfuPet.Services
         /// </summary>
         public void AddTurn(ModelConfig model, string user, string assistant)
         {
+            // 记忆里不允许出现链接：写入短期/归档、以及后续提炼长期记忆前先统一剔除
+            assistant = ModelReplyText.StripLinks(assistant);
+
             var (shortCount, archiveCount, overflowCount, turnEntry) = AppendEntry(user, assistant);
 
             _logService.Debug($"[记忆] 记录一轮对话：短期 {shortCount}/{ShortMemoryLimit}" +
@@ -383,7 +387,11 @@ namespace KfuPet.Services
             var overflowCount = 0;
             lock (_archiveLock)
             {
-                var turnEntry = new ShortMemoryEntry { User = user, Assistant = assistant };
+                var turnEntry = new ShortMemoryEntry
+                {
+                    User = user,
+                    Assistant = ModelReplyText.StripLinks(assistant)
+                };
                 _shortEntries.Add(turnEntry);
 
                 // 短期溢出到归档（保留最近 20 条）

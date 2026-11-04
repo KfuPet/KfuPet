@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using KfuPet.Helpers;
 using KfuPet.Models;
 
 namespace KfuPet.Services
@@ -53,7 +54,8 @@ namespace KfuPet.Services
             {
                 Timestamp = DateTime.UtcNow,
                 Level = level,
-                Message = message
+                // 日志同样不保留链接：内存缓冲、开发者工具管道与落盘文件统一使用清理后的正文
+                Message = ModelReplyText.StripLinks(message)
             };
 
             lock (_gate)
