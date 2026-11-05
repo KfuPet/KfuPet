@@ -55,6 +55,7 @@ namespace KfuPet.Views
         private bool _suppressOpenAppEvents;
         private bool _suppressFullAccessEvents;
         private bool _suppressForegroundAppEvents;
+        private bool _suppressVisionEvents;
         private bool _isLoadingStorageUsage;
         private bool _hasLoadedStorageUsage;
         private AddModelProviderDialog? _addModelProviderDialog;
@@ -188,6 +189,11 @@ namespace KfuPet.Views
             _suppressForegroundAppEvents = true;
             ForegroundAppContextToggle.IsChecked = SettingsService.Instance.ForegroundAppContextEnabled;
             _suppressForegroundAppEvents = false;
+
+            // 屏幕观察：读取授权开关（控件事件在此期间忽略）
+            _suppressVisionEvents = true;
+            VisionToggle.IsChecked = SettingsService.Instance.VisionEnabled;
+            _suppressVisionEvents = false;
 
             // 完全访问：读取开关（控件事件在此期间忽略）
             _suppressFullAccessEvents = true;
@@ -368,6 +374,19 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetForegroundAppContextEnabled(ForegroundAppContextToggle.IsChecked == true);
+        }
+
+        /// <summary>
+        /// 屏幕观察授权开关：保存用户授权状态；开启后模型可调用 screen_look 工具，主动搭话也可能先观察屏幕。
+        /// </summary>
+        private void VisionToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressVisionEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetVisionEnabled(VisionToggle.IsChecked == true);
         }
 
         /// <summary>

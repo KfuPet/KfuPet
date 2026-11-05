@@ -63,7 +63,10 @@ namespace KfuPet.Services
         MemorySummary,
 
         /// <summary>长期记忆去重判断。</summary>
-        MemoryDedupJudge
+        MemoryDedupJudge,
+
+        /// <summary>屏幕视觉观察（多模态图片输入，固定使用远端模型）。</summary>
+        Vision
     }
 
     /// <summary>主动搭话频度档位：决定独处判定阈值、冷却时长与触发概率。</summary>
@@ -213,6 +216,12 @@ namespace KfuPet.Services
         /// <summary>是否允许模型帮忙打开应用（总开关，默认关闭）。</summary>
         public bool OpenAppEnabled { get; private set; }
 
+        /// <summary>
+        /// 是否允许桌宠看屏幕（总开关，默认关闭）：开启后模型可调用 screen_look，
+        /// 主动搭话时也可能先观察屏幕；关闭则既不暴露工具也不截图。
+        /// </summary>
+        public bool VisionEnabled { get; private set; }
+
         /// <summary>允许模型打开的应用白名单（默认空；为空时模型无法打开任何程序）。</summary>
         public IReadOnlyList<AllowedAppEntry> AllowedApps { get; private set; } = Array.Empty<AllowedAppEntry>();
 
@@ -295,6 +304,7 @@ namespace KfuPet.Services
             CustomProactiveChatUseAi = true;
             ForegroundAppContextEnabled = false;
             OpenAppEnabled = false;
+            VisionEnabled = false;
             AllowedApps = Array.Empty<AllowedAppEntry>();
             OpenAppFullAccess = false;
             LocalModelDirectory = string.Empty;
@@ -401,6 +411,8 @@ namespace KfuPet.Services
                 ModelCallKind.MemoryScoring => MemoryScoringSource,
                 ModelCallKind.MemorySummary => MemorySummarySource,
                 ModelCallKind.MemoryDedupJudge => MemoryDedupJudgeSource,
+                // 本地 GGUF 模型不支持图片输入，视觉观察固定走远端
+                ModelCallKind.Vision => ModelCallSource.Remote,
                 _ => ModelCallSource.Remote
             };
         }
@@ -524,6 +536,13 @@ namespace KfuPet.Services
         public void SetOpenAppEnabled(bool enabled)
         {
             OpenAppEnabled = enabled;
+            Save();
+        }
+
+        /// <summary>保存“允许桌宠看屏幕”总开关状态。</summary>
+        public void SetVisionEnabled(bool enabled)
+        {
+            VisionEnabled = enabled;
             Save();
         }
 
@@ -725,6 +744,12 @@ namespace KfuPet.Services
                     OpenAppEnabled = openAppElement.GetBoolean();
                 }
 
+                if (root.TryGetProperty("VisionEnabled", out var visionElement) &&
+                    visionElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    VisionEnabled = visionElement.GetBoolean();
+                }
+
                 if (root.TryGetProperty("OpenAppFullAccess", out var openAppFullElement) &&
                     openAppFullElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
                 {
@@ -891,6 +916,7 @@ namespace KfuPet.Services
                     CustomMemoryExtractionGated,
                     ForegroundAppContextEnabled,
                     OpenAppEnabled,
+                    VisionEnabled,
                     OpenAppFullAccess,
                     AllowedApps,
                     LocalModelDirectory,

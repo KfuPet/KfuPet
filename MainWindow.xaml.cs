@@ -186,7 +186,8 @@ namespace KfuPet
 
         internal EmotionService EmotionService => EmotionService.Instance;
 
-        internal VisionService VisionService { get; } = new VisionService();
+        /// <summary>视觉服务：截图 + 多模态问答，构造时注入聊天服务。</summary>
+        internal VisionService VisionService { get; }
 
         /// <summary>全局日志服务（与应用其他部分共用同一实例）。</summary>
         internal LogService LogService => Log.Instance;
@@ -247,6 +248,7 @@ namespace KfuPet
         {
             InitializeComponent();
             _chatService = new ChatService();
+            VisionService = new VisionService(_chatService);
             _memorySystem = new MemorySystem(_chatService, LogService, StopWordsService, MemoryTriggerService);
             _toolRegistry = new ToolRegistry();
             _toolRegistry.Register(new WebSearchTool(ModelConfigService));
@@ -256,6 +258,7 @@ namespace KfuPet
             _toolRegistry.Register(new MemorySearchTool(_memorySystem));
             _toolRegistry.Register(new OpenAppTool());
             _toolRegistry.Register(new ListRunningAppsTool());
+            _toolRegistry.Register(new ScreenLookTool(ModelConfigService, LookAtScreenAsync));
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
@@ -275,6 +278,11 @@ namespace KfuPet
             if (tool is ListRunningAppsTool)
             {
                 return SettingsService.Instance.ForegroundAppContextEnabled;
+            }
+
+            if (tool is ScreenLookTool)
+            {
+                return SettingsService.Instance.VisionEnabled;
             }
 
             return true;
@@ -1631,6 +1639,12 @@ namespace KfuPet
                 {
                     try
                     {
+                        var observation = await TryObserveScreenForProactiveAsync(model, e.Type);
+                        if (!string.IsNullOrEmpty(observation))
+                        {
+                            eventPrompt += $"\n\n当前屏幕画面：{observation}";
+                        }
+
                         var history = _memorySystem.GetShortTermMessages();
                         if (history.Count > PROACTIVE_HISTORY_LIMIT)
                         {
@@ -1686,6 +1700,87 @@ namespace KfuPet
 
             // 记录到短期记忆，让之后的对话里角色"记得"自己主动说过什么
             _memorySystem.AddProactiveLine(line);
+        }
+
+        // ── 视觉观察 ───────────────────────────────
+
+        /// <summary>主动搭话时观察屏幕的最小间隔（分钟），控制截图与视觉调用的成本。</summary>
+        private const int PROACTIVE_SCREEN_LOOK_COOLDOWN_MINUTES = 30;
+
+        private double _opacityBeforeScreenLook = 1.0;
+        private DateTime _lastProactiveScreenLookTimeUtc = DateTime.MinValue;
+
+        /// <summary>截图期间隐藏桌宠自身窗口，并等待合成器完成一帧，避免宠物被截进画面。</summary>
+        private async Task HideSelfForScreenLookAsync()
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                _opacityBeforeScreenLook = Opacity;
+                Opacity = 0;
+            });
+
+            // 留出一帧时间让窗口真正从画面消失
+            await Task.Delay(120);
+        }
+
+        /// <summary>恢复截图前的窗口透明度。</summary>
+        private async Task RestoreSelfAfterScreenLookAsync()
+        {
+            await Dispatcher.InvokeAsync(() => Opacity = _opacityBeforeScreenLook);
+        }
+
+        /// <summary>截图并让视觉模型回答问题的统一入口：截图期间隐藏桌宠自身。</summary>
+        private async Task<string> LookAtScreenAsync(ModelConfig model, string question)
+        {
+            await HideSelfForScreenLookAsync();
+            try
+            {
+                return await VisionService.LookAsync(model, question);
+            }
+            finally
+            {
+                await RestoreSelfAfterScreenLookAsync();
+            }
+        }
+
+        /// <summary>
+        /// 主动搭话前的屏幕观察：仅在开关开启、触发类型符合且冷却通过时执行；
+        /// 失败只记日志并返回 null，本次搭话退回纯文本语境。
+        /// </summary>
+        private async Task<string?> TryObserveScreenForProactiveAsync(
+            ModelConfig model, ProactiveTriggerType type)
+        {
+            if (!SettingsService.Instance.VisionEnabled)
+            {
+                return null;
+            }
+
+            // 问候类触发不额外看屏幕，避免每天早晚固定多一次视觉调用
+            if (type is not (ProactiveTriggerType.IdleChat or ProactiveTriggerType.WelcomeBack))
+            {
+                return null;
+            }
+
+            if ((DateTime.UtcNow - _lastProactiveScreenLookTimeUtc).TotalMinutes <
+                PROACTIVE_SCREEN_LOOK_COOLDOWN_MINUTES)
+            {
+                return null;
+            }
+
+            _lastProactiveScreenLookTimeUtc = DateTime.UtcNow;
+
+            try
+            {
+                var observation = await LookAtScreenAsync(
+                    model, "简要描述主人屏幕上的主要内容，特别是当前正在使用的软件或页面，一到两句话。");
+                Log.Debug($"[主动搭话] 屏幕观察完成：{observation.Length} 字");
+                return observation;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[主动搭话] 屏幕观察失败，本次不带画面语境：{ex.Message}");
+                return null;
+            }
         }
     }
 }

@@ -27,6 +27,9 @@ namespace KfuPet.Services
         /// <summary>对话后对主人态度的情绪判断。</summary>
         EmotionJudge,
 
+        /// <summary>屏幕视觉观察（截图 + 多模态问答）。</summary>
+        Vision,
+
         /// <summary>其他未分类的调用。</summary>
         Other
     }

@@ -43,6 +43,64 @@ namespace KfuPet.Services
         }
 
         /// <summary>
+        /// 发送一张图片与文本问题给多模态模型，返回回复文本（用于屏幕视觉观察）。
+        /// 图片以 base64 data URL 内联在 user 消息的 content 数组里；本地 GGUF 模型不支持图片输入，
+        /// 因此该调用点固定走远端模型，不按 <see cref="ModelCallKind"/> 做本地分流。
+        /// </summary>
+        /// <param name="imageBytes">JPEG / PNG 等图片的原始字节。</param>
+        /// <param name="mimeType">图片 MIME 类型，例如 image/jpeg。</param>
+        /// <param name="kind">调用点分类，用于日志与调用点追踪。</param>
+        /// <param name="category">token 用量统计分类。</param>
+        internal async Task<string> SendVisionAsync(
+            ModelConfig model, string systemPrompt, string question, byte[] imageBytes,
+            string mimeType, ModelCallKind kind, TokenUsageCategory category,
+            CancellationToken cancellationToken = default)
+        {
+            if (imageBytes.Length == 0)
+            {
+                throw new InvalidOperationException("截图为空");
+            }
+
+            var payload = new JsonObject
+            {
+                ["model"] = model.ModelId,
+                ["messages"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["role"] = "system",
+                        ["content"] = systemPrompt
+                    },
+                    new JsonObject
+                    {
+                        ["role"] = "user",
+                        ["content"] = new JsonArray
+                        {
+                            new JsonObject
+                            {
+                                ["type"] = "text",
+                                ["text"] = question
+                            },
+                            new JsonObject
+                            {
+                                ["type"] = "image_url",
+                                ["image_url"] = new JsonObject
+                                {
+                                    ["url"] = $"data:{mimeType};base64,{Convert.ToBase64String(imageBytes)}"
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            Log.Debug($"[视觉] 请求图片理解：模型 {model.ModelId}，图片 {imageBytes.Length / 1024} KB，" +
+                      $"问题 {question.Length} 字，调用点 {kind}");
+            var body = await PostAsync(model, payload, category, cancellationToken);
+            return ExtractReply(body);
+        }
+
+        /// <summary>
         /// 发送消息列表并返回第一条回复文本，供记忆分析等内部流程复用（不带工具）。
         /// </summary>
         internal async Task<string> SendRawAsync(
