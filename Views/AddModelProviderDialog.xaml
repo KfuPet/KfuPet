@@ -109,7 +109,7 @@
                         <TextBlock Text="&#xE783;"
                                    FontFamily="{DynamicResource FontFamilyIcon}"
                                    FontSize="{DynamicResource FontSizeIcon}"
-                                   Foreground="#E81123"
+                                   Foreground="{DynamicResource AppDangerBrush}"
                                    VerticalAlignment="Top"
                                    Margin="0,1,8,0"/>
                         <StackPanel Grid.Column="1">
@@ -161,7 +161,7 @@
                 <Grid x:Name="ModelGroup">
                     <StackPanel>
                         <TextBlock Style="{StaticResource FieldLabelStyle}">
-                            <Run Foreground="#E81123">* </Run><Run Text="模型"/>
+                            <Run Foreground="{DynamicResource AppDangerBrush}">* </Run><Run Text="模型"/>
                         </TextBlock>
                         <!-- 预设服务商：先点击刷新按钮拉取模型列表，成功后切换为可展开的下拉框 -->
                         <Grid x:Name="ModelFetchPanel" Margin="0,0,0,14">
@@ -210,7 +210,7 @@
                 <Grid x:Name="BaseUrlGroup">
                     <StackPanel x:Name="BaseUrlPanel" Visibility="Collapsed">
                         <TextBlock Style="{StaticResource FieldLabelStyle}">
-                            <Run Foreground="#E81123">* </Run><Run Text="Base URL"/>
+                            <Run Foreground="{DynamicResource AppDangerBrush}">* </Run><Run Text="Base URL"/>
                         </TextBlock>
                         <TextBox x:Name="BaseUrlBox"
                                  Style="{StaticResource FieldInputStyle}"/>
@@ -221,7 +221,7 @@
                     <StackPanel>
                         <Grid Margin="0,0,0,4">
                             <TextBlock Style="{StaticResource FieldLabelStyle}" Margin="0">
-                                <Run Foreground="#E81123">* </Run><Run Text="API 密钥"/>
+                                <Run Foreground="{DynamicResource AppDangerBrush}">* </Run><Run Text="API 密钥"/>
                             </TextBlock>
                             <TextBlock x:Name="GetApiKeyLink"
                                        Text="获取 API 密钥"

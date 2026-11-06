@@ -13,7 +13,7 @@
     <Border x:Name="DialogRoot"
             Margin="16"
             Background="{DynamicResource AppBackgroundBrush}"
-            BorderBrush="#E81123"
+            BorderBrush="{DynamicResource AppDangerBrush}"
             BorderThickness="1"
             CornerRadius="12"
             Opacity="0"
@@ -44,7 +44,7 @@
                                FontFamily="{StaticResource FontFamilyBody}"
                                FontSize="{StaticResource FontSizeBody}"
                                FontWeight="{StaticResource FontWeightSemiBold}"
-                               Foreground="#E81123"
+                               Foreground="{DynamicResource AppDangerBrush}"
                                VerticalAlignment="Center"/>
                     <Button x:Name="CloseButton"
                             Width="46" Height="44"
@@ -57,7 +57,7 @@
                             <ControlTemplate TargetType="Button">
                                 <Border Background="{TemplateBinding Background}">
                                     <Grid>
-                                        <Border x:Name="HoverBg" Background="#E81123" CornerRadius="0,10,0,0" Opacity="0"/>
+                                        <Border x:Name="HoverBg" Background="{DynamicResource AppDangerBrush}" CornerRadius="0,10,0,0" Opacity="0"/>
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
@@ -131,10 +131,7 @@
                             Content="取消"
                             Click="CancelButton_Click"/>
                     <Button x:Name="ConfirmButton"
-                            Style="{StaticResource DialogButtonStyle}"
-                            Background="#E81123"
-                            Foreground="White"
-                            BorderBrush="#E81123"
+                            Style="{StaticResource DangerButtonStyle}"
                             Content="仍然开启"
                             Click="ConfirmButton_Click"/>
                 </StackPanel>

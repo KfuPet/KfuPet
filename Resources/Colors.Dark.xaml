@@ -33,4 +33,9 @@
 
     <!-- 功能色：记忆等级（浅红） -->
     <SolidColorBrush x:Key="AppPinkBrush" Color="#FFF0A0A0"/>
+
+    <!-- 功能色：危险操作（删除确认 / 错误提示 / 关闭按钮悬停），深浅主题共用 -->
+    <SolidColorBrush x:Key="AppDangerBrush" Color="#FFE81123"/>
+    <SolidColorBrush x:Key="AppDangerHoverBrush" Color="#FFF32F41"/>
+    <SolidColorBrush x:Key="AppDangerSubtleBrush" Color="#22E81123"/>
 </ResourceDictionary>

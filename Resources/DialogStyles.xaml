@@ -505,6 +505,102 @@
         </Setter>
     </Style>
 
+    <!-- 危险操作按钮：红底白字，悬停提亮（叠层淡入，避免直接动画共享主题画刷），按下回弹，禁用时整体变灰 -->
+    <Style x:Key="DangerButtonStyle" TargetType="Button">
+        <Setter Property="MinWidth" Value="88"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Background" Value="{DynamicResource AppDangerBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="ScaleRoot" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform/>
+                        </Grid.RenderTransform>
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="8"/>
+                        <Border x:Name="HoverOverlay"
+                                Background="{DynamicResource AppDangerHoverBrush}"
+                                CornerRadius="8"
+                                Opacity="0"
+                                IsHitTestVisible="False"/>
+                        <Border x:Name="DisabledOverlay"
+                                Background="{DynamicResource AppSurfaceBrush}"
+                                CornerRadius="8"
+                                Opacity="0"
+                                IsHitTestVisible="False"/>
+                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.18"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ScaleRoot"
+                                                         Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                                         To="0.95" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="ScaleRoot"
+                                                         Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                         To="0.95" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ScaleRoot"
+                                                         Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                                         To="1" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction>
+                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="ScaleRoot"
+                                                         Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                         To="1" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction>
+                                                <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="DisabledOverlay" Property="Opacity" Value="0.55"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- 服务商条目按钮：图标块 + 名称 + 右箭头，悬停时描边变强调色、内容右移 -->
     <Style x:Key="ProviderButtonStyle" TargetType="Button">
         <Setter Property="Padding" Value="12,10"/>
@@ -710,7 +806,7 @@
                     <Border Background="{TemplateBinding Background}">
                         <Grid>
                             <Border x:Name="HoverBg"
-                                    Background="#E81123"
+                                    Background="{DynamicResource AppDangerBrush}"
                                     CornerRadius="0,10,0,0"
                                     Opacity="0"/>
                             <TextBlock Text="&#xE8BB;"
@@ -753,8 +849,8 @@
     <Style x:Key="DialogErrorBannerStyle" TargetType="Border">
         <Setter Property="Margin" Value="0,0,0,14"/>
         <Setter Property="Padding" Value="12,10"/>
-        <Setter Property="Background" Value="#22E81123"/>
-        <Setter Property="BorderBrush" Value="#E81123"/>
+        <Setter Property="Background" Value="{DynamicResource AppDangerSubtleBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="8"/>
     </Style>

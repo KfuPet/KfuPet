@@ -26,13 +26,6 @@
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
         </Style>
 
-        <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-
         <Style x:Key="HintTextStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
             <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
@@ -68,7 +61,7 @@
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}">
                             <Grid>
-                                <Border x:Name="HoverBg" Background="#E81123" CornerRadius="0,10,0,0" Opacity="0"/>
+                                <Border x:Name="HoverBg" Background="{DynamicResource AppDangerBrush}" CornerRadius="0,10,0,0" Opacity="0"/>
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
@@ -100,168 +93,11 @@
             </Setter>
         </Style>
 
-        <!-- 输入框：圆角，悬停/聚焦时描边环淡入（叠加层方案，兼容主题画刷） -->
-        <Style x:Key="FieldInputStyle" TargetType="TextBox">
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="Padding" Value="12,11"/>
-            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{DynamicResource AppBorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
-                                CornerRadius="8">
-                            <Grid>
-                                <Border x:Name="HoverRing"
-                                        BorderBrush="{DynamicResource AppTextDisabledBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        CornerRadius="8"
-                                        Opacity="0"/>
-                                <Border x:Name="FocusRing"
-                                        BorderBrush="{DynamicResource AppAccentBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        CornerRadius="8"
-                                        Opacity="0"/>
-                                <ScrollViewer x:Name="PART_ContentHost" Margin="2,0"/>
-                            </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="HoverRing"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="1" Duration="0:0:0.12"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="HoverRing"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="0" Duration="0:0:0.18"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="FocusRing"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="1" Duration="0:0:0.15"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="FocusRing"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="0" Duration="0:0:0.2"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 密码框：与输入框同款外观（WPF 模板无法跨控件类型复用，故分开定义） -->
-        <Style x:Key="FieldPasswordStyle" TargetType="PasswordBox">
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="Padding" Value="12,11"/>
-            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource AppTextPrimaryBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="PasswordBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{DynamicResource AppBorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
-                                CornerRadius="8">
-                            <Grid>
-                                <Border x:Name="HoverRing"
-                                        BorderBrush="{DynamicResource AppTextDisabledBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        CornerRadius="8"
-                                        Opacity="0"/>
-                                <Border x:Name="FocusRing"
-                                        BorderBrush="{DynamicResource AppAccentBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        CornerRadius="8"
-                                        Opacity="0"/>
-                                <ScrollViewer x:Name="PART_ContentHost" Margin="2,0"/>
-                            </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="HoverRing"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="1" Duration="0:0:0.12"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="HoverRing"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="0" Duration="0:0:0.18"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="FocusRing"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="1" Duration="0:0:0.15"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="FocusRing"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="0" Duration="0:0:0.2"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <!-- 开关：滑块缓动滑动 + 拇指弹性缩放回弹，轨道强调色淡入淡出 -->
         <Style x:Key="ToggleSwitchStyle" TargetType="ToggleButton">
             <Setter Property="Width" Value="44"/>
             <Setter Property="Height" Value="24"/>
+            <Setter Property="Background" Value="{DynamicResource AppSuccessBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -270,8 +106,9 @@
                                 Background="{DynamicResource AppBorderBrush}"
                                 CornerRadius="12">
                             <Grid>
+                                <!-- 轨道“开启”色跟随 Background，默认成功绿，危险开关可在使用处改为危险红 -->
                                 <Border x:Name="TrackOn"
-                                        Background="{DynamicResource AppSuccessBrush}"
+                                        Background="{TemplateBinding Background}"
                                         CornerRadius="12"
                                         Opacity="0"/>
                                 <Ellipse x:Name="Thumb"
@@ -400,125 +237,8 @@
             </Setter>
         </Style>
 
-        <!-- 滚动条分页按钮：透明占位，仅保留滚动功能 -->
-        <Style x:Key="ScrollBarPageButtonStyle" TargetType="RepeatButton">
-            <Setter Property="IsTabStop" Value="False"/>
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="RepeatButton">
-                        <Border Background="Transparent"/>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 滚动条滑块：圆角细条，悬停强调色 -->
-        <Style x:Key="ScrollBarThumbStyle" TargetType="Thumb">
-            <Setter Property="IsTabStop" Value="False"/>
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Thumb">
-                        <Border x:Name="ThumbBorder"
-                                Background="{DynamicResource AppBorderBrush}"
-                                CornerRadius="3"/>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ThumbBorder"
-                                        Property="Background"
-                                        Value="{DynamicResource AppAccentBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 细滚动条：overlay 悬浮在内容上方，不挤压布局 -->
-        <Style TargetType="ScrollBar">
-            <Setter Property="Width" Value="6"/>
-            <Setter Property="MinWidth" Value="6"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollBar">
-                        <Grid Background="Transparent">
-                            <Track x:Name="PART_Track" IsDirectionReversed="True">
-                                <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="ScrollBar.PageUpCommand"
-                                                  Style="{StaticResource ScrollBarPageButtonStyle}"/>
-                                </Track.DecreaseRepeatButton>
-                                <Track.Thumb>
-                                    <Thumb Style="{StaticResource ScrollBarThumbStyle}"/>
-                                </Track.Thumb>
-                                <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="ScrollBar.PageDownCommand"
-                                                  Style="{StaticResource ScrollBarPageButtonStyle}"/>
-                                </Track.IncreaseRepeatButton>
-                            </Track>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Trigger.EnterActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                 To="1" Duration="0:0:0.15"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </Trigger.EnterActions>
-                    <Trigger.ExitActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                 To="0" Duration="0:0:0.3"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </Trigger.ExitActions>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- 自定义 ScrollViewer：滚动条悬浮在内容上方，不占用布局空间 -->
-        <Style x:Key="OverlayScrollViewerStyle" TargetType="ScrollViewer">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollViewer">
-                        <Grid>
-                            <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
-                                                    Content="{TemplateBinding Content}"
-                                                    ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                    CanContentScroll="{TemplateBinding CanContentScroll}"
-                                                    CanHorizontallyScroll="False"
-                                                    CanVerticallyScroll="False"/>
-                            <ScrollBar x:Name="PART_VerticalScrollBar"
-                                       Value="{TemplateBinding VerticalOffset}"
-                                       Maximum="{TemplateBinding ScrollableHeight}"
-                                       ViewportSize="{TemplateBinding ViewportHeight}"
-                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
-                                       Orientation="Vertical"
-                                       HorizontalAlignment="Right"
-                                       Width="6"
-                                       Margin="0,4,2,4"/>
-                            <ScrollBar x:Name="PART_HorizontalScrollBar"
-                                       Value="{TemplateBinding HorizontalOffset}"
-                                       Maximum="{TemplateBinding ScrollableWidth}"
-                                       ViewportSize="{TemplateBinding ViewportWidth}"
-                                       Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
-                                       Orientation="Horizontal"
-                                       VerticalAlignment="Bottom"
-                                       Height="6"
-                                       Margin="4,0,4,2"/>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- 细滚动条：overlay 悬浮在内容上方，不挤压布局（外观复用共享的 SlimScrollBarStyle） -->
+        <Style TargetType="ScrollBar" BasedOn="{StaticResource SlimScrollBarStyle}"/>
 
         <!-- 模型列表项：圆角卡片，左侧名称，右侧删除按钮 + 开关 -->
         <Style x:Key="ModelItemStyle" TargetType="ListBoxItem">
@@ -641,7 +361,7 @@
                                                             Value="{DynamicResource AppBorderBrush}"/>
                                                     <Setter TargetName="DeleteIcon"
                                                             Property="Fill"
-                                                            Value="#E81123"/>
+                                                            Value="{DynamicResource AppDangerBrush}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -742,7 +462,7 @@
                                                             Value="{DynamicResource AppBorderBrush}"/>
                                                     <Setter TargetName="DeleteIcon"
                                                             Property="Fill"
-                                                            Value="#E81123"/>
+                                                            Value="{DynamicResource AppDangerBrush}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -3064,7 +2784,7 @@
                                 <Border Margin="0,8,0,0"
                                         Padding="14,10"
                                         Background="{DynamicResource AppSurfaceBrush}"
-                                        BorderBrush="#E81123"
+                                        BorderBrush="{DynamicResource AppDangerBrush}"
                                         BorderThickness="1"
                                         CornerRadius="10">
                                     <Grid>
@@ -3074,13 +2794,13 @@
                                             <TextBlock Text="完全访问（忽略白名单）"
                                                        FontFamily="{StaticResource FontFamilyBody}"
                                                        FontSize="{StaticResource FontSizeBody}"
-                                                       Foreground="#E81123"
+                                                       Foreground="{DynamicResource AppDangerBrush}"
                                                        VerticalAlignment="Center"/>
 
                                             <TextBlock Text="&#xE9CE;"
                                                        FontFamily="{StaticResource FontFamilyIcon}"
                                                        FontSize="{StaticResource FontSizeIconSmall}"
-                                                       Foreground="#E81123"
+                                                       Foreground="{DynamicResource AppDangerBrush}"
                                                        Cursor="Help"
                                                        Margin="6,1,0,0"
                                                        VerticalAlignment="Center">
@@ -3093,17 +2813,14 @@
                                             </TextBlock>
                                         </StackPanel>
 
-                                        <!-- 开关的“开启”色改为警示红（仅作用于本控件子树） -->
+                                        <!-- 开关的“开启”色改为警示红 -->
                                         <ToggleButton x:Name="OpenAppFullAccessToggle"
                                                       Style="{StaticResource ToggleSwitchStyle}"
+                                                      Background="{DynamicResource AppDangerBrush}"
                                                       HorizontalAlignment="Right"
                                                       VerticalAlignment="Center"
                                                       Checked="OpenAppFullAccessToggle_Changed"
-                                                      Unchecked="OpenAppFullAccessToggle_Changed">
-                                            <ToggleButton.Resources>
-                                                <SolidColorBrush x:Key="AppSuccessBrush" Color="#E81123"/>
-                                            </ToggleButton.Resources>
-                                        </ToggleButton>
+                                                      Unchecked="OpenAppFullAccessToggle_Changed"/>
                                     </Grid>
                                 </Border>
 
@@ -3114,7 +2831,7 @@
                                            Text="完全访问已开启：桌宠可打开任意程序，白名单不再生效。"
                                            FontFamily="{StaticResource FontFamilyBody}"
                                            FontSize="{StaticResource FontSizeCaption}"
-                                           Foreground="#E81123"
+                                           Foreground="{DynamicResource AppDangerBrush}"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
 
@@ -4438,96 +4155,27 @@
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <!-- 缓存清理按钮：红色危险操作，位于标题行右侧 -->
+                                <!-- 缓存清理按钮：危险操作，外观复用共享的 DangerButtonStyle，位于标题行右侧 -->
                                 <Button x:Name="CleanupCacheButton"
                                         Grid.Column="3"
+                                        Style="{StaticResource DangerButtonStyle}"
+                                        MinWidth="0"
                                         VerticalAlignment="Center"
                                         Padding="12,7"
-                                        Cursor="Hand"
-                                        FocusVisualStyle="{x:Null}"
                                         Click="CleanupCacheButton_Click">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="Bd"
-                                                    Background="#E81123"
-                                                    CornerRadius="8"
-                                                    Padding="{TemplateBinding Padding}"
-                                                    RenderTransformOrigin="0.5,0.5">
-                                                <Border.RenderTransform>
-                                                    <ScaleTransform x:Name="BtnScale"/>
-                                                </Border.RenderTransform>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE74D;"
-                                                               FontFamily="{StaticResource FontFamilyIcon}"
-                                                               FontSize="{StaticResource FontSizeIconSmall}"
-                                                               Foreground="White"
-                                                               VerticalAlignment="Center"
-                                                               Margin="0,0,6,0"/>
-                                                    <TextBlock Text="缓存清理"
-                                                               FontFamily="{StaticResource FontFamilyBody}"
-                                                               FontSize="{StaticResource FontSizeBody}"
-                                                               Foreground="White"
-                                                               VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Trigger.EnterActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <ColorAnimation Storyboard.TargetName="Bd"
-                                                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                                                To="#F32F41" Duration="0:0:0.12"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.EnterActions>
-                                                    <Trigger.ExitActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <ColorAnimation Storyboard.TargetName="Bd"
-                                                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                                                To="#E81123" Duration="0:0:0.18"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.ExitActions>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Trigger.EnterActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                 Storyboard.TargetProperty="ScaleX"
-                                                                                 To="0.95" Duration="0:0:0.08"/>
-                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                 Storyboard.TargetProperty="ScaleY"
-                                                                                 To="0.95" Duration="0:0:0.08"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.EnterActions>
-                                                    <Trigger.ExitActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                 Storyboard.TargetProperty="ScaleX"
-                                                                                 To="1" Duration="0:0:0.25">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <CubicEase EasingMode="EaseOut"/>
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                                <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                                                 Storyboard.TargetProperty="ScaleY"
-                                                                                 To="1" Duration="0:0:0.25">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <CubicEase EasingMode="EaseOut"/>
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </Trigger.ExitActions>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE74D;"
+                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock Text="缓存清理"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
                                 </Button>
                             </Grid>
 

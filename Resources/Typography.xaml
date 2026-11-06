@@ -18,6 +18,9 @@
     <sys:Double x:Key="FontSizeIconSmall">12</sys:Double>
     <sys:Double x:Key="FontSizeIcon">15</sys:Double>
     <sys:Double x:Key="FontSizeIconLarge">22</sys:Double>
+    <!-- 空状态占位大图标 -->
+    <sys:Double x:Key="FontSizeIconExtraLarge">28</sys:Double>
+    <sys:Double x:Key="FontSizeIconHuge">40</sys:Double>
 
     <!-- 字重令牌 -->
     <FontWeight x:Key="FontWeightSemiBold">SemiBold</FontWeight>

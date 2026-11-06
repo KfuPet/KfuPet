@@ -68,7 +68,7 @@
                         <TextBlock Text="&#xE783;"
                                    FontFamily="{DynamicResource FontFamilyIcon}"
                                    FontSize="{DynamicResource FontSizeIcon}"
-                                   Foreground="#E81123"
+                                   Foreground="{DynamicResource AppDangerBrush}"
                                    VerticalAlignment="Top"
                                    Margin="0,1,8,0"/>
                         <StackPanel Grid.Column="1">

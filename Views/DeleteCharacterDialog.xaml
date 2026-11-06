@@ -10,115 +10,6 @@
         ResizeMode="NoResize"
         Background="{x:Null}">
 
-    <Window.Resources>
-        <!-- 危险操作按钮：红底白字，悬停提亮、按压缩放回弹 -->
-        <Style x:Key="DangerButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="88"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Grid RenderTransformOrigin="0.5,0.5">
-                            <Grid.RenderTransform>
-                                <ScaleTransform x:Name="BtnScale"/>
-                            </Grid.RenderTransform>
-                            <Border x:Name="Bd"
-                                    Background="#E81123"
-                                    CornerRadius="8"
-                                    Padding="{TemplateBinding Padding}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#F32F41" Duration="0:0:0.12"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                            To="#E81123" Duration="0:0:0.18"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                             Storyboard.TargetProperty="ScaleX"
-                                                             To="0.95" Duration="0:0:0.08"/>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                             Storyboard.TargetProperty="ScaleY"
-                                                             To="0.95" Duration="0:0:0.08"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                             Storyboard.TargetProperty="ScaleX"
-                                                             To="1" Duration="0:0:0.25">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale"
-                                                             Storyboard.TargetProperty="ScaleY"
-                                                             To="1" Duration="0:0:0.25">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <BackEase EasingMode="EaseOut" Amplitude="0.6"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 普通按钮：透明底描边 -->
-        <Style x:Key="DialogButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="88"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontFamilyBody}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
-
     <Border x:Name="DialogRoot"
             Margin="16"
             Background="{DynamicResource AppBackgroundBrush}"
@@ -153,7 +44,7 @@
                     <TextBlock Text="&#xE74D;"
                                FontFamily="{StaticResource FontFamilyIcon}"
                                FontSize="{StaticResource FontSizeIcon}"
-                               Foreground="#E81123"
+                               Foreground="{DynamicResource AppDangerBrush}"
                                VerticalAlignment="Center"/>
                     <TextBlock Text="删除角色"
                                Margin="10,0,0,0"
@@ -174,7 +65,7 @@
                     <TextBlock Text="&#xE7BA;"
                                FontFamily="{StaticResource FontFamilyIcon}"
                                FontSize="{StaticResource FontSizeIconLarge}"
-                               Foreground="#E81123"
+                               Foreground="{DynamicResource AppDangerBrush}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
                 </Border>

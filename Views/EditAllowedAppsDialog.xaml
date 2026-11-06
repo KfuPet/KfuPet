@@ -68,7 +68,7 @@
                             <ControlTemplate TargetType="Button">
                                 <Border Background="{TemplateBinding Background}">
                                     <Grid>
-                                        <Border x:Name="HoverBg" Background="#E81123" CornerRadius="0,10,0,0" Opacity="0"/>
+                                        <Border x:Name="HoverBg" Background="{DynamicResource AppDangerBrush}" CornerRadius="0,10,0,0" Opacity="0"/>
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
