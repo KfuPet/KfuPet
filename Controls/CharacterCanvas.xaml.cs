@@ -88,6 +88,13 @@ namespace KfuPet.Controls
             _skeletonRenderer?.Clear();
         }
 
+        /// <summary>清空图片和 alpha 像素缓存。角色切换时调用，释放旧图片占用的内存。</summary>
+        public void ClearAllCaches()
+        {
+            _alphaCache.Clear();
+            _skeletonRenderer?.ClearImageCache();
+        }
+
         /// <summary>判断画布上的点是否命中角色的不透明区域（悬停交互用，透明部分不响应）。
         /// 按 Z 序从顶层往下检查：附件图片按像素透明度判断，调试骨骼线框（连线/关节圆点）按几何距离判断。</summary>
         public bool HitTestOpaque(Point canvasPoint)

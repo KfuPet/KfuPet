@@ -389,6 +389,7 @@ namespace KfuPet
             SaveCharacterAttachments();
 
             SkeletonService.RemoveAllAttachments();
+            CharacterCanvas.ClearAllCaches();
             CharacterAttachmentService.Load(SkeletonService, package.DirectoryPath);
             _attachmentsPackageDir = package.DirectoryPath;
             _touchReactions.Load(package.DirectoryPath);

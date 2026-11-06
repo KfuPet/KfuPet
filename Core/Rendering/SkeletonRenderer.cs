@@ -200,5 +200,8 @@ namespace KfuPet.Core.Rendering
         {
             Context.Canvas.Children.Clear();
         }
+
+        /// <summary>清空图片缓存。角色切换时调用，释放旧图片占用的内存。</summary>
+        public void ClearImageCache() => _imageCache.Clear();
     }
 }
