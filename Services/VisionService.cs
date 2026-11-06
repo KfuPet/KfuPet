@@ -47,9 +47,27 @@ namespace KfuPet.Services
         /// <returns>模型针对画面的文字回答。</returns>
         internal async Task<string> LookAsync(ModelConfig model, string question)
         {
-            var imageBytes = await Task.Run(CapturePrimaryScreenJpeg);
-            Log.Debug($"[视觉] 截图完成：{imageBytes.Length / 1024} KB");
+            var imageBytes = await CaptureScreenJpegAsync();
+            return await AskAsync(model, question, imageBytes);
+        }
 
+        /// <summary>截取主显示器并编码为最长边不超过 1024 的 JPEG。</summary>
+        /// <remarks>
+        /// 截图本身是 GDI+ CPU 操作，内部已用 <see cref="Task.Run(System.Action)"/> 包裹；
+        /// 调用方如果需要在截图期间隐藏自身窗口，应在调用前后自行控制，而不是依赖本方法。
+        /// </remarks>
+        internal static async Task<byte[]> CaptureScreenJpegAsync()
+        {
+            return await Task.Run(CapturePrimaryScreenJpeg);
+        }
+
+        /// <summary>拿着已截好的图片，让视觉模型回答指定问题。</summary>
+        /// <param name="model">用于视觉问答的远端模型。</param>
+        /// <param name="question">希望从画面中了解的问题。</param>
+        /// <param name="imageBytes">已编码的 JPEG 图片字节。</param>
+        /// <returns>模型针对画面的文字回答。</returns>
+        internal async Task<string> AskAsync(ModelConfig model, string question, byte[] imageBytes)
+        {
             var reply = await _chatService.SendVisionAsync(
                 model, SystemPrompt, question, imageBytes, "image/jpeg",
                 ModelCallKind.Vision, TokenUsageCategory.Vision);

@@ -1719,8 +1719,8 @@ namespace KfuPet
                 Opacity = 0;
             });
 
-            // 留出一帧时间让窗口真正从画面消失
-            await Task.Delay(120);
+            // 留出一帧时间让窗口真正从画面消失；50ms 足够，再长用户会察觉"消失了一下"
+            await Task.Delay(50);
         }
 
         /// <summary>恢复截图前的窗口透明度。</summary>
@@ -1729,18 +1729,23 @@ namespace KfuPet
             await Dispatcher.InvokeAsync(() => Opacity = _opacityBeforeScreenLook);
         }
 
-        /// <summary>截图并让视觉模型回答问题的统一入口：截图期间隐藏桌宠自身。</summary>
+        /// <summary>截图并让视觉模型回答问题的统一入口：只在截图瞬间隐藏桌宠自身，截完立即恢复。</summary>
         private async Task<string> LookAtScreenAsync(ModelConfig model, string question)
         {
+            // 只在截图的瞬间隐藏（50ms 等待 + GDI+ 截图 ≈ 几十毫秒），
+            // 网络请求阶段窗口已经恢复正常，用户不会感觉到宠物"消失了一会儿"
             await HideSelfForScreenLookAsync();
+            byte[] imageBytes;
             try
             {
-                return await VisionService.LookAsync(model, question);
+                imageBytes = await VisionService.CaptureScreenJpegAsync();
             }
             finally
             {
                 await RestoreSelfAfterScreenLookAsync();
             }
+
+            return await VisionService.AskAsync(model, question, imageBytes);
         }
 
         /// <summary>
