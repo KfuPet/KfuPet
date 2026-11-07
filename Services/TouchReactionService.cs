@@ -265,7 +265,7 @@ namespace KfuPet.Services
             }
 
             Log.Warning($"[触摸] 角色包反应配置不完整，缺少 {_missingConfigKeys.Count} 项：{string.Join("、", _missingConfigKeys)}" +
-                        $"（{name}，补全方法见 docs/角色包制作指南.md）");
+                        $"（{name}，补全方法见 docs/guides/角色包制作指南.md）");
         }
 
         /// <summary>

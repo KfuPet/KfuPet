@@ -396,7 +396,7 @@ namespace KfuPet
             _notifyIcon.BalloonTipTitle = "角色包配置不完整";
             _notifyIcon.BalloonTipText =
                 $"当前角色包的 reactions.json 缺少 {missing.Count} 项必填内容：{string.Join("、", missing)}。" +
-                "补全方法见 docs/角色包制作指南.md。";
+                "补全方法见 docs/guides/角色包制作指南.md。";
             _notifyIcon.BalloonTipIcon = System.Windows.Forms.ToolTipIcon.Warning;
             _notifyIcon.ShowBalloonTip(NotificationDisplayMilliseconds);
             Log.Info($"[触摸] 已就角色包反应配置不完整发出系统通知：缺少 {missing.Count} 项");

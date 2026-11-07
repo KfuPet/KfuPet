@@ -96,7 +96,7 @@ The following items are planned but NOT implemented. Do NOT implement them unles
 - Vision service (`VisionService` is a stub)
 - Android debugging HTTP server
 
-`docs/备忘录.md` tracks these stubs. Update it when a stub becomes a real implementation.
+`docs/reference/备忘录.md` tracks these stubs. Update it when a stub becomes a real implementation.
 
 ---
 
@@ -263,7 +263,7 @@ A character package is a folder under `Characters/<CharacterId>/`:
 - `reactions.json` — touch / interaction reactions
 - `attachments.json` — sprite attachments bound to skeleton bones
 
-The exact format is defined in `docs/角色包制作指南.md`. Follow that document instead of inventing new fields.
+The exact format is defined in `docs/guides/角色包制作指南.md`. Follow that document instead of inventing new fields.
 
 The character skeleton (bone hierarchy) is fixed for this project — only human characters are supported — so the skeleton definition may be hardcoded in code.
 
@@ -372,7 +372,7 @@ Calling rules:
 - Never surface a local inference failure as a user-facing error; log it and fall back.
 - `Qwen3-1.7B` does not support memory extraction or memory summarization. Keep `SupportsMemoryExtraction` / `SupportsMemorySummarization` accurate.
 - Emotion judging (`ModelCallKind.EmotionJudge`) must not be saved as `Local`; it is not stability-tested on local models.
-- When adding a local model or changing its capabilities, update `docs/模型API调用点清单.md`.
+- When adding a local model or changing its capabilities, update `docs/reference/模型API调用点清单.md`.
 
 ---
 
@@ -669,12 +669,12 @@ When adding new systems:
 
 Relevant documents:
 
-- `docs/角色包制作指南.md` — character package format
+- `docs/guides/角色包制作指南.md` — character package format
 - `docs/skeleton/SKELETON_API.md` — IPC / skeleton protocol
 - `docs/skeleton/SKELETON_BONES.md` — skeleton bone reference
-- `docs/模型API调用点清单.md` — model call sites and local model capability matrix
+- `docs/reference/模型API调用点清单.md` — model call sites and local model capability matrix
 - `docs/design/情感系统与DPI缩放.md` — emotion and DPI design notes
-- `docs/备忘录.md` — stubs and unused models
+- `docs/reference/备忘录.md` — stubs and unused models
 
 Rules:
 

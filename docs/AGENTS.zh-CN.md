@@ -98,7 +98,7 @@ Android（独立项目）
 - 视觉服务（`VisionService` 目前是空壳）
 - Android 调试 HTTP 服务
 
-`docs/备忘录.md` 记录了这些空壳。某个空壳变为真实实现时，请同步更新该文档。
+`docs/reference/备忘录.md` 记录了这些空壳。某个空壳变为真实实现时，请同步更新该文档。
 
 ---
 
@@ -265,7 +265,7 @@ UI 层（`Views/`、`Controls/`）：
 - `reactions.json` — 触摸 / 交互反应
 - `attachments.json` — 绑定到骨骼的贴图挂点
 
-完整格式定义在 `docs/角色包制作指南.md`。请遵循该文档，不要自行发明新字段。
+完整格式定义在 `docs/guides/角色包制作指南.md`。请遵循该文档，不要自行发明新字段。
 
 本项目的角色骨骼（骨骼层级）是固定的——只支持人形角色——因此骨骼定义可以硬编码在代码中。
 
@@ -374,7 +374,7 @@ AI 服务商必须始终可替换。
 - 绝不把本地推理失败作为用户可见错误抛出；记录日志并回退。
 - `Qwen3-1.7B` 不支持记忆提取与记忆总结。请保持 `SupportsMemoryExtraction` / `SupportsMemorySummarization` 标记准确。
 - 情绪判断（`ModelCallKind.EmotionJudge`）不得保存为 `Local`；它尚未经过本地模型稳定性测试。
-- 新增本地模型或调整其能力时，必须同步更新 `docs/模型API调用点清单.md`。
+- 新增本地模型或调整其能力时，必须同步更新 `docs/reference/模型API调用点清单.md`。
 
 ---
 
@@ -671,12 +671,12 @@ type：summary
 
 相关文档：
 
-- `docs/角色包制作指南.md` — 角色包格式
+- `docs/guides/角色包制作指南.md` — 角色包格式
 - `docs/skeleton/SKELETON_API.md` — IPC / 骨骼协议
 - `docs/skeleton/SKELETON_BONES.md` — 骨骼参考
-- `docs/模型API调用点清单.md` — 模型调用点与本地模型能力矩阵
+- `docs/reference/模型API调用点清单.md` — 模型调用点与本地模型能力矩阵
 - `docs/design/情感系统与DPI缩放.md` — 情感系统与 DPI 设计说明
-- `docs/备忘录.md` — 空壳与未使用模型
+- `docs/reference/备忘录.md` — 空壳与未使用模型
 
 规则：
 
