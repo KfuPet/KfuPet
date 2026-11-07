@@ -1652,7 +1652,7 @@ namespace KfuPet
                             history = history.Skip(history.Count - PROACTIVE_HISTORY_LIMIT).ToList();
                         }
 
-                        Log.Debug($"[主动搭话] {e.Type} 请求 AI：历史 {history.Count} 条，事件消息：{eventPrompt}");
+                        Log.Debug($"[主动搭话] {e.Type} 请求 AI：历史 {history.Count} 条，事件消息 {eventPrompt.Length} 字");
                         var stopwatch = Stopwatch.StartNew();
                         var reply = await _chatService.SendAsync(
                             model, _memorySystem.BuildBaseSystemPrompt(), history, eventPrompt,
