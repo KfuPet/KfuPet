@@ -341,7 +341,7 @@ AI 服务商必须始终可替换。
 
 - `LLamaSharp` 0.27.0
 - `LLamaSharp.Backend.Cpu` 0.27.0
-- `LLamaSharp.Backend.Vulkan` 0.27.0
+- `LLamaSharp.Backend.Vulkan.Windows` 0.27.0（不要用 `LLamaSharp.Backend.Vulkan` meta 包，它会连带把 Linux 原生库也拷进 Windows 产物）
 
 关键文件：
 

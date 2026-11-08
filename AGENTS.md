@@ -339,7 +339,7 @@ Approved packages (do NOT change versions or swap runtimes without permission):
 
 - `LLamaSharp` 0.27.0
 - `LLamaSharp.Backend.Cpu` 0.27.0
-- `LLamaSharp.Backend.Vulkan` 0.27.0
+- `LLamaSharp.Backend.Vulkan.Windows` 0.27.0 (do NOT use the `LLamaSharp.Backend.Vulkan` meta package — it also pulls the Linux natives into the Windows package)
 
 Key files:
 

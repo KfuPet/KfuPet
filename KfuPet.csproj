@@ -43,7 +43,8 @@
     <!-- 0.30 的原生库加载依赖 net10 的动态加载，net8 会回退到 netstandard2.0 并加载失败 -->
     <PackageReference Include="LLamaSharp" Version="0.27.0" />
     <PackageReference Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />
-    <PackageReference Include="LLamaSharp.Backend.Vulkan" Version="0.27.0" />
+    <!-- 用 Windows 专用子包替代 meta 包：meta 包会连带 LLamaSharp.Backend.Vulkan.Linux，其 props 在 win-x64 发布时走 fallback，把 64 MB 的 linux 原生库也拷进产物 -->
+    <PackageReference Include="LLamaSharp.Backend.Vulkan.Windows" Version="0.27.0" />
   </ItemGroup>
 
 </Project>
