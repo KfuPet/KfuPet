@@ -2922,7 +2922,7 @@
                                             <TextBlock.ToolTip>
                                                 <ToolTip MaxWidth="320">
                                                     <TextBlock TextWrapping="Wrap"
-                                                               Text="开启即授权桌宠在需要时截取当前主屏幕画面，并发送给你配置的 AI 模型服务商来理解画面内容。截图只在内存中处理，不保存到磁盘；截图前会短暂隐藏桌宠自身。默认关闭，关闭后桌宠既不会截图，也无法调用查看屏幕的工具。"/>
+                                                               Text="开启即授权桌宠在需要时截取当前屏幕画面，并发送给你配置的 AI 模型服务商来理解画面内容。截图只在内存中处理、不保存到磁盘；截图前会短暂隐藏桌宠自身。默认关闭，关闭后桌宠既不会截图，也无法调用查看屏幕的工具。"/>
                                                 </ToolTip>
                                             </TextBlock.ToolTip>
                                         </TextBlock>
@@ -2934,6 +2934,57 @@
                                                   VerticalAlignment="Center"
                                                   Checked="VisionToggle_Changed"
                                                   Unchecked="VisionToggle_Changed"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- 截图范围：开启只截前台窗口，关闭截取整个主屏；仅在“允许桌宠看屏幕”开启后生效 -->
+                            <Border Margin="0,8,0,0"
+                                    Padding="14,10"
+                                    Background="{DynamicResource AppSurfaceBrush}"
+                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,16,0">
+                                        <TextBlock Text="仅截取前台窗口"
+                                                   FontFamily="{StaticResource FontFamilyBody}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{DynamicResource AppTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <TextBlock Text="&#xE9CE;"
+                                                   FontFamily="{StaticResource FontFamilyIcon}"
+                                                   FontSize="{StaticResource FontSizeIconSmall}"
+                                                   Cursor="Help"
+                                                   Margin="6,1,0,0"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                            <TextBlock.ToolTip>
+                                                <ToolTip MaxWidth="320">
+                                                    <TextBlock TextWrapping="Wrap"
+                                                               Text="开启时只截取当前活动窗口，不会拍到旁边的其他窗口，更省流量也更保护隐私；关闭时截取整个主屏幕。两种范围下，检测到密码管理器、远程控制等敏感应用时都会跳过截图。用户正在与桌宠交互、前台窗口缺小时会自动退回整屏。"/>
+                                                </ToolTip>
+                                            </TextBlock.ToolTip>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <ToggleButton x:Name="VisionForegroundOnlyToggle"
+                                                  Style="{StaticResource ToggleSwitchStyle}"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center"
+                                                  Checked="VisionForegroundOnlyToggle_Changed"
+                                                  Unchecked="VisionForegroundOnlyToggle_Changed"/>
                                 </Grid>
                             </Border>
                         </StackPanel>

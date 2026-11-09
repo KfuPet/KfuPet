@@ -222,6 +222,12 @@ namespace KfuPet.Services
         /// </summary>
         public bool VisionEnabled { get; private set; }
 
+        /// <summary>
+        /// 是否只截取前台窗口（默认开启）：开启时只截当前活动窗口，关闭时截取整个主屏。
+        /// 前台是本进程或拿不到有效窗口时自动退回整屏。
+        /// </summary>
+        public bool VisionForegroundOnly { get; private set; }
+
         /// <summary>允许模型打开的应用白名单（默认空；为空时模型无法打开任何程序）。</summary>
         public IReadOnlyList<AllowedAppEntry> AllowedApps { get; private set; } = Array.Empty<AllowedAppEntry>();
 
@@ -305,6 +311,7 @@ namespace KfuPet.Services
             ForegroundAppContextEnabled = false;
             OpenAppEnabled = false;
             VisionEnabled = false;
+            VisionForegroundOnly = true;
             AllowedApps = Array.Empty<AllowedAppEntry>();
             OpenAppFullAccess = false;
             LocalModelDirectory = string.Empty;
@@ -546,6 +553,13 @@ namespace KfuPet.Services
             Save();
         }
 
+        /// <summary>保存“仅截取前台窗口”选项：开启只截活动窗口，关闭截取整个主屏。</summary>
+        public void SetVisionForegroundOnly(bool foregroundOnly)
+        {
+            VisionForegroundOnly = foregroundOnly;
+            Save();
+        }
+
         /// <summary>保存允许打开的应用白名单（复制一份再存，避免界面直接改内存对象绕过落盘）。</summary>
         public void SetAllowedApps(IReadOnlyList<AllowedAppEntry> apps)
         {
@@ -750,6 +764,12 @@ namespace KfuPet.Services
                     VisionEnabled = visionElement.GetBoolean();
                 }
 
+                if (root.TryGetProperty("VisionForegroundOnly", out var visionScopeElement) &&
+                    visionScopeElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    VisionForegroundOnly = visionScopeElement.GetBoolean();
+                }
+
                 if (root.TryGetProperty("OpenAppFullAccess", out var openAppFullElement) &&
                     openAppFullElement.ValueKind is JsonValueKind.True or JsonValueKind.False)
                 {
@@ -917,6 +937,7 @@ namespace KfuPet.Services
                     ForegroundAppContextEnabled,
                     OpenAppEnabled,
                     VisionEnabled,
+                    VisionForegroundOnly,
                     OpenAppFullAccess,
                     AllowedApps,
                     LocalModelDirectory,

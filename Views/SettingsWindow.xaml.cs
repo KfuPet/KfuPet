@@ -190,9 +190,10 @@ namespace KfuPet.Views
             ForegroundAppContextToggle.IsChecked = SettingsService.Instance.ForegroundAppContextEnabled;
             _suppressForegroundAppEvents = false;
 
-            // 屏幕观察：读取授权开关（控件事件在此期间忽略）
+            // 屏幕观察：读取授权开关与截图范围（控件事件在此期间忽略）
             _suppressVisionEvents = true;
             VisionToggle.IsChecked = SettingsService.Instance.VisionEnabled;
+            VisionForegroundOnlyToggle.IsChecked = SettingsService.Instance.VisionForegroundOnly;
             _suppressVisionEvents = false;
 
             // 完全访问：读取开关（控件事件在此期间忽略）
@@ -387,6 +388,19 @@ namespace KfuPet.Views
             }
 
             SettingsService.Instance.SetVisionEnabled(VisionToggle.IsChecked == true);
+        }
+
+        /// <summary>
+        /// 截图范围开关：开启只截前台窗口，关闭截取整个主屏；仅在总开关开启后生效。
+        /// </summary>
+        private void VisionForegroundOnlyToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressVisionEvents)
+            {
+                return;
+            }
+
+            SettingsService.Instance.SetVisionForegroundOnly(VisionForegroundOnlyToggle.IsChecked == true);
         }
 
         /// <summary>
