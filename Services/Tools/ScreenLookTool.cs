@@ -4,7 +4,7 @@ using KfuPet.Models;
 namespace KfuPet.Services.Tools
 {
     /// <summary>
-    /// 屏幕观察工具：截取主显示器画面，交给多模态模型回答模型自己提出的问题，把答案文本回填。
+    /// 屏幕观察工具：截取前台窗口或主屏画面，交给多模态模型回答模型自己提出的问题，把答案文本回填。
     /// 是否可用由 SettingsService.VisionEnabled 总开关控制；工具内部再做冷却，避免模型频繁截图。
     /// </summary>
     internal class ScreenLookTool : ITool
@@ -20,7 +20,7 @@ namespace KfuPet.Services.Tools
 
         private readonly ModelConfigService _modelConfigService;
 
-        /// <summary>实际执行截图与视觉问答：由主窗口注入，负责截图期间隐藏桌宠自身窗口。</summary>
+        /// <summary>实际执行截图与视觉问答：由主窗口注入，直接复用 VisionService 的截图与问答流程。</summary>
         private readonly Func<ModelConfig, string, Task<string>> _lookAsync;
 
         /// <summary>用模型配置服务与观察委托构造。</summary>

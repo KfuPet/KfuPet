@@ -1704,48 +1704,18 @@ namespace KfuPet
         }
 
         // ── 视觉观察 ───────────────────────────────
+        // 截图时不隐藏桌宠自身：Opacity 隐藏依赖 DWM 合成时机，无法确定何时真正生效，
+        // 会出现"宠物只消失一半"或闪一下；改为让桌宠自然入镜，由视觉系统提示说明那是它自己。
 
         /// <summary>主动搭话时观察屏幕的最小间隔（分钟），控制截图与视觉调用的成本。</summary>
         private const int PROACTIVE_SCREEN_LOOK_COOLDOWN_MINUTES = 30;
 
-        private double _opacityBeforeScreenLook = 1.0;
         private DateTime _lastProactiveScreenLookTimeUtc = DateTime.MinValue;
 
-        /// <summary>截图期间隐藏桌宠自身窗口，并等待合成器完成一帧，避免宠物被截进画面。</summary>
-        private async Task HideSelfForScreenLookAsync()
-        {
-            await Dispatcher.InvokeAsync(() =>
-            {
-                _opacityBeforeScreenLook = Opacity;
-                Opacity = 0;
-            });
-
-            // 留出一帧时间让窗口真正从画面消失；50ms 足够，再长用户会察觉"消失了一下"
-            await Task.Delay(50);
-        }
-
-        /// <summary>恢复截图前的窗口透明度。</summary>
-        private async Task RestoreSelfAfterScreenLookAsync()
-        {
-            await Dispatcher.InvokeAsync(() => Opacity = _opacityBeforeScreenLook);
-        }
-
-        /// <summary>截图并让视觉模型回答问题的统一入口：只在截图瞬间隐藏桌宠自身，截完立即恢复。</summary>
+        /// <summary>截图并让视觉模型回答问题的统一入口：截图时不隐藏桌宠自身，宠物会自然入镜。</summary>
         private async Task<string> LookAtScreenAsync(ModelConfig model, string question)
         {
-            // 只在截图的瞬间隐藏（50ms 等待 + GDI+ 截图 ≈ 几十毫秒），
-            // 网络请求阶段窗口已经恢复正常，用户不会感觉到宠物"消失了一会儿"
-            await HideSelfForScreenLookAsync();
-            byte[] imageBytes;
-            try
-            {
-                imageBytes = await VisionService.CaptureScreenJpegAsync();
-            }
-            finally
-            {
-                await RestoreSelfAfterScreenLookAsync();
-            }
-
+            var imageBytes = await VisionService.CaptureScreenJpegAsync();
             return await VisionService.AskAsync(model, question, imageBytes);
         }
 
