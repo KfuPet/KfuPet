@@ -25,6 +25,7 @@ namespace KfuPet.Views
 
         private IReadOnlyList<CharacterPackageInfo> _packages = new List<CharacterPackageInfo>();
         private ICollectionView? _packageView;
+        private CharacterDetailDialog? _detailDialog;
         private bool _isLoading;
 
         public CharacterGalleryWindow(MainWindow mainWindow)
@@ -188,6 +189,27 @@ namespace KfuPet.Views
 
             _mainWindow.SwitchCharacterPackage(package);
             _ = ReloadAsync();
+        }
+
+        /// <summary>
+        /// 卡片「详情」：打开角色介绍窗口，展示预览图、作者、版本、标签与完整简介。
+        /// 用非模态 Show()：ShowDialog 会禁用同一线程上的所有窗口（含桌宠），导致桌宠无法点击拖动。
+        /// </summary>
+        private void DetailsCharacterButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is not CharacterPackageInfo package)
+            {
+                return;
+            }
+
+            // 同一时间只保留一个介绍窗口，避免连续点击不同卡片时层层叠加
+            if (_detailDialog != null && _detailDialog.IsVisible)
+            {
+                _detailDialog.Close();
+            }
+
+            _detailDialog = new CharacterDetailDialog(package) { Owner = this };
+            _detailDialog.Show();
         }
 
         /// <summary>

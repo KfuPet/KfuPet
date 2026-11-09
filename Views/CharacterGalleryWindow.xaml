@@ -467,16 +467,14 @@
                                                                    VerticalAlignment="Center"/>
                                                     </Grid>
 
-                                                    <!-- 描述：固定三行高度，超出裁切 -->
-                                                    <Grid Height="51" Margin="0,8,0,0" ClipToBounds="True">
-                                                        <TextBlock Text="{Binding Description}"
-                                                                   TextWrapping="Wrap"
-                                                                   LineHeight="17"
-                                                                   FontFamily="{StaticResource FontFamilyBody}"
-                                                                   FontSize="{StaticResource FontSizeIconSmall}"
-                                                                   Foreground="{DynamicResource AppTextSecondaryBrush}"
-                                                                   VerticalAlignment="Top"/>
-                                                    </Grid>
+                                                    <!-- 描述：单行展示，超出省略；完整介绍点「详情」查看 -->
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Margin="0,8,0,0"
+                                                               FontFamily="{StaticResource FontFamilyBody}"
+                                                               FontSize="{StaticResource FontSizeIconSmall}"
+                                                               Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                                               TextWrapping="NoWrap"
+                                                               TextTrimming="CharacterEllipsis"/>
 
                                                     <TextBlock x:Name="TagsText"
                                                                Text="{Binding TagsText}"
@@ -515,7 +513,8 @@
                                                         Click="UseCharacterButton_Click"/>
                                                 <Button Style="{StaticResource HoverActionButtonStyle}"
                                                         Margin="0,8,0,0"
-                                                        Content="详情"/>
+                                                        Content="详情"
+                                                        Click="DetailsCharacterButton_Click"/>
                                                 <Button x:Name="DeleteButton"
                                                         Style="{StaticResource HoverActionButtonStyle}"
                                                         Margin="0,8,0,0"
