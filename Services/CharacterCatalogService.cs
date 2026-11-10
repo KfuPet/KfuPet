@@ -183,8 +183,8 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 解析当前生效的角色包目录：优先设置里记录的角色包，其次第一个含 attachments.json 的角色包，
-        /// 最后第一个含 character.json 的角色包；都找不到时返回 null。
+        /// 解析当前生效的角色包目录：优先设置里记录的角色包文件夹名，其次记录的角色包标识（旧配置或文件夹改名后的回退），
+        /// 再退到第一个含 attachments.json 的角色包与第一个含 character.json 的角色包；都找不到时返回 null。
         /// 启动时挂载附件、构建提示词与角色模型窗口判定「使用中」共用此入口。
         /// </summary>
         public static string? ResolveActivePackageDirectory()
@@ -192,7 +192,23 @@ namespace KfuPet.Services
             var packageDirs = GetCharacterPackageDirectories();
             if (packageDirs.Length == 0) return null;
 
-            // 优先：设置里记录的角色包（角色模型窗口「使用」写入）
+            // 优先：设置里记录的角色包文件夹名（角色模型窗口「使用」写入）。
+            // 目录名天然唯一，两个角色包 id 相同时也不会解析歧义
+            var activeFolder = SettingsService.Instance.ActiveCharacterFolder;
+            if (activeFolder.Length > 0)
+            {
+                foreach (var packageDir in packageDirs)
+                {
+                    if (string.Equals(Path.GetFileName(packageDir), activeFolder, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return packageDir;
+                    }
+                }
+
+                Log.Warning($"[角色] 设置中记录的角色包文件夹已不存在：{activeFolder}");
+            }
+
+            // 回退：旧版设置只记录了角色包标识，或角色文件夹被改名后按标识重新匹配
             var activeId = SettingsService.Instance.ActiveCharacterId;
             if (activeId.Length > 0)
             {

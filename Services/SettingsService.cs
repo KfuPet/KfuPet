@@ -110,8 +110,11 @@ namespace KfuPet.Services
         /// <summary>桌宠窗口左上角 Y 坐标（逻辑像素）；null 表示尚未记录，启动时居中。</summary>
         public double? WindowTop { get; private set; }
 
-        /// <summary>当前使用的角色包标识（character.json 的 id，缺省时为文件夹名）；空串表示未选择过，按默认角色启动。</summary>
+        /// <summary>当前使用的角色包标识（character.json 的 id，缺省时为文件夹名）；仅作文件夹被改名后的回退匹配。</summary>
         public string ActiveCharacterId { get; private set; } = string.Empty;
+
+        /// <summary>当前使用的角色包文件夹名（Characters 下的目录名）；目录天然唯一，优先按此解析当前角色，避免 id 重名歧义。</summary>
+        public string ActiveCharacterFolder { get; private set; } = string.Empty;
 
         /// <summary>最近一次已展示过的公告标识；同一公告不再重复弹出。</summary>
         public string LastSeenAnnouncementId { get; private set; } = string.Empty;
@@ -282,6 +285,7 @@ namespace KfuPet.Services
             WindowLeft = null;
             WindowTop = null;
             ActiveCharacterId = string.Empty;
+            ActiveCharacterFolder = string.Empty;
             LastSeenAnnouncementId = string.Empty;
             ModelSavingMode = SavingMode.Off;
             CustomTouchReactionUseAi = true;
@@ -347,9 +351,13 @@ namespace KfuPet.Services
             Save();
         }
 
-        /// <summary>保存当前使用的角色包标识（角色模型窗口「使用」按钮写入）。</summary>
-        public void SetActiveCharacterId(string characterId)
+        /// <summary>
+        /// 保存当前使用的角色包（角色模型窗口「使用」按钮写入）：文件夹名用于精确解析，
+        /// 角色包标识保留作文件夹被改名后的回退匹配。
+        /// </summary>
+        public void SetActiveCharacterSelection(string folderName, string characterId)
         {
+            ActiveCharacterFolder = folderName?.Trim() ?? string.Empty;
             ActiveCharacterId = characterId?.Trim() ?? string.Empty;
             Save();
         }
@@ -643,6 +651,12 @@ namespace KfuPet.Services
                     ActiveCharacterId = activeCharacterElement.GetString()?.Trim() ?? string.Empty;
                 }
 
+                if (root.TryGetProperty("ActiveCharacterFolder", out var activeCharacterFolderElement) &&
+                    activeCharacterFolderElement.ValueKind == JsonValueKind.String)
+                {
+                    ActiveCharacterFolder = activeCharacterFolderElement.GetString()?.Trim() ?? string.Empty;
+                }
+
                 if (root.TryGetProperty("LastSeenAnnouncementId", out var lastSeenAnnouncementElement) &&
                     lastSeenAnnouncementElement.ValueKind == JsonValueKind.String)
                 {
@@ -918,6 +932,7 @@ namespace KfuPet.Services
                     WindowLeft,
                     WindowTop,
                     ActiveCharacterId,
+                    ActiveCharacterFolder,
                     LastSeenAnnouncementId,
                     ModelSavingMode = ModelSavingMode.ToString(),
                     CustomTouchReactionUseAi,

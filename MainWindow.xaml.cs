@@ -378,7 +378,10 @@ namespace KfuPet
         /// </summary>
         internal void SwitchCharacterPackage(CharacterPackageInfo package)
         {
-            SettingsService.Instance.SetActiveCharacterId(package.Id);
+            // 文件夹名用于精确解析当前角色（目录天然唯一，避免两个角色包 id 相同时产生歧义）；
+            // 同时记录角色包标识，供角色文件夹被改名后的回退匹配
+            SettingsService.Instance.SetActiveCharacterSelection(
+                Path.GetFileName(package.DirectoryPath), package.Id);
 
             if (string.Equals(_attachmentsPackageDir, package.DirectoryPath, StringComparison.OrdinalIgnoreCase))
             {

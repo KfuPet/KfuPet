@@ -10,7 +10,7 @@ namespace KfuPet.Models
         /// <summary>角色名称；无效角色包显示文件夹名。</summary>
         public string Name { get; init; } = string.Empty;
 
-        /// <summary>角色包标识（character.json 的 id，缺省时为文件夹名），用于记录当前使用的角色。</summary>
+        /// <summary>角色包标识（character.json 的 id，缺省时为文件夹名），用于角色文件夹被改名后的回退匹配。</summary>
         public string Id { get; init; } = string.Empty;
 
         /// <summary>角色包版本号。</summary>
