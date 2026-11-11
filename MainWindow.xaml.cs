@@ -182,6 +182,9 @@ namespace KfuPet
         /// <summary>本次启动加载附件配置的角色包目录；为空表示没有可回写的角色包。</summary>
         private string? _attachmentsPackageDir;
 
+        /// <summary>角色切换的请求版本号：连续切换多个角色时只应用最后一次，过期的后台预加载结果直接丢弃。</summary>
+        private int _characterSwitchVersion;
+
         internal SkeletonService SkeletonService { get; } = new SkeletonService();
 
         internal EmotionService EmotionService => EmotionService.Instance;
@@ -375,9 +378,10 @@ namespace KfuPet
         /// <summary>
         /// 切换当前使用的角色包（角色模型窗口「使用」按钮调用）：记录选择、先把旧角色的附件位置固化，
         /// 再清空骨骼、挂载新角色包的部位图与反应配置；提示词按当前角色包即时生效。
+        /// 配置读取与图片解码在后台线程完成，UI 线程只做批量挂载与一次重渲染，避免切换瞬间卡顿。
         /// 方法自身按磁盘实时状态校验角色包完整性，不依赖调用方预检。
         /// </summary>
-        internal void SwitchCharacterPackage(CharacterPackageInfo package)
+        internal async Task SwitchCharacterPackageAsync(CharacterPackageInfo package)
         {
             // 防御性校验：调用方切换前已复检，这里再独立判定一次，
             // 避免后续新增调用点、或两次检查之间角色包被外部改动后切到残缺包
@@ -391,6 +395,28 @@ namespace KfuPet
             if (!isComplete)
             {
                 Log.Warning($"[角色] 拒绝切换到不完整的角色包：{package.Name}（{reason}）");
+                return;
+            }
+
+            // 连续点击多个角色时只应用最后一次：递增版本号，过期的预加载结果在回到 UI 线程后丢弃
+            var switchVersion = ++_characterSwitchVersion;
+            var stopwatch = Stopwatch.StartNew();
+
+            CharacterAttachmentLoadPlan? plan;
+            try
+            {
+                plan = await Task.Run(() =>
+                    CharacterAttachmentService.BuildLoadPlan(package.DirectoryPath, decodeImages: true));
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[角色] 角色包预加载失败，已取消切换：{package.Name}（{ex.Message}）");
+                return;
+            }
+
+            if (switchVersion != _characterSwitchVersion)
+            {
+                Log.Info($"[角色] 切换请求已被更新的请求取代，丢弃预加载结果：{package.Name}");
                 return;
             }
 
@@ -409,11 +435,23 @@ namespace KfuPet
 
             SkeletonService.RemoveAllAttachments();
             CharacterCanvas.ClearAllCaches();
-            CharacterAttachmentService.Load(SkeletonService, package.DirectoryPath);
+
+            if (plan != null)
+            {
+                // 先把后台解码好的图片注入渲染缓存，挂载后的首次渲染直接命中，不再在 UI 线程解码
+                foreach (var (cacheKey, image, lastWriteUtc) in plan.Images)
+                {
+                    CharacterCanvas.PrimeImageCache(cacheKey, image, lastWriteUtc);
+                }
+
+                CharacterAttachmentService.Apply(SkeletonService, plan);
+            }
+
             _attachmentsPackageDir = package.DirectoryPath;
             _touchReactions.Load(package.DirectoryPath);
 
-            Log.Info($"[角色] 已切换使用角色包：{package.Name}（{package.DirectoryPath}）");
+            Log.Info($"[角色] 已切换使用角色包：{package.Name}（{package.DirectoryPath}），" +
+                     $"预加载与挂载耗时 {stopwatch.ElapsedMilliseconds} ms");
         }
 
         /// <summary>

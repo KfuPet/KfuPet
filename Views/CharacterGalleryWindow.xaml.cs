@@ -163,9 +163,9 @@ namespace KfuPet.Views
 
         /// <summary>
         /// 卡片「使用」：立即切换到该角色包（重挂部位图、切换提示词与台词）；
-        /// 角色包不完整时提示缺失项并中止。
+        /// 角色包不完整时提示缺失项并中止。切换含后台图片预解码，等待完成后再刷新卡片状态。
         /// </summary>
-        private void UseCharacterButton_Click(object sender, RoutedEventArgs e)
+        private async void UseCharacterButton_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is not CharacterPackageInfo package)
             {
@@ -199,7 +199,7 @@ namespace KfuPet.Views
                 return;
             }
 
-            _mainWindow.SwitchCharacterPackage(package);
+            await _mainWindow.SwitchCharacterPackageAsync(package);
             _ = ReloadAsync();
         }
 

@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Windows.Media.Imaging;
+using KfuPet.Core.Rendering;
 using KfuPet.Models;
 
 namespace KfuPet.Services
@@ -41,11 +43,22 @@ namespace KfuPet.Services
         /// </summary>
         public static int Load(SkeletonService skeletonService, string packageDir)
         {
+            var plan = BuildLoadPlan(packageDir, decodeImages: false);
+            return plan == null ? 0 : Apply(skeletonService, plan);
+        }
+
+        /// <summary>
+        /// 读取角色包附件配置并生成挂载计划，保存待挂载列表与整套图的统一缩放系数。
+        /// 可在后台线程调用（<paramref name="decodeImages"/> 为 true 时同时预解码全部图片，供切换角色时预加载）。
+        /// 配置缺失、解析失败或没有可用附件时返回 null。
+        /// </summary>
+        public static CharacterAttachmentLoadPlan? BuildLoadPlan(string packageDir, bool decodeImages)
+        {
             var manifestPath = Path.Combine(packageDir, ManifestFileName);
             if (!File.Exists(manifestPath))
             {
                 Log.Warning($"[附件] 未找到 {ManifestFileName}：{packageDir}");
-                return 0;
+                return null;
             }
 
             AttachmentManifest? manifest;
@@ -57,18 +70,21 @@ namespace KfuPet.Services
             catch (Exception ex)
             {
                 Log.Warning($"[附件] {ManifestFileName} 解析失败：{ex.Message}");
-                return 0;
+                return null;
             }
 
             if (manifest?.Attachments == null || manifest.Attachments.Count == 0)
             {
                 Log.Warning($"[附件] {ManifestFileName} 中没有附件定义");
-                return 0;
+                return null;
             }
 
             // 窗口与骨骼统一使用 DIP，配置里的缩放与偏移可直接使用，无需做 DPI 换算
-            var scale = manifest.Scale > 0 ? manifest.Scale : 1.0;
-            var loaded = 0;
+            var plan = new CharacterAttachmentLoadPlan
+            {
+                PackageDir = packageDir,
+                Scale = manifest.Scale > 0 ? manifest.Scale : 1.0
+            };
 
             foreach (var definition in manifest.Attachments)
             {
@@ -80,40 +96,74 @@ namespace KfuPet.Services
                 }
 
                 // 相对路径按角色包目录解析为绝对路径；渲染层对绝对路径直接放行
-                var resourcePath = Path.IsPathRooted(definition.Resource)
+                var fullPath = Path.IsPathRooted(definition.Resource)
                     ? definition.Resource
                     : Path.Combine(packageDir, definition.Resource);
 
-                if (!File.Exists(resourcePath))
+                if (!File.Exists(fullPath))
                 {
-                    Log.Warning($"[附件] 图片不存在，已跳过：{resourcePath}");
+                    Log.Warning($"[附件] 图片不存在，已跳过：{fullPath}");
                     continue;
                 }
 
-                // 重复加载时先移除同名附件，避免叠加
-                if (skeletonService.GetAttachment(definition.Id) != null)
-                {
-                    skeletonService.RemoveAttachment(definition.Id);
-                }
-
-                var attachment = skeletonService.AddAttachment(
-                    definition.BoneId, definition.Id, definition.Name, resourcePath,
-                    SafeValue(definition.Offset, 0), SafeValue(definition.Offset, 1),
-                    SafeValue(definition.Pivot, 0, 0.5), SafeValue(definition.Pivot, 1, 0.5),
-                    definition.ZOrder,
-                    scale, scale);
-
-                if (attachment == null) continue;
-
-                if (!definition.Visible)
-                {
-                    skeletonService.SetAttachmentVisible(definition.Id, false);
-                }
-
-                loaded++;
+                plan.Items.Add((definition, fullPath));
             }
 
-            Log.Info($"[附件] 已挂载 {loaded} 个部位（缩放 {scale:F3}）：{Path.GetFileName(packageDir)}");
+            if (decodeImages)
+            {
+                foreach (var (_, fullPath) in plan.Items)
+                {
+                    var decoded = SkeletonRenderer.DecodeForCache(fullPath);
+                    if (decoded == null)
+                    {
+                        Log.Warning($"[附件] 图片预解码失败，将由渲染时重试：{fullPath}");
+                        continue;
+                    }
+
+                    plan.Images.Add(decoded.Value);
+                }
+            }
+
+            return plan;
+        }
+
+        /// <summary>
+        /// 把预加载计划挂载到骨骼上（UI 线程调用）：整批挂载只在最后通知一次渲染，
+        /// 同名附件会先移除再挂载，保证重复调用不会叠加。返回成功挂载的附件数量。
+        /// </summary>
+        public static int Apply(SkeletonService skeletonService, CharacterAttachmentLoadPlan plan)
+        {
+            var loaded = 0;
+
+            skeletonService.Batch(service =>
+            {
+                foreach (var (definition, fullPath) in plan.Items)
+                {
+                    // 重复加载时先移除同名附件，避免叠加
+                    if (service.GetAttachment(definition.Id) != null)
+                    {
+                        service.RemoveAttachment(definition.Id);
+                    }
+
+                    var attachment = service.AddAttachment(
+                        definition.BoneId, definition.Id, definition.Name, fullPath,
+                        SafeValue(definition.Offset, 0), SafeValue(definition.Offset, 1),
+                        SafeValue(definition.Pivot, 0, 0.5), SafeValue(definition.Pivot, 1, 0.5),
+                        definition.ZOrder,
+                        plan.Scale, plan.Scale);
+
+                    if (attachment == null) continue;
+
+                    if (!definition.Visible)
+                    {
+                        service.SetAttachmentVisible(definition.Id, false);
+                    }
+
+                    loaded++;
+                }
+            });
+
+            Log.Info($"[附件] 已挂载 {loaded} 个部位（缩放 {plan.Scale:F3}）：{Path.GetFileName(plan.PackageDir)}");
             return loaded;
         }
 
@@ -216,5 +266,24 @@ namespace KfuPet.Services
                 return string.Empty;
             }
         }
+    }
+
+    /// <summary>
+    /// 角色包附件的预加载计划：后台线程完成配置读取与图片解码，UI 线程只做批量挂载，
+    /// 避免切换角色时在 UI 线程逐张解码图片造成卡顿。
+    /// </summary>
+    internal sealed class CharacterAttachmentLoadPlan
+    {
+        /// <summary>角色包目录（用于日志与相对路径解析）。</summary>
+        public string PackageDir { get; init; } = string.Empty;
+
+        /// <summary>整套部位图的统一缩放系数。</summary>
+        public double Scale { get; init; } = 1.0;
+
+        /// <summary>待挂载的附件定义与已解析的图片绝对路径。</summary>
+        public List<(AttachmentDefinition Definition, string FullPath)> Items { get; } = new();
+
+        /// <summary>已解码的图片缓存条目（缓存键、图片、文件写入时间），由 UI 线程注入渲染缓存。</summary>
+        public List<(string CacheKey, BitmapSource Image, DateTime LastWriteUtc)> Images { get; } = new();
     }
 }

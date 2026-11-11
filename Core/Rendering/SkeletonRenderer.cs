@@ -15,7 +15,7 @@ namespace KfuPet.Core.Rendering
         private static readonly string _resourceRootDir = System.IO.Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, "Resources");
 
-        private readonly Dictionary<string, (BitmapImage Image, DateTime LastWriteUtc)> _imageCache = new();
+        private readonly Dictionary<string, (BitmapSource Image, DateTime LastWriteUtc)> _imageCache = new();
 
         private const double BONE_LINE_THICKNESS = 3;
         private const double JOINT_RADIUS = 4;
@@ -136,7 +136,7 @@ namespace KfuPet.Core.Rendering
             Context.Canvas.Children.Add(imageControl);
         }
 
-        private BitmapImage? LoadImageForAttachment(Attachment attachment)
+        private BitmapSource? LoadImageForAttachment(Attachment attachment)
         {
             var path = attachment.GetCurrentResourcePath();
             if (string.IsNullOrEmpty(path)) return null;
@@ -144,10 +144,56 @@ namespace KfuPet.Core.Rendering
             var fullPath = ResolveResourcePath(path);
             var lastWriteUtc = GetLastWriteTimeUtc(fullPath);
 
-            // 文件未变化时复用缓存，避免重复解码；文件更新后自动重新加载。
+            // 文件未变化时复用缓存（含角色切换时后台预解码注入的图片），避免在 UI 线程重复解码
             if (_imageCache.TryGetValue(fullPath, out var entry) && entry.LastWriteUtc == lastWriteUtc)
                 return entry.Image;
 
+            var bitmap = DecodeBitmap(fullPath);
+            if (bitmap == null) return null;
+
+            if (_imageCache.Count >= MAX_IMAGE_CACHE)
+                _imageCache.Clear();
+
+            _imageCache[fullPath] = (bitmap, lastWriteUtc);
+            return bitmap;
+        }
+
+        /// <summary>
+        /// 后台线程预解码一张部位图，返回可直接注入图片缓存的条目（缓存键、图片与文件写入时间）。
+        /// 文件不存在或解码失败时返回 null，渲染时会按原有流程再尝试一次。
+        /// </summary>
+        public static (string CacheKey, BitmapSource Image, DateTime LastWriteUtc)? DecodeForCache(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+
+            var fullPath = ResolveResourcePath(path);
+            if (!System.IO.File.Exists(fullPath)) return null;
+
+            var image = DecodeBitmap(fullPath);
+            if (image == null) return null;
+
+            return (fullPath, image, GetLastWriteTimeUtc(fullPath));
+        }
+
+        /// <summary>
+        /// 把后台预解码的图片注入缓存：角色切换时避免在 UI 线程逐张解码造成卡顿。
+        /// 缓存键必须与渲染时解析出的绝对路径一致。
+        /// </summary>
+        public void PrimeImageCache(string cacheKey, BitmapSource? image, DateTime lastWriteUtc)
+        {
+            if (string.IsNullOrEmpty(cacheKey) || image == null) return;
+
+            if (_imageCache.Count >= MAX_IMAGE_CACHE)
+                _imageCache.Clear();
+
+            _imageCache[cacheKey] = (image, lastWriteUtc);
+        }
+
+        /// <summary>
+        /// 按渲染路径的同一规则解码图片并冻结，使结果可跨线程传递与缓存。
+        /// </summary>
+        private static BitmapSource? DecodeBitmap(string fullPath)
+        {
             try
             {
                 var bitmap = new BitmapImage();
@@ -157,11 +203,6 @@ namespace KfuPet.Core.Rendering
                 bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
                 bitmap.EndInit();
                 bitmap.Freeze();
-
-                if (_imageCache.Count >= MAX_IMAGE_CACHE)
-                    _imageCache.Clear();
-
-                _imageCache[fullPath] = (bitmap, lastWriteUtc);
                 return bitmap;
             }
             catch

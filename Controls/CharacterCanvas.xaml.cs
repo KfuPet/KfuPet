@@ -95,6 +95,12 @@ namespace KfuPet.Controls
             _skeletonRenderer?.ClearImageCache();
         }
 
+        /// <summary>把后台预解码的图片注入渲染缓存：角色切换时避免在 UI 线程逐张解码。</summary>
+        public void PrimeImageCache(string cacheKey, BitmapSource image, DateTime lastWriteUtc)
+        {
+            _skeletonRenderer?.PrimeImageCache(cacheKey, image, lastWriteUtc);
+        }
+
         /// <summary>判断画布上的点是否命中角色的不透明区域（悬停交互用，透明部分不响应）。
         /// 按 Z 序从顶层往下检查：附件图片按像素透明度判断，调试骨骼线框（连线/关节圆点）按几何距离判断。</summary>
         public bool HitTestOpaque(Point canvasPoint)

@@ -15,6 +15,9 @@ namespace KfuPet.Services
 
         private Skeleton? _skeleton;
 
+        /// <summary>批量操作期间抑制渲染通知的嵌套计数：大于 0 时只更新世界变换，不触发 SkeletonChanged。</summary>
+        private int _notificationSuspendCount;
+
         /// <summary>
         /// 从本地设置恢复上次的调试线框开关状态。
         /// </summary>
@@ -233,7 +236,19 @@ namespace KfuPet.Services
         public void Batch(Action<SkeletonService> action)
         {
             if (action == null || _skeleton == null) return;
-            action(this);
+
+            // 批量操作期间逐条操作只更新世界变换、不通知渲染，结束时统一通知一次：
+            // 挂载 N 个附件只重渲染一次，避免 O(N²) 的重复绘制与重复解码
+            _notificationSuspendCount++;
+            try
+            {
+                action(this);
+            }
+            finally
+            {
+                _notificationSuspendCount--;
+            }
+
             UpdateAndNotify();
         }
 
@@ -574,7 +589,9 @@ namespace KfuPet.Services
 
         private void UpdateAndNotify()
         {
+            // 世界变换始终更新，保证批量操作中间读取骨骼位置时结果正确；渲染通知按需抑制
             _skeleton?.UpdateWorldTransforms();
+            if (_notificationSuspendCount > 0) return;
             RaiseSkeletonChanged();
         }
 
