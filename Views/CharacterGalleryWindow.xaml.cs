@@ -187,6 +187,18 @@ namespace KfuPet.Views
                 return;
             }
 
+            // 列表是扫描时的快照，角色包可能在扫描后被外部改动：切换前实时复检一次，
+            // 避免切到残缺包后触摸反应等配置静默降级
+            var (isComplete, reason) = CharacterCatalogService.CheckCompleteness(package.DirectoryPath);
+            if (!isComplete)
+            {
+                Log.Warning($"[角色] 切换前复检发现角色包不完整：{package.Name}（{reason}）");
+                MessageBox.Show(this, $"角色包不完整，无法使用：{reason}", "角色模型",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                _ = ReloadAsync();
+                return;
+            }
+
             _mainWindow.SwitchCharacterPackage(package);
             _ = ReloadAsync();
         }

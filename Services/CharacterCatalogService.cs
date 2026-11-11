@@ -130,8 +130,9 @@ namespace KfuPet.Services
         /// <summary>
         /// 角色包完整性判定：外层已确认 character.json 可用，这里再要求 prompt.md、attachments.json
         /// 与 reactions.json 的必填项缺一不可；返回是否完整与缺失项说明。
+        /// 扫描列表与切换前的实时复检共用此方法。
         /// </summary>
-        private static (bool IsComplete, string Reason) CheckCompleteness(string packageDir)
+        internal static (bool IsComplete, string Reason) CheckCompleteness(string packageDir)
         {
             var missing = new List<string>();
 
