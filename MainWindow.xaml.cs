@@ -375,9 +375,25 @@ namespace KfuPet
         /// <summary>
         /// 切换当前使用的角色包（角色模型窗口「使用」按钮调用）：记录选择、先把旧角色的附件位置固化，
         /// 再清空骨骼、挂载新角色包的部位图与反应配置；提示词按当前角色包即时生效。
+        /// 方法自身按磁盘实时状态校验角色包完整性，不依赖调用方预检。
         /// </summary>
         internal void SwitchCharacterPackage(CharacterPackageInfo package)
         {
+            // 防御性校验：调用方切换前已复检，这里再独立判定一次，
+            // 避免后续新增调用点、或两次检查之间角色包被外部改动后切到残缺包
+            if (!package.IsValid)
+            {
+                Log.Warning($"[角色] 拒绝切换到无效角色包：{package.Name}（{package.InvalidReason}）");
+                return;
+            }
+
+            var (isComplete, reason) = CharacterCatalogService.CheckCompleteness(package.DirectoryPath);
+            if (!isComplete)
+            {
+                Log.Warning($"[角色] 拒绝切换到不完整的角色包：{package.Name}（{reason}）");
+                return;
+            }
+
             // 文件夹名用于精确解析当前角色（目录天然唯一，避免两个角色包 id 相同时产生歧义）；
             // 同时记录角色包标识，供角色文件夹被改名后的回退匹配
             SettingsService.Instance.SetActiveCharacterSelection(

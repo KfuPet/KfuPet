@@ -174,10 +174,10 @@ namespace KfuPet.Views
 
             if (!package.CanUse)
             {
-                var reason = string.IsNullOrWhiteSpace(package.IncompleteReason)
+                var unusableReason = string.IsNullOrWhiteSpace(package.IncompleteReason)
                     ? "该角色包不可使用。"
                     : $"角色包不完整，无法使用：{package.IncompleteReason}";
-                MessageBox.Show(this, reason, "角色模型", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(this, unusableReason, "角色模型", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
