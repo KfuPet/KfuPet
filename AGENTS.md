@@ -198,7 +198,8 @@ Runtime data is NOT part of the repository. It lives under the cache root:
 ```
 %AppData%\KfuPet\            Default cache root
     Config\                  settings.json, models.json, stopwords.json, deployed-models.json
-    Memory\                  Short-term, archive, and long-term memory files
+    Memory\Characters\<角色文件夹>\  Short-term/archive memory and emotion state (per character)
+    Memory\LongMemory.json   Shared long-term memory
     Logs\                    KfuPet-*.log
     Models\                  Downloaded GGUF files
 ```

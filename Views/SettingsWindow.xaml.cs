@@ -1816,6 +1816,7 @@ namespace KfuPet.Views
 
             // 先重载磁盘数据，避免删除后又把备份文件复制回来时，统计数字仍显示旧缓存
             memory.Reload();
+            UpdateMemoryScopeText();
 
             // 数字滚动 + 进度条填充，错开节奏更有层次
             PlayCountUpAnimation(ShortCountText, memory.ShortCount, TimeSpan.FromMilliseconds(120));
@@ -1841,8 +1842,21 @@ namespace KfuPet.Views
         {
             var count = _mainWindow.MemorySystem.GetChatHistory().Count;
             ChatHistoryPreviewText.Text = count > 0
-                ? $"一共保存了 {count} 条对话，点“查看”可以回顾我们聊过的内容。"
-                : "还没有聊天记录，去和我聊几句吧。";
+                ? $"当前角色一共保存了 {count} 条对话，点“查看”可以回顾我们聊过的内容。"
+                : "当前角色还没有聊天记录，去和我聊几句吧。";
+        }
+
+        /// <summary>刷新记忆页的作用域提示：当前角色 + 哪些数据按角色隔离。</summary>
+        private void UpdateMemoryScopeText()
+        {
+            var packageDir = CharacterCatalogService.ResolveActivePackageDirectory();
+            var name = packageDir == null ? null : CharacterCatalogService.ReadManifest(packageDir)?.Name?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = packageDir == null ? "—" : Path.GetFileName(packageDir);
+            }
+
+            MemoryScopeText.Text = $"当前角色：{name}　短期与归档记忆按角色独立，长期记忆所有角色共享";
         }
 
         /// <summary>把当前长期记忆数量显示在卡片预览里。</summary>
@@ -1850,7 +1864,7 @@ namespace KfuPet.Views
         {
             var count = _mainWindow.MemorySystem.LongCount;
             LongTermMemoryPreviewText.Text = count > 0
-                ? $"我已经牢牢记住了 {count} 件关于你的事，点“查看”可以看到全部。"
+                ? $"我已经牢牢记住了 {count} 件关于你的事（所有角色共享），点“查看”可以看到全部。"
                 : "还没有长期记忆，多和我聊聊，我会慢慢记住关于你的事。";
         }
 
@@ -1859,6 +1873,7 @@ namespace KfuPet.Views
         {
             var memory = _mainWindow.MemorySystem;
             memory.Reload();
+            UpdateMemoryScopeText();
 
             ShortCountText.Text = memory.ShortCount.ToString();
             ArchiveCountText.Text = memory.ArchiveCount.ToString();
@@ -2018,8 +2033,7 @@ namespace KfuPet.Views
                 if (kinds.HasFlag(CleanupCacheDialog.CacheKinds.Memory))
                 {
                     var memory = _mainWindow.MemorySystem;
-                    memory.ClearShortTerm();
-                    memory.ClearArchive();
+                    memory.ClearAllScopes();
                     memory.ClearLongTerm();
                     cleanedParts.Add("记忆");
                 }
@@ -2051,7 +2065,7 @@ namespace KfuPet.Views
             _mainWindow.StopWordsService.ResetToDefaults();
             _mainWindow.MemoryTriggerService.ResetToDefaults();
             TokenUsageService.Instance.ResetToDefaults();
-            EmotionService.Instance.ResetToDefaults();
+            EmotionService.Instance.ResetAllScopes();
 
             Log.Info("[清理] 软件配置已复位为初始值，等待重启生效");
         }

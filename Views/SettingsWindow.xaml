@@ -3165,6 +3165,13 @@
                             <TextBlock Text="记忆"
                                        Style="{StaticResource SubSectionTitleStyle}"
                                        Margin="0,24,0,0"/>
+                            <TextBlock x:Name="MemoryScopeText"
+                                       Margin="0,4,0,0"
+                                       TextWrapping="Wrap"
+                                       FontFamily="{StaticResource FontFamilyBody}"
+                                       FontSize="{StaticResource FontSizeCaption}"
+                                       Foreground="{DynamicResource AppTextSecondaryBrush}"
+                                       Text="当前角色：—　短期与归档记忆按角色独立，长期记忆所有角色共享"/>
 
                             <!-- 记忆概览：三级记忆状态卡片（数字滚动 + 进度条缓动填充） -->
                             <Grid Margin="0,16,0,0">

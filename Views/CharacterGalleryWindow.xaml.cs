@@ -332,6 +332,9 @@ namespace KfuPet.Views
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
+            // 角色包已移出列表：同步删除它独占的短期/归档记忆与情绪数据，避免遗留孤儿目录
+            CharacterScopeService.DeleteScope(Path.GetFileName(target));
+
             _ = ReloadAsync();
         }
 

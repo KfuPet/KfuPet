@@ -200,7 +200,8 @@ docs/                        项目文档
 ```
 %AppData%\KfuPet\            默认缓存根目录
     Config\                  settings.json、models.json、stopwords.json、deployed-models.json
-    Memory\                  短期记忆、归档记忆、长期记忆文件
+    Memory\Characters\<角色文件夹>\  按角色隔离的短期记忆、归档记忆与情绪状态
+    Memory\LongMemory.json   所有角色共享的长期记忆
     Logs\                    KfuPet-*.log
     Models\                  已下载的 GGUF 文件
 ```

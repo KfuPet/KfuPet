@@ -8,13 +8,21 @@ namespace KfuPet.Core.Memory
     /// </summary>
     internal class ArchiveMemoryStore
     {
-        private readonly string _directory;
-        private readonly string _filePath;
+        private string _directory;
+        private string _filePath;
 
-        public ArchiveMemoryStore()
+        /// <summary>在角色作用域目录下读写归档记忆。</summary>
+        public ArchiveMemoryStore(string directory)
         {
-            _directory = AppPaths.MemoryDirectory;
-            _filePath = Path.Combine(_directory, "ArchiveMemory.json");
+            _directory = directory;
+            _filePath = Path.Combine(_directory, CharacterScopeService.ArchiveMemoryFileName);
+        }
+
+        /// <summary>切换角色作用域：后续读写改用新目录（调用方需保证没有并发读写）。</summary>
+        public void SetDirectory(string directory)
+        {
+            _directory = directory;
+            _filePath = Path.Combine(_directory, CharacterScopeService.ArchiveMemoryFileName);
         }
 
         /// <summary>从磁盘加载归档记忆，文件不存在或损坏时返回空列表。</summary>

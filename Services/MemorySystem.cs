@@ -32,8 +32,8 @@ namespace KfuPet.Services
         /// <summary>关键词未命中时，模型相关性判断的最长等待时间；超时即放弃本次注入，不拖慢回复。</summary>
         private static readonly TimeSpan MemoryJudgeTimeout = TimeSpan.FromSeconds(3);
 
-        private readonly ShortTermMemoryStore _shortStore = new();
-        private readonly ArchiveMemoryStore _archiveStore = new();
+        private readonly ShortTermMemoryStore _shortStore;
+        private readonly ArchiveMemoryStore _archiveStore;
         private readonly MemoryManager _memoryManager;
         private readonly PromptService _promptService = new();
         private readonly ChatService _chatService;
@@ -43,6 +43,12 @@ namespace KfuPet.Services
         private readonly List<ShortMemoryEntry> _shortEntries;
         private readonly List<ArchiveEntry> _archiveEntries;
         private readonly object _archiveLock = new();
+
+        /// <summary>当前记忆作用域（角色包文件夹名）；短期与归档记忆按此隔离。</summary>
+        private string _scopeKey;
+
+        /// <summary>作用域版本号：切换角色或清理全部记忆时递增，后台任务据此丢弃过期结果。</summary>
+        private int _scopeVersion;
 
         /// <summary>仍在实时提炼中的短期条目：归档分析遇到这些对话时跳过并保留，避免同一轮被两个通道同时提炼。</summary>
         private readonly HashSet<ShortMemoryEntry> _pendingRealtimeTurns = new();
@@ -59,8 +65,66 @@ namespace KfuPet.Services
             _logService = logService;
             _triggerService = triggerService;
             _memoryManager = new MemoryManager(stopWordsService);
+
+            _scopeKey = CharacterScopeService.ResolveActiveScopeKey();
+            var scopeDirectory = CharacterScopeService.GetScopeDirectory(_scopeKey);
+            _shortStore = new ShortTermMemoryStore(scopeDirectory);
+            _archiveStore = new ArchiveMemoryStore(scopeDirectory);
             _shortEntries = _shortStore.Load();
             _archiveEntries = _archiveStore.Load();
+
+            Log.Info($"[记忆] 当前角色记忆作用域：{_scopeKey}（短期 {_shortEntries.Count} 条，归档 {_archiveEntries.Count} 条）");
+        }
+
+        /// <summary>当前作用域版本号；发起异步记忆任务时记录，任务完成前比对，角色已切换则丢弃结果。</summary>
+        public int ScopeVersion
+        {
+            get
+            {
+                lock (_archiveLock)
+                {
+                    return _scopeVersion;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 切换记忆作用域：短期与归档记忆换到新角色的目录并重新加载，长期记忆保持共享。
+        /// 递增作用域版本号，让仍在运行的后台提炼/归档分析丢弃过期结果。
+        /// </summary>
+        public void SwitchScope(string scopeKey)
+        {
+            var normalized = string.IsNullOrWhiteSpace(scopeKey)
+                ? CharacterScopeService.DefaultScopeKey
+                : scopeKey.Trim();
+
+            int shortCount;
+            int archiveCount;
+            lock (_archiveLock)
+            {
+                if (string.Equals(_scopeKey, normalized, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                _scopeVersion++;
+                _scopeKey = normalized;
+
+                var scopeDirectory = CharacterScopeService.GetScopeDirectory(normalized);
+                _shortStore.SetDirectory(scopeDirectory);
+                _archiveStore.SetDirectory(scopeDirectory);
+
+                _shortEntries.Clear();
+                _shortEntries.AddRange(_shortStore.Load());
+                _archiveEntries.Clear();
+                _archiveEntries.AddRange(_archiveStore.Load());
+                _pendingRealtimeTurns.Clear();
+
+                shortCount = _shortEntries.Count;
+                archiveCount = _archiveEntries.Count;
+            }
+
+            Log.Info($"[记忆] 已切换角色记忆作用域：{normalized}（短期 {shortCount} 条，归档 {archiveCount} 条）");
         }
 
         /// <summary>从磁盘重新加载三级记忆，覆盖当前内存中的缓存。</summary>
@@ -183,6 +247,28 @@ namespace KfuPet.Services
         public void ClearLongTerm()
         {
             _memoryManager.Clear();
+        }
+
+        /// <summary>
+        /// 清空所有角色的短期与归档记忆并删除对应文件（清理“记忆”时使用）。
+        /// 长期记忆为所有角色共享，由调用方另行清理。
+        /// </summary>
+        public void ClearAllScopes()
+        {
+            lock (_archiveLock)
+            {
+                _scopeVersion++;
+                _shortEntries.Clear();
+                _archiveEntries.Clear();
+                _pendingRealtimeTurns.Clear();
+
+                // 先写回空文件，避免删除失败时重启又读回旧数据
+                _shortStore.Save(_shortEntries);
+                _archiveStore.Save(_archiveEntries);
+            }
+
+            CharacterScopeService.DeleteAllScopedMemoryFiles();
+            Log.Info("[记忆] 已清空所有角色的短期与归档记忆");
         }
 
         /// <summary>把短期记忆转成对话消息列表，供 AI 作为会话上下文使用。</summary>
@@ -325,6 +411,9 @@ namespace KfuPet.Services
             // 记忆里不允许出现链接：写入短期/归档、以及后续提炼长期记忆前先统一剔除
             assistant = ModelReplyText.StripLinks(assistant);
 
+            // 记录当前作用域版本：角色切换后，仍在运行的后台任务据此丢弃结果
+            var scopeVersion = ScopeVersion;
+
             var (shortCount, archiveCount, overflowCount, turnEntry) = AppendEntry(user, assistant);
 
             _logService.Debug($"[记忆] 记录一轮对话：短期 {shortCount}/{ShortMemoryLimit}" +
@@ -340,7 +429,7 @@ namespace KfuPet.Services
                     _pendingRealtimeTurns.Add(turnEntry);
                 }
 
-                _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant, turnEntry));
+                _ = Task.Run(() => RunRealtimeExtractAsync(model, user, assistant, turnEntry, scopeVersion));
             }
             else
             {
@@ -354,12 +443,15 @@ namespace KfuPet.Services
         /// <summary>归档达到上限且当前没有分析在跑时，启动后台分析。</summary>
         private void TryStartArchiveAnalysis(ModelConfig model)
         {
+            int scopeVersion;
             lock (_archiveLock)
             {
                 if (_archiveEntries.Count < ArchiveMemoryLimit)
                 {
                     return;
                 }
+
+                scopeVersion = _scopeVersion;
             }
 
             if (Interlocked.CompareExchange(ref _archiveAnalysisRunning, 1, 0) != 0)
@@ -367,7 +459,7 @@ namespace KfuPet.Services
                 return;
             }
 
-            _ = Task.Run(() => RunArchiveAnalysisAsync(model));
+            _ = Task.Run(() => RunArchiveAnalysisAsync(model, scopeVersion));
         }
 
         /// <summary>
@@ -418,11 +510,11 @@ namespace KfuPet.Services
         }
 
         /// <summary>归档分析的外层包装：吞掉异常并复位状态位。</summary>
-        private async Task RunArchiveAnalysisAsync(ModelConfig model)
+        private async Task RunArchiveAnalysisAsync(ModelConfig model, int scopeVersion)
         {
             try
             {
-                await AnalyzeArchiveAsync(model);
+                await AnalyzeArchiveAsync(model, scopeVersion);
             }
             catch (Exception ex)
             {
@@ -436,23 +528,38 @@ namespace KfuPet.Services
 
         /// <summary>实时提取的外层包装：吞掉异常，不影响主流程。</summary>
         private async Task RunRealtimeExtractAsync(
-            ModelConfig model, string user, string assistant, ShortMemoryEntry turnEntry)
+            ModelConfig model, string user, string assistant, ShortMemoryEntry turnEntry, int scopeVersion)
         {
             try
             {
                 _logService.Debug("[记忆] 实时通道：开始提取核心信息...");
                 var items = await ExtractCoreInfoAsync(model, user, assistant);
+
+                // 提取期间角色已切换：结果属于旧角色，直接丢弃，避免写进新角色的记忆
+                if (scopeVersion != ScopeVersion)
+                {
+                    _logService.Debug("[记忆] 实时通道：角色已切换，丢弃旧角色的提取结果");
+                    return;
+                }
+
                 var coreItems = items.Where(i => i.Importance >= 3).ToList();
                 _logService.Debug(coreItems.Count > 0
                     ? $"[记忆] 实时通道：提取到 {coreItems.Count} 条信息"
                     : "[记忆] 实时通道：未发现需要立即记住的信息");
                 await StoreItemsAsync(model, coreItems, "实时入库核心信息");
 
+                // 写入长期记忆期间角色可能已切换：不再回写新角色的短期/归档标记
+                if (scopeVersion != ScopeVersion)
+                {
+                    _logService.Debug("[记忆] 实时通道：角色已切换，跳过旧角色的提炼标记回写");
+                    return;
+                }
+
                 // 只有真正写入长期记忆的对话才算处理完，归档分析据此跳过、不重复提炼；
                 // 没有写入任何信息的对话保持未标记，继续等待归档统一处理（3 分以下的内容也在归档里总结）
                 if (coreItems.Count > 0)
                 {
-                    MarkRealtimeExtracted(turnEntry);
+                    MarkRealtimeExtracted(turnEntry, scopeVersion);
                 }
 
                 // 实时入库后同样检查长期记忆上限，避免只在归档分析末尾才压缩
@@ -470,15 +577,26 @@ namespace KfuPet.Services
                     _pendingRealtimeTurns.Remove(turnEntry);
                 }
 
-                TryStartArchiveAnalysis(model);
+                // 角色已切换时不再为新作用域启动旧任务的归档分析
+                if (scopeVersion == ScopeVersion)
+                {
+                    TryStartArchiveAnalysis(model);
+                }
             }
         }
 
         /// <summary>标记该轮对话已由实时通道提炼并写入长期记忆，并立即落盘，避免重启后标记丢失。</summary>
-        private void MarkRealtimeExtracted(ShortMemoryEntry turnEntry)
+        private void MarkRealtimeExtracted(ShortMemoryEntry turnEntry, int scopeVersion)
         {
             lock (_archiveLock)
             {
+                // 锁内再次确认作用域：检查与加锁之间可能刚好完成了一次角色切换
+                if (scopeVersion != _scopeVersion)
+                {
+                    _logService.Debug("[记忆] 角色已切换，跳过旧角色的提炼标记回写");
+                    return;
+                }
+
                 turnEntry.RealtimeExtracted = true;
 
                 // 设置页 Reload 可能已把短期列表换成新的对象，按时间与内容把当前列表里的同一轮也标记上
@@ -578,8 +696,15 @@ namespace KfuPet.Services
         /// <summary>
         /// 归档分析：对归档内容提炼信息点并评分，重要者进长期，其余总结留归档。
         /// </summary>
-        private async Task AnalyzeArchiveAsync(ModelConfig model)
+        private async Task AnalyzeArchiveAsync(ModelConfig model, int scopeVersion)
         {
+            // 角色已切换：旧作用域的归档分析不再继续
+            if (scopeVersion != ScopeVersion)
+            {
+                _logService.Debug("[记忆] 角色已切换，跳过旧角色的归档分析");
+                return;
+            }
+
             List<ArchiveEntry> snapshot;
             HashSet<ArchiveEntry> pendingEntries;
             lock (_archiveLock)
@@ -657,6 +782,12 @@ namespace KfuPet.Services
             }
 
             // 3. 入选信息写入长期记忆（疑似重复的条目会先交给模型判定）
+            if (scopeVersion != ScopeVersion)
+            {
+                _logService.Debug("[记忆] 角色已切换，丢弃旧角色的归档分析结果");
+                return;
+            }
+
             await StoreItemsAsync(model, longTermItems, "已写入长期记忆");
 
             // 4. 未入选信息：总结成一条 / 暂留 / 清空
@@ -689,8 +820,21 @@ namespace KfuPet.Services
             // 5. 归档重建：移除本轮已处理的快照条目（含直接丢弃的已提炼对话），
             //    保留分析期间新产生的对话和仍在实时提炼中的对话，避免数据丢失。
             //    这里按内容匹配而不是引用：分析期间设置页可能 Reload，列表对象会被整体替换。
+            if (scopeVersion != ScopeVersion)
+            {
+                _logService.Debug("[记忆] 角色已切换，不再回写旧角色的归档");
+                return;
+            }
+
             lock (_archiveLock)
             {
+                // 锁内再次确认作用域：检查与加锁之间可能刚好完成了一次角色切换
+                if (scopeVersion != _scopeVersion)
+                {
+                    _logService.Debug("[记忆] 角色已切换，不再回写旧角色的归档");
+                    return;
+                }
+
                 var processed = snapshot
                     .Where(e => !pendingEntries.Contains(e))
                     .ToList();

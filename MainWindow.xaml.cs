@@ -371,8 +371,20 @@ namespace KfuPet
             }
 
             _attachmentsPackageDir = packageDir;
+            ApplyCharacterScope(packageDir);
             CharacterAttachmentService.Load(SkeletonService, packageDir);
             _touchReactions.Load(packageDir);
+        }
+
+        /// <summary>
+        /// 把记忆与情绪切到角色包对应的作用域：短期/归档记忆与情绪按角色隔离，
+        /// 长期记忆与 token 用量保持全局。启动加载与切换角色共用。
+        /// </summary>
+        private void ApplyCharacterScope(string packageDir)
+        {
+            var scopeKey = Path.GetFileName(packageDir);
+            _memorySystem.SwitchScope(scopeKey);
+            EmotionService.Instance.SwitchScope(scopeKey);
         }
 
         /// <summary>
@@ -432,6 +444,7 @@ namespace KfuPet
             }
 
             SaveCharacterAttachments();
+            ApplyCharacterScope(package.DirectoryPath);
 
             SkeletonService.RemoveAllAttachments();
             CharacterCanvas.ClearAllCaches();
@@ -1406,11 +1419,19 @@ namespace KfuPet
         /// <param name="model">本轮对话使用的模型。</param>
         /// <param name="userMessage">主人这一轮说的话。</param>
         /// <param name="assistantReply">桌宠这一轮的回复。</param>
-        private async Task JudgeEmotionAfterChatAsync(ModelConfig model, string userMessage, string assistantReply)
+        /// <param name="emotionScopeKey">发送时所在角色的情绪作用域；请求期间切换了角色则跳过调整。</param>
+        private async Task JudgeEmotionAfterChatAsync(
+            ModelConfig model, string userMessage, string assistantReply, string emotionScopeKey)
         {
             if (!SettingsService.Instance.EmotionJudgeUseAi)
             {
                 Log.Debug("[情绪] 对话后态度判断已在节省模式中关闭，本次跳过");
+                return;
+            }
+
+            if (!string.Equals(EmotionService.ScopeKey, emotionScopeKey, StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Debug("[情绪] 角色已切换，跳过对话后态度判断");
                 return;
             }
 
@@ -1429,6 +1450,13 @@ namespace KfuPet
                 if (result.IsNoChange)
                 {
                     Log.Debug("[情绪] 对话后态度判断：主人这句话与态度无关，情绪不变");
+                    return;
+                }
+
+                // 请求期间角色可能已切换：结果属于旧角色，不能写进新角色的情绪
+                if (!string.Equals(EmotionService.ScopeKey, emotionScopeKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Debug("[情绪] 角色已切换，丢弃旧角色的对话后态度判断结果");
                     return;
                 }
 
@@ -1464,6 +1492,10 @@ namespace KfuPet
             _isSending = true;
             ChatInputBox.Clear();
 
+            // 记录发送时的作用域：等待回复期间如果切换了角色，本轮结果不写进新角色的记忆与情绪
+            var memoryScopeVersion = _memorySystem.ScopeVersion;
+            var emotionScopeKey = EmotionService.ScopeKey;
+
             // 等待回复期间的占位台词取自角色包 reactions.json（thinking 键），代码不再内置默认
             var thinking = _touchReactions.PickLine(TouchReactionService.EventThinking);
             if (!string.IsNullOrEmpty(thinking))
@@ -1489,13 +1521,21 @@ namespace KfuPet
                 ShowBubbleBatches(SplitIntoBatches(reply), isChatOutput: true);
                 Log.Debug($"[对话] 回复已显示：{reply.Length} 字");
 
-                // 记录一轮对话到记忆系统（短期 + 溢出归档 + 后台分析）
-                _memorySystem.AddTurn(model, text, reply);
+                // 记录一轮对话到记忆系统（短期 + 溢出归档 + 后台分析）；
+                // 等待回复期间角色已切换时，旧角色的对话不写入新角色的记忆
+                if (memoryScopeVersion == _memorySystem.ScopeVersion)
+                {
+                    _memorySystem.AddTurn(model, text, reply);
+                }
+                else
+                {
+                    Log.Info("[记忆] 角色已切换，本轮对话不写入新的角色记忆");
+                }
 
                 // 对话后态度判断：本轮若已由模型工具调整过情绪则跳过，避免同一句话被算两次
                 if (EmotionService.AdjustCount == adjustCountBeforeSend)
                 {
-                    _ = JudgeEmotionAfterChatAsync(model, text, reply);
+                    _ = JudgeEmotionAfterChatAsync(model, text, reply, emotionScopeKey);
                 }
                 else
                 {
@@ -1668,6 +1708,9 @@ namespace KfuPet
         /// </summary>
         private async Task RunProactiveChatAsync(ProactiveTriggerEventArgs e)
         {
+            // 记录触发时的记忆作用域：生成期间切换角色后，台词与记忆都不写入新角色
+            var memoryScopeVersion = _memorySystem.ScopeVersion;
+
             // 节省模式：不请求 AI，直接走下方的文案兜底
             var useAi = SettingsService.Instance.ProactiveChatUseAi;
             var model = useAi ? ModelConfigService.Models.FirstOrDefault(m => m.IsActive) : null;
@@ -1740,6 +1783,13 @@ namespace KfuPet
             {
                 Log.Debug($"[主动搭话] {e.Type} 既没有 AI 回应也没有备用台词，本次不作声" +
                           $"（可在角色包 {TouchReactionService.ManifestFileName} 中补充）");
+                return;
+            }
+
+            // 生成期间角色已切换：旧角色的台词不再显示，也不写入记忆
+            if (memoryScopeVersion != _memorySystem.ScopeVersion)
+            {
+                Log.Debug("[主动搭话] 角色已切换，本次台词丢弃");
                 return;
             }
 

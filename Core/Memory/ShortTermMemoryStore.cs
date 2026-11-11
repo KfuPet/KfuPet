@@ -9,13 +9,21 @@ namespace KfuPet.Core.Memory
     /// </summary>
     internal class ShortTermMemoryStore
     {
-        private readonly string _directory;
-        private readonly string _filePath;
+        private string _directory;
+        private string _filePath;
 
-        public ShortTermMemoryStore()
+        /// <summary>在角色作用域目录下读写短期记忆。</summary>
+        public ShortTermMemoryStore(string directory)
         {
-            _directory = AppPaths.MemoryDirectory;
-            _filePath = Path.Combine(_directory, "ShortMemory.json");
+            _directory = directory;
+            _filePath = Path.Combine(_directory, CharacterScopeService.ShortMemoryFileName);
+        }
+
+        /// <summary>切换角色作用域：后续读写改用新目录（调用方需保证没有并发读写）。</summary>
+        public void SetDirectory(string directory)
+        {
+            _directory = directory;
+            _filePath = Path.Combine(_directory, CharacterScopeService.ShortMemoryFileName);
         }
 
         /// <summary>从磁盘加载短期记忆，文件不存在或损坏时返回空列表。</summary>

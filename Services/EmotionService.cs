@@ -78,14 +78,18 @@ namespace KfuPet.Services
         /// <summary>落盘节流：两次自动保存之间的最短间隔。</summary>
         private static readonly TimeSpan SaveInterval = TimeSpan.FromMinutes(5);
 
-        private static readonly string StateFilePath = Path.Combine(AppPaths.ConfigDirectory, "emotion.json");
-
         private static readonly Lazy<EmotionService> LazyInstance = new(() => new EmotionService());
 
         /// <summary>全局共享实例（提示词注入、主动搭话与设置界面共用）。</summary>
         public static EmotionService Instance => LazyInstance.Value;
 
         private readonly object _sync = new();
+
+        /// <summary>当前情绪作用域（角色包文件夹名）；情绪状态按角色隔离。</summary>
+        private string _scopeKey;
+
+        /// <summary>当前作用域的情绪状态文件路径。</summary>
+        private string _stateFilePath;
 
         private EmotionState _state;
         private bool _dirty;
@@ -94,7 +98,51 @@ namespace KfuPet.Services
         private EmotionService()
         {
             _state = CreateDefaultState();
+            _scopeKey = CharacterScopeService.ResolveActiveScopeKey();
+            _stateFilePath = CharacterScopeService.GetEmotionFilePath(_scopeKey);
             LoadLocked();
+        }
+
+        /// <summary>当前情绪作用域（角色包文件夹名）。</summary>
+        public string ScopeKey
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    return _scopeKey;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 切换情绪作用域：先把旧角色的状态强制落盘，再载入新角色的状态文件。
+        /// 角色切换时调用；新角色没有状态文件时从基线开始。
+        /// </summary>
+        public void SwitchScope(string scopeKey)
+        {
+            var normalized = string.IsNullOrWhiteSpace(scopeKey)
+                ? CharacterScopeService.DefaultScopeKey
+                : scopeKey.Trim();
+
+            lock (_sync)
+            {
+                if (string.Equals(_scopeKey, normalized, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                SaveLocked(force: true);
+                _scopeKey = normalized;
+                _stateFilePath = CharacterScopeService.GetEmotionFilePath(normalized);
+                _state = CreateDefaultState();
+                _dirty = false;
+                _lastSaveUtc = DateTime.MinValue;
+                LoadLocked();
+            }
+
+            Log.Info($"[情绪] 已切换角色情绪作用域：{normalized}");
+            RaiseChanged();
         }
 
         /// <summary>情绪发生变化（事件增减、模型调整或复位）时触发，用于让设置界面实时刷新。</summary>
@@ -345,36 +393,47 @@ namespace KfuPet.Services
             return Math.Clamp(factor, 0.3, 2.0);
         }
 
-        /// <summary>把情绪状态写入 emotion.json；自动调用受节流限制，<paramref name="force"/> 为 true 时立即写入。</summary>
-        /// <param name="force">是否跳过节流立即落盘（关闭窗口时使用）。</param>
+        /// <summary>把情绪状态写入当前角色作用域的状态文件；自动调用受节流限制，<paramref name="force"/> 为 true 时立即写入。</summary>
+        /// <param name="force">是否跳过节流立即落盘（关闭窗口或切换角色时使用）。</param>
         public void Save(bool force = false)
         {
             lock (_sync)
             {
-                if (!_dirty && !force)
+                SaveLocked(force);
+            }
+        }
+
+        /// <summary>已在锁内的保存实现，供 <see cref="Save"/> 与切换作用域复用。</summary>
+        private void SaveLocked(bool force)
+        {
+            if (!_dirty && !force)
+            {
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            if (!force && now - _lastSaveUtc < SaveInterval)
+            {
+                return;
+            }
+
+            try
+            {
+                var directory = Path.GetDirectoryName(_stateFilePath);
+                if (!string.IsNullOrEmpty(directory))
                 {
-                    return;
+                    Directory.CreateDirectory(directory);
                 }
 
-                var now = DateTime.UtcNow;
-                if (!force && now - _lastSaveUtc < SaveInterval)
-                {
-                    return;
-                }
-
-                try
-                {
-                    Directory.CreateDirectory(AppPaths.ConfigDirectory);
-                    var json = JsonSerializer.Serialize(_state, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(StateFilePath, json);
-                    _lastSaveUtc = now;
-                    _dirty = false;
-                }
-                catch (Exception ex)
-                {
-                    // 保存失败不阻塞使用，下次启动回退到基线情绪
-                    Log.Error($"[情绪] 保存失败：{ex.Message}");
-                }
+                var json = JsonSerializer.Serialize(_state, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_stateFilePath, json);
+                _lastSaveUtc = now;
+                _dirty = false;
+            }
+            catch (Exception ex)
+            {
+                // 保存失败不阻塞使用，下次启动回退到基线情绪
+                Log.Error($"[情绪] 保存失败：{ex.Message}");
             }
         }
 
@@ -392,7 +451,7 @@ namespace KfuPet.Services
             RaiseChanged();
         }
 
-        /// <summary>恢复初始情绪：内存回到基线并删除磁盘状态文件（供“清理软件配置”使用）。</summary>
+        /// <summary>恢复当前角色的初始情绪：内存回到基线并删除该角色的状态文件（供“清理软件配置”使用）。</summary>
         public void ResetToDefaults()
         {
             lock (_sync)
@@ -400,23 +459,43 @@ namespace KfuPet.Services
                 _state = CreateDefaultState();
                 _dirty = false;
                 _lastSaveUtc = DateTime.MinValue;
-
-                try
-                {
-                    if (File.Exists(StateFilePath))
-                    {
-                        File.Delete(StateFilePath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // 删除失败不影响内存中的复位
-                    Log.Warning($"[情绪] 状态文件删除失败：{ex.Message}");
-                }
+                DeleteStateFileLocked();
             }
 
-            Log.Info("[情绪] 已恢复初始情绪状态");
+            Log.Info("[情绪] 已恢复当前角色的初始情绪状态");
             RaiseChanged();
+        }
+
+        /// <summary>恢复所有角色的初始情绪：内存回到基线，并删除全部角色作用域的情绪文件。</summary>
+        public void ResetAllScopes()
+        {
+            lock (_sync)
+            {
+                _state = CreateDefaultState();
+                _dirty = false;
+                _lastSaveUtc = DateTime.MinValue;
+                DeleteStateFileLocked();
+            }
+
+            CharacterScopeService.DeleteAllEmotionFiles();
+            Log.Info("[情绪] 已恢复所有角色的初始情绪状态");
+            RaiseChanged();
+        }
+
+        /// <summary>删除当前作用域的状态文件；失败只记录日志，不影响内存中的复位。</summary>
+        private void DeleteStateFileLocked()
+        {
+            try
+            {
+                if (File.Exists(_stateFilePath))
+                {
+                    File.Delete(_stateFilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[情绪] 状态文件删除失败：{ex.Message}");
+            }
         }
 
         public CommandResponse Execute(string action, Dictionary<string, object>? parameters)
@@ -598,9 +677,9 @@ namespace KfuPet.Services
 
             try
             {
-                if (File.Exists(StateFilePath))
+                if (File.Exists(_stateFilePath))
                 {
-                    using var document = JsonDocument.Parse(File.ReadAllText(StateFilePath));
+                    using var document = JsonDocument.Parse(File.ReadAllText(_stateFilePath));
                     var root = document.RootElement;
 
                     _state.Joy = ReadNumber(root, "Joy", JoyBaseline);

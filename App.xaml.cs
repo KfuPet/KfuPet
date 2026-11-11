@@ -107,6 +107,10 @@ namespace KfuPet
                 ApplySystemTheme();
             }
 
+            // 旧版本的短期/归档记忆与情绪写在全局路径：创建主窗口前迁入当前角色作用域，
+            // 保证记忆与情绪服务按新的按角色路径加载
+            CharacterScopeService.MigrateLegacyFilesIfNeeded();
+
             // 主窗口预先创建但保持隐藏，等待 Splash 结束后再显示
             _mainWindow = new MainWindow();
 
