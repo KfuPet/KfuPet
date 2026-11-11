@@ -128,17 +128,18 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 角色包完整性判定：外层已确认 character.json 可用，这里再要求 prompt.md、attachments.json
-        /// 与 reactions.json 的必填项缺一不可；返回是否完整与缺失项说明。
+        /// 角色包完整性判定：外层已确认 character.json 可用，这里再要求提示词文件（prompt 字段指定的文件，
+        /// 缺省为 prompt.md）、attachments.json 与 reactions.json 的必填项缺一不可；返回是否完整与缺失项说明。
         /// 扫描列表与切换前的实时复检共用此方法。
         /// </summary>
         internal static (bool IsComplete, string Reason) CheckCompleteness(string packageDir)
         {
             var missing = new List<string>();
 
-            if (!File.Exists(Path.Combine(packageDir, PromptService.PromptFileName)))
+            var promptPath = PromptService.ResolvePromptPath(packageDir);
+            if (!File.Exists(promptPath))
             {
-                missing.Add(PromptService.PromptFileName);
+                missing.Add(Path.GetFileName(promptPath));
             }
 
             if (!File.Exists(Path.Combine(packageDir, CharacterAttachmentService.ManifestFileName)))
@@ -242,20 +243,25 @@ namespace KfuPet.Services
         /// <summary>读取角色包标识：character.json 的 id，缺失、解析失败或缺省时用文件夹名。</summary>
         public static string ReadCharacterId(string packageDir)
         {
-            var folderName = Path.GetFileName(packageDir);
+            var manifest = ReadManifest(packageDir);
+            return Clean(manifest?.Id) is { Length: > 0 } id ? id : Path.GetFileName(packageDir);
+        }
+
+        /// <summary>读取角色包清单；文件缺失或解析失败时返回 null。</summary>
+        internal static CharacterManifest? ReadManifest(string packageDir)
+        {
             try
             {
                 var manifestPath = Path.Combine(packageDir, ManifestFileName);
-                if (!File.Exists(manifestPath)) return folderName;
+                if (!File.Exists(manifestPath)) return null;
 
-                var manifest = JsonSerializer.Deserialize<CharacterManifest>(
+                return JsonSerializer.Deserialize<CharacterManifest>(
                     File.ReadAllText(manifestPath), ManifestJsonOptions);
-                return Clean(manifest?.Id) is { Length: > 0 } id ? id : folderName;
             }
             catch (Exception ex)
             {
-                Log.Warning($"[角色] 角色包标识读取失败（{folderName}）：{ex.Message}");
-                return folderName;
+                Log.Warning($"[角色] 清单读取失败（{Path.GetFileName(packageDir)}）：{ex.Message}");
+                return null;
             }
         }
 

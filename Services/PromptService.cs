@@ -2,11 +2,12 @@ using System.Text;
 
 namespace KfuPet.Services
 {
-    /// <summary>组装 AI 系统提示词：全局提示词（硬编码底线规则、优先级最高、角色提示词不得违反）在前，再叠加当前生效角色包的 prompt.md。
-    /// 角色包没有 prompt.md 时只用全局提示词。</summary>
+    /// <summary>组装 AI 系统提示词：全局提示词（硬编码底线规则、优先级最高、角色提示词不得违反）在前，
+    /// 再叠加当前生效角色包的提示词文件（character.json 的 prompt 字段，缺省为 prompt.md）。
+    /// 角色包没有提示词文件时只用全局提示词。</summary>
     internal class PromptService
     {
-        /// <summary>角色包内的提示词文件名。</summary>
+        /// <summary>角色包内的默认提示词文件名（character.json 的 prompt 字段留空时使用）。</summary>
         public const string PromptFileName = "prompt.md";
 
         // 全局提示词：行为底线，不随角色变化。
@@ -68,7 +69,7 @@ namespace KfuPet.Services
         }
 
         /// <summary>
-        /// 读取当前生效角色包的 prompt.md：优先当前使用的角色包（角色模型窗口「使用」切换后立即生效），
+        /// 读取当前生效角色包的提示词文件：优先当前使用的角色包（角色模型窗口「使用」切换后立即生效），
         /// 其次遍历角色包取第一个找到的。
         /// </summary>
         private static string? LoadCharacterPrompt()
@@ -100,12 +101,25 @@ namespace KfuPet.Services
             return null;
         }
 
-        /// <summary>读取某个角色包目录下的 prompt.md；文件不存在或读取失败时返回 null。</summary>
+        /// <summary>
+        /// 解析角色包的提示词文件路径：优先 character.json 的 prompt 字段（相对角色包目录，也支持绝对路径），
+        /// 字段缺省时回退 prompt.md。返回绝对路径，文件是否存在需调用方自行判断。
+        /// </summary>
+        internal static string ResolvePromptPath(string packageDir)
+        {
+            var prompt = CharacterCatalogService.ReadManifest(packageDir)?.Prompt;
+            var relativePath = string.IsNullOrWhiteSpace(prompt) ? PromptFileName : prompt.Trim();
+            return Path.IsPathRooted(relativePath)
+                ? relativePath
+                : Path.Combine(packageDir, relativePath);
+        }
+
+        /// <summary>读取某个角色包的提示词文件；文件不存在或读取失败时返回 null。</summary>
         private static string? ReadPrompt(string packageDir)
         {
             try
             {
-                var promptFile = Path.Combine(packageDir, PromptFileName);
+                var promptFile = ResolvePromptPath(packageDir);
                 if (!File.Exists(promptFile)) return null;
 
                 var text = File.ReadAllText(promptFile);

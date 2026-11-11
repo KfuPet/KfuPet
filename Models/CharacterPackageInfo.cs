@@ -37,7 +37,7 @@ namespace KfuPet.Models
         /// <summary>是否为有效角色包（character.json 存在且可解析）。</summary>
         public bool IsValid { get; init; } = true;
 
-        /// <summary>是否为完整角色包：character.json、prompt.md、attachments.json 与 reactions.json 必填项缺一不可。</summary>
+        /// <summary>是否为完整角色包：character.json、提示词文件（缺省 prompt.md）、attachments.json 与 reactions.json 必填项缺一不可。</summary>
         public bool IsComplete { get; init; }
 
         /// <summary>不完整原因（列出缺失的文件或必填项）；完整时为空串。</summary>
