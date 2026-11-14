@@ -1,0 +1,11 @@
+{
+  "id": "baiyy-beta",
+  "name": "白摇摇-Beta",
+  "version": "1.0.0-beta",
+  "author": "咲",
+  "authorAvatar": "logo.png",
+  "description": "活泼开朗的二次元宅女，14 岁的初中生，喜欢动漫和游戏。（关节补缝试验版：肘/膝/颈带出血，肩/髋带补片）",
+  "preview": "baiyy.png",
+  "tags": ["二次元", "元气", "猫耳短发", "试验版"],
+  "prompt": "prompt.md"
+}

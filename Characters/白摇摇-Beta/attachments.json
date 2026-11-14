@@ -1,0 +1,146 @@
+{
+  "version": "1.0.0",
+  "scale": 0.21432,
+  "attachments": [
+    {
+      "id": "leg_left_upper",
+      "boneId": "leg_right_upper",
+      "name": "右大腿",
+      "resource": "images/leg_left_upper.png",
+      "pivot": [0.5, 0],
+      "offset": [0, 0],
+      "zOrder": 10,
+      "visible": true
+    },
+    {
+      "id": "leg_right_upper",
+      "boneId": "leg_left_upper",
+      "name": "左大腿",
+      "resource": "images/leg_right_upper.png",
+      "pivot": [0.5, 0],
+      "offset": [0, 0],
+      "zOrder": 11,
+      "visible": true
+    },
+    {
+      "id": "leg_left_lower",
+      "boneId": "leg_right_lower",
+      "name": "右小腿",
+      "resource": "images/leg_left_lower.png",
+      "pivot": [0.5, 0.07971],
+      "offset": [0, 0],
+      "zOrder": 12,
+      "visible": true
+    },
+    {
+      "id": "leg_right_lower",
+      "boneId": "leg_left_lower",
+      "name": "左小腿",
+      "resource": "images/leg_right_lower.png",
+      "pivot": [0.5, 0.079137],
+      "offset": [0, 0],
+      "zOrder": 13,
+      "visible": true
+    },
+    {
+      "id": "body",
+      "boneId": "body",
+      "name": "身体",
+      "resource": "images/body.png",
+      "pivot": [0.5, 0.906367],
+      "offset": [0, 0],
+      "zOrder": 20,
+      "visible": true
+    },
+    {
+      "id": "arm_right_upper",
+      "boneId": "arm_left_upper",
+      "name": "左上臂",
+      "resource": "images/arm_right_upper.png",
+      "pivot": [1, 0.5],
+      "offset": [0, 0],
+      "zOrder": 31,
+      "visible": true
+    },
+    {
+      "id": "arm_right_lower",
+      "boneId": "arm_left_lower",
+      "name": "左小臂",
+      "resource": "images/arm_right_lower.png",
+      "pivot": [0.871069, 0.5],
+      "offset": [0, 0],
+      "zOrder": 32,
+      "visible": true
+    },
+    {
+      "id": "arm_left_upper",
+      "boneId": "arm_right_upper",
+      "name": "右上臂",
+      "resource": "images/arm_left_upper.png",
+      "pivot": [0, 0.5],
+      "offset": [0, 0],
+      "zOrder": 33,
+      "visible": true
+    },
+    {
+      "id": "arm_left_lower",
+      "boneId": "arm_right_lower",
+      "name": "右小臂",
+      "resource": "images/arm_left_lower.png",
+      "pivot": [0.108753, 0.5],
+      "offset": [0, 0],
+      "zOrder": 34,
+      "visible": true
+    },
+    {
+      "id": "head",
+      "boneId": "head",
+      "name": "头部",
+      "resource": "images/head.png",
+      "pivot": [0.5, 1],
+      "offset": [0, 0],
+      "zOrder": 40,
+      "visible": true
+    },
+    {
+      "id": "patch_shoulder_l",
+      "boneId": "body",
+      "name": "肩部补片（画面左侧）",
+      "resource": "images/patch_shoulder_l.png",
+      "pivot": [1, 0.5],
+      "offset": [-29.47, -127.6],
+      "zOrder": 21,
+      "visible": true
+    },
+    {
+      "id": "patch_shoulder_r",
+      "boneId": "body",
+      "name": "肩部补片（画面右侧）",
+      "resource": "images/patch_shoulder_r.png",
+      "pivot": [0, 0.5],
+      "offset": [29.04, -126.85],
+      "zOrder": 22,
+      "visible": true
+    },
+    {
+      "id": "patch_hip_l",
+      "boneId": "body",
+      "name": "髋部补片（画面左侧）",
+      "resource": "images/patch_hip_l.png",
+      "pivot": [0.5, 0],
+      "offset": [-19.4, 3.46],
+      "zOrder": 9,
+      "visible": true
+    },
+    {
+      "id": "patch_hip_r",
+      "boneId": "body",
+      "name": "髋部补片（画面右侧）",
+      "resource": "images/patch_hip_r.png",
+      "pivot": [0.5, 0],
+      "offset": [19.4, 3.89],
+      "zOrder": 9,
+      "visible": true
+    }
+  ]
+}
