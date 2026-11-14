@@ -84,11 +84,10 @@ namespace KfuPet.Models
             var translation = Matrix3x3.Translation(bone.LocalPosition.X, bone.LocalPosition.Y);
             var scale = Matrix3x3.Scale(bone.LocalScale.X, bone.LocalScale.Y);
 
-            // Root 的位置是世界锚点，旋转时不能连同锚点一起绕画布原点移动。
-            // 普通骨骼的旋转则作用于“父节点到当前节点”的骨骼线段。
-            var localTransform = bone.Parent == null
-                ? translation * rotation * scale
-                : rotation * translation * scale;
+            // 先平移到骨骼自身位置，再绕自身旋转（T·R·S）：
+            // root 的 LocalPosition 是世界锚点，普通骨骼的 LocalPosition 是相对父骨骼的关节位置，
+            // 两者都不应被自身旋转带着走，否则转动关节时该部位会整体平移，接缝补不上。
+            var localTransform = translation * rotation * scale;
 
             bone.WorldTransform = parentTransform * localTransform;
 

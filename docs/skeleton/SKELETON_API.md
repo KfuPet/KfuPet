@@ -98,9 +98,9 @@ await client.SetRotationAsync("arm_left_upper", 45);
 
 ```json
 {
-  "service": "skeleton",
-  "action": "SetRotation",
-  "params": {
+  "Service": "skeleton",
+  "Action": "SetRotation",
+  "Params": {
     "boneId": "arm_left_upper",
     "degrees": 45
   }
@@ -109,9 +109,12 @@ await client.SetRotationAsync("arm_left_upper", 45);
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| service | string | 目标服务名：`skeleton` / `memory` / `emotion` / `vision` |
-| action | string | 操作名称 |
-| params | object | 操作参数（可选） |
+| Service | string | 目标服务名：`skeleton` / `memory` / `emotion` / `vision` |
+| Action | string | 操作名称 |
+| Params | object | 操作参数（可选） |
+
+> 三层属性名都是 **PascalCase**，且区分大小写；写成 `service` / `action` / `params` 会返回 `Service name is required`。
+> `Params` 里的键仍是 camelCase（如 `boneId`、`degrees`）。
 
 ### 响应格式
 
@@ -316,6 +319,23 @@ bool success = client.SetRotation("arm_left_upper", 45);
 **返回值**：`bool` — `true` 设置成功，`false` 骨骼不存在
 
 > **注意**：旋转会传递给所有子骨骼。例如旋转上臂，小臂会跟随一起旋转。
+>
+> 旋转围绕**该骨骼自身的关节位置**进行（局部变换为 `T·R·S`），关节本身不会平移；只转上臂时，肩点是固定不动的，小臂绕肘跟随转动。
+
+**角度限位**：`SetRotation` 与 `Rotate` 都会把结果收敛到下表范围（`Batch` 经由 `SetRotation`，同样受限）；表外的骨骼不限位。正值 = 屏幕顺时针。
+
+| 骨骼 | 范围 | 说明 |
+|---|---|---|
+| `head` | -18 … 18 | 颈部接缝最窄，过量就露底 |
+| `body` | -8 … 8 | 整体倾斜（绕腰部） |
+| `arm_left_upper` / `arm_right_upper` | -70 … 70 | 抬臂 |
+| `arm_left_lower` / `arm_right_lower` | -80 … 80 | 屈肘 |
+| `leg_left_upper` / `leg_right_upper` | -25 … 25 | 外展 |
+| `leg_left_lower` / `leg_right_lower` | -60 … 60 | 屈膝 |
+
+> 左右**不镜像**：同一动作在两侧的符号本来就相反，镜像限制会把一侧的正角度夹成 0（表现为「设置 10°，读回 0°」）。
+
+> 限位是全局强制的，开发者工具对齐美术图时同样受约束；需要更大角度时改 `SkeletonService.RotationLimits`。
 
 ### SetRotationAsync（异步版本）
 

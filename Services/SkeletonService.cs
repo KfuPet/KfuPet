@@ -129,13 +129,41 @@ namespace KfuPet.Services
             return true;
         }
 
-        /// <summary>设置骨骼本地旋转（角度制），返回是否成功。</summary>
+        /// <summary>
+        /// 各骨骼的本地旋转限位（角度制，正值 = 屏幕顺时针），左右对称。
+        /// 部位图在关节处只有 16–44 px 的出血，转过限位就会露出接缝；未列出的骨骼不限制。
+        /// 不做左右镜像：同一动作在左右两侧的符号本来就相反，镜像限制只会让一侧的正角度被夹成 0。
+        /// </summary>
+        private static readonly Dictionary<string, (double Min, double Max)> RotationLimits = new()
+        {
+            ["head"] = (-18, 18),
+            ["body"] = (-8, 8),
+            ["arm_left_upper"] = (-70, 70),
+            ["arm_left_lower"] = (-80, 80),
+            ["arm_right_upper"] = (-70, 70),
+            ["arm_right_lower"] = (-80, 80),
+            ["leg_left_upper"] = (-25, 25),
+            ["leg_left_lower"] = (-60, 60),
+            ["leg_right_upper"] = (-25, 25),
+            ["leg_right_lower"] = (-60, 60)
+        };
+
+        /// <summary>
+        /// 按限位表收敛角度；未配置限位的骨骼原样返回。
+        /// </summary>
+        private static double ClampRotation(string boneId, double degrees)
+        {
+            if (!RotationLimits.TryGetValue(boneId, out var limit)) return degrees;
+            return Math.Clamp(degrees, limit.Min, limit.Max);
+        }
+
+        /// <summary>设置骨骼本地旋转（角度制，超出限位会被收敛），返回是否成功。</summary>
         public bool SetRotation(string boneId, double degrees)
         {
             var bone = _skeleton?.FindBone(boneId);
             if (bone == null) return false;
 
-            bone.LocalRotation = degrees * Math.PI / 180.0;
+            bone.LocalRotation = ClampRotation(boneId, degrees) * Math.PI / 180.0;
             UpdateAndNotify();
             return true;
         }
@@ -148,13 +176,14 @@ namespace KfuPet.Services
             return bone.LocalRotation * 180.0 / Math.PI;
         }
 
-        /// <summary>相对当前角度旋转骨骼（角度制），返回是否成功。</summary>
+        /// <summary>相对当前角度旋转骨骼（角度制，超出限位会被收敛），返回是否成功。</summary>
         public bool Rotate(string boneId, double deltaDegrees)
         {
             var bone = _skeleton?.FindBone(boneId);
             if (bone == null) return false;
 
-            bone.LocalRotation += deltaDegrees * Math.PI / 180.0;
+            var degrees = bone.LocalRotation * 180.0 / Math.PI + deltaDegrees;
+            bone.LocalRotation = ClampRotation(boneId, degrees) * Math.PI / 180.0;
             UpdateAndNotify();
             return true;
         }
