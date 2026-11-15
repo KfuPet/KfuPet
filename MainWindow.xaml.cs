@@ -198,6 +198,9 @@ namespace KfuPet
 
         internal SkeletonService SkeletonService { get; } = new SkeletonService();
 
+        /// <summary>窗口调试服务：仅供开发者工具通过 IPC 设置背景色，主界面不提供入口。</summary>
+        internal WindowService WindowService { get; } = new WindowService();
+
         internal EmotionService EmotionService => EmotionService.Instance;
 
         /// <summary>视觉服务：截图 + 多模态问答，构造时注入聊天服务。</summary>
@@ -273,6 +276,7 @@ namespace KfuPet
             _toolRegistry.Register(new OpenAppTool());
             _toolRegistry.Register(new ListRunningAppsTool());
             _toolRegistry.Register(new ScreenLookTool(ModelConfigService, LookAtScreenAsync));
+            WindowService.BackgroundColorChanged += OnWindowBackgroundChanged;
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
@@ -356,12 +360,21 @@ namespace KfuPet
             CommandDispatcher.RegisterService(SkeletonService);
             CommandDispatcher.RegisterService(EmotionService);
             CommandDispatcher.RegisterService(VisionService);
+            CommandDispatcher.RegisterService(WindowService);
 
             _pipeServer = new NamedPipeServer(CommandDispatcher, Application.Current);
 
             // 工具端连接/断开会从后台线程触发，统一切回 UI 线程后再通知设置界面刷新
             _pipeServer.ClientStateChanged += (s, e) =>
-                Dispatcher.InvokeAsync(() => ToolStatusChanged?.Invoke(this, EventArgs.Empty));
+                Dispatcher.InvokeAsync(() =>
+                {
+                    // 背景色属于开发调试状态：工具一旦断开就恢复透明，避免桌宠被纯色背景一直盖住
+                    if (_pipeServer?.IsClientConnected != true)
+                    {
+                        WindowService.ResetBackground();
+                    }
+                    ToolStatusChanged?.Invoke(this, EventArgs.Empty);
+                });
 
             // 命令管道由开发者模式开关控制，默认关闭；日志管道常开，由 App 在启动时拉起
             DeveloperModeService.EnabledChanged += OnDeveloperModeChanged;
@@ -514,6 +527,14 @@ namespace KfuPet
         }
 
         /// <summary>
+        /// 应用开发者工具设置的窗口背景色：透明时恢复无背景，其余用纯色铺满窗口，便于检查角色图片边缘。
+        /// </summary>
+        private void OnWindowBackgroundChanged(object? sender, Color color)
+        {
+            RootGrid.Background = color.A == 0 ? Brushes.Transparent : new SolidColorBrush(color);
+        }
+
+        /// <summary>
         /// 根据开发者模式开关状态启动或停止供开发者工具连接的命名管道。
         /// 只管命令管道；日志管道常开，不随该开关变化。
         /// </summary>
@@ -527,6 +548,8 @@ namespace KfuPet
             else
             {
                 _pipeServer?.Stop();
+                // 背景色只是开发调试状态，关闭开发者模式后不能留在桌面上
+                WindowService.ResetBackground();
                 Log.Info("[开发者模式] 已关闭，命名管道已停止");
             }
         }

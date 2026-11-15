@@ -56,9 +56,9 @@ namespace KfuPet.Ipc.Client
             return response ?? IpcResponse.Fail("Invalid response");
         }
 
-        private async Task<T?> CallSkeletonAsync<T>(string action, object? parameters = null, CancellationToken ct = default)
+        private async Task<T?> CallServiceAsync<T>(string service, string action, object? parameters = null, CancellationToken ct = default)
         {
-            var response = await SendRequestAsync("skeleton", action, parameters, ct);
+            var response = await SendRequestAsync(service, action, parameters, ct);
             if (!response.Success)
             {
                 throw new InvalidOperationException(response.Error ?? "Unknown error");
@@ -72,13 +72,23 @@ namespace KfuPet.Ipc.Client
             return default;
         }
 
-        private async Task<bool> CallSkeletonBoolAsync(string action, object? parameters = null, CancellationToken ct = default)
+        private Task<T?> CallSkeletonAsync<T>(string action, object? parameters = null, CancellationToken ct = default)
         {
-            var response = await SendRequestAsync("skeleton", action, parameters, ct);
+            return CallServiceAsync<T>("skeleton", action, parameters, ct);
+        }
+
+        private async Task<bool> CallServiceBoolAsync(string service, string action, object? parameters = null, CancellationToken ct = default)
+        {
+            var response = await SendRequestAsync(service, action, parameters, ct);
             if (!response.Success) return false;
             if (response.Data is JsonElement je) return je.ValueKind == JsonValueKind.True;
             if (response.Data is bool b) return b;
             return true; // Data 为空时（Batch / ResetAll / SetDebugSkeleton），按命令已成功执行处理
+        }
+
+        private Task<bool> CallSkeletonBoolAsync(string action, object? parameters = null, CancellationToken ct = default)
+        {
+            return CallServiceBoolAsync("skeleton", action, parameters, ct);
         }
 
         /// <summary>
@@ -340,6 +350,30 @@ namespace KfuPet.Ipc.Client
         public bool GetDebugSkeleton()
         {
             return CallSkeletonBoolAsync("GetDebugSkeleton", null).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// 设置桌宠窗口背景色（仅开发者工具可用）。支持 #AARRGGBB、#RRGGBB 或 Transparent。
+        /// </summary>
+        public bool SetBackgroundColor(string color)
+        {
+            return CallServiceBoolAsync("window", "SetBackgroundColor", new { color }).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// 获取桌宠窗口当前背景色，"Transparent" 表示透明。
+        /// </summary>
+        public string? GetBackgroundColor()
+        {
+            return CallServiceAsync<string>("window", "GetBackgroundColor").GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// 恢复桌宠窗口透明背景（仅开发者工具可用）。
+        /// </summary>
+        public bool ResetBackgroundColor()
+        {
+            return CallServiceBoolAsync("window", "ResetBackgroundColor").GetAwaiter().GetResult();
         }
 
         public JsonElement? GetAttachment(string attachmentId)

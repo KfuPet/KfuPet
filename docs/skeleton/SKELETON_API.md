@@ -21,7 +21,7 @@ NamedPipeServer    LogPipeServer     HttpServer（后期，Kestrel）
         ▼                                 │ 
  CommandDispatcher ◄──────────────────────┘ 
         ▼ 
- Skeleton / Memory / Emotion / Vision 
+ Skeleton / Memory / Emotion / Vision / Window 
  Service 
 ```
 
@@ -46,6 +46,7 @@ NamedPipeServer    LogPipeServer     HttpServer（后期，Kestrel）
 - [世界坐标](#世界坐标)
 - [骨骼图片挂载](#骨骼图片挂载)
 - [调试控制](#调试控制)
+- [窗口背景](#窗口背景)
 - [Action 列表](#action-列表)
 - [骨骼 ID 列表](#骨骼-id-列表)
 - [日志管道](#日志管道)
@@ -109,7 +110,7 @@ await client.SetRotationAsync("arm_left_upper", 45);
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| Service | string | 目标服务名：`skeleton` / `memory` / `emotion` / `vision` |
+| Service | string | 目标服务名：`skeleton` / `memory` / `emotion` / `vision` / `window` |
 | Action | string | 操作名称 |
 | Params | object | 操作参数（可选） |
 
@@ -1072,6 +1073,56 @@ bool visible = client.GetDebugSkeleton();
 **对应 action**：`GetDebugSkeleton`
 
 **返回值**：`bool` — 当前是否显示调试线框
+
+---
+
+## 窗口背景
+
+> 仅供开发者工具（KfuPet-Tool）通过 `window` 服务调试角色图片的边缘与透明通道，KfuPet 主界面不提供该设置的入口。
+> 背景色只在内存中生效，不写入 `Config`；工具断开连接或关闭开发者模式时自动恢复透明。
+
+### SetBackgroundColor
+
+设置桌宠窗口的背景色。
+
+```csharp
+client.SetBackgroundColor("#33FF0000");   // 半透明红
+client.SetBackgroundColor("#FF202020");   // 不透明深灰
+client.SetBackgroundColor("Transparent"); // 恢复透明
+```
+
+**对应 action**：`SetBackgroundColor`（请求时 `"service": "window"`）
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| color | string | 背景色，支持 `#RGB` / `#ARGB` / `#RRGGBB` / `#AARRGGBB` 或 `Transparent` |
+
+**返回值**：`bool` — `true` 设置成功，`false` 颜色格式无效。
+
+### GetBackgroundColor
+
+获取当前窗口背景色。
+
+```csharp
+string? color = client.GetBackgroundColor();
+// "#FF202020" 或 "Transparent"
+```
+
+**对应 action**：`GetBackgroundColor`
+
+**返回值**：`string` — 当前背景色，透明时返回 `"Transparent"`。
+
+### ResetBackgroundColor
+
+恢复窗口透明背景。
+
+```csharp
+client.ResetBackgroundColor();
+```
+
+**对应 action**：`ResetBackgroundColor`
+
+**返回值**：`bool` — `true` 恢复成功。
 
 ---
 
