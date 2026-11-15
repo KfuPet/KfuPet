@@ -44,7 +44,18 @@ namespace KfuPet
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
         private const uint MONITOR_DEFAULTTONEAREST = 2;
+
+        private const int GWL_EXSTYLE = -20;
+
+        /// <summary>工具窗口样式：任务管理器归入“后台进程”，并从 Alt+Tab 列表中隐藏。</summary>
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT
@@ -264,6 +275,25 @@ namespace KfuPet
             _toolRegistry.Register(new ScreenLookTool(ModelConfigService, LookAtScreenAsync));
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
+        }
+
+        /// <summary>
+        /// 把主窗口标记为工具窗口（WS_EX_TOOLWINDOW）：仅设置 ShowInTaskbar=False 时，
+        /// 任务管理器仍会把桌宠归入“应用”，加上该扩展样式后才显示为“后台进程”。
+        /// 不影响窗口显示、置顶与鼠标键盘交互，但会从 Alt+Tab 列表中隐藏。
+        /// </summary>
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
         }
 
         /// <summary>

@@ -70,6 +70,17 @@ namespace KfuPet.Views
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        private const int GWL_EXSTYLE = -20;
+
+        /// <summary>工具窗口样式：托盘菜单弹出期间任务管理器仍把进程归入“后台进程”。</summary>
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
+
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string? lpModuleName);
 
@@ -90,6 +101,23 @@ namespace KfuPet.Views
             ExitItem.Click += (s, e) => OnItemClicked(ExitClicked);
 
             Closed += (s, e) => StopMouseHook();
+        }
+
+        /// <summary>
+        /// 标记为工具窗口（WS_EX_TOOLWINDOW）：否则菜单可见时进程会重新被任务管理器归入“应用”。
+        /// </summary>
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
         }
 
         /// <summary>
