@@ -101,46 +101,6 @@
       "offset": [0, 0],
       "zOrder": 40,
       "visible": true
-    },
-    {
-      "id": "patch_shoulder_l",
-      "boneId": "body",
-      "name": "肩部补片（画面左侧）",
-      "resource": "images/patch_shoulder_l.png",
-      "pivot": [1, 0.5],
-      "offset": [-29.47, -127.6],
-      "zOrder": 21,
-      "visible": true
-    },
-    {
-      "id": "patch_shoulder_r",
-      "boneId": "body",
-      "name": "肩部补片（画面右侧）",
-      "resource": "images/patch_shoulder_r.png",
-      "pivot": [0, 0.5],
-      "offset": [29.04, -126.85],
-      "zOrder": 22,
-      "visible": true
-    },
-    {
-      "id": "patch_hip_l",
-      "boneId": "body",
-      "name": "髋部补片（画面左侧）",
-      "resource": "images/patch_hip_l.png",
-      "pivot": [0.5, 0],
-      "offset": [-19.4, 3.46],
-      "zOrder": 9,
-      "visible": true
-    },
-    {
-      "id": "patch_hip_r",
-      "boneId": "body",
-      "name": "髋部补片（画面右侧）",
-      "resource": "images/patch_hip_r.png",
-      "pivot": [0.5, 0],
-      "offset": [19.4, 3.89],
-      "zOrder": 9,
-      "visible": true
     }
   ]
 }
