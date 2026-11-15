@@ -48,6 +48,7 @@
 
 - [xiao-Kfu](https://github.com/xiao-Kfu) — 图片模型提供
 - [SPlayer](https://github.com/SPlayer-Dev/SPlayer) — 议题模板参考
+- [kfupet-local-chat](https://github.com/KfuPet/kfupet-local-chat) — 本地模型逻辑参考
 
 ### 贡献者
 
